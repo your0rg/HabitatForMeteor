@@ -35,6 +35,13 @@ addShellVar 'TARGET_OPERATING_SYSTEM' \
             'Target host server operating system : ${TARGET_OPERATING_SYSTEM};' \
             '2';
 
+addShellVar 'ORIGIN_KEY_ID' \
+            'Unique identifier of your Habitat origin ( eg; "core", "billmeyer" ):: ' \
+            'Origin key identifier : ${ORIGIN_KEY_ID};' \
+            '3';
+
+
+
 # addShellVar 'PARENT_DIR' \
 #             'Your directory for projects in the ${HOME} directory  :: ' \
 #             'Projects folder in ${HOME} directory : ${PARENT_DIR}' \
