@@ -4,21 +4,33 @@
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
-echo ${METEOR_VERSION};
-METEOR_VERSION=$(meteor --version)  &>/dev/null;
+METEOR_VERSION="";
+METEOR_VERSION_MEMORY=${HOME}/.meteorVersion;
+if [ -f ${METEOR_VERSION_MEMORY} ]; then
+  METEOR_VERSION=$(cat ${METEOR_VERSION_MEMORY});
+  echo "Previously, found ${METEOR_VERSION} installed.";
+else
 
-if [[ "X${METEOR_VERSION}X" == "XX" ]]; then
-	echo " ** A Meteor JS installation was expected. **";
-	echo "Please install Meteor and run this script again.";
-	echo "    curl https://install.meteor.com/ | sh;    ";
-    exit;
-# else
-	# echo "Found ${METEOR_VERSION} installed already..";
+  echo "Verifying installed Meteor version (give us a minute...).";
+  METEOR_VERSION=$(meteor --version);
+  # METEOR_VERSION=$(meteor --version)  &>/dev/null;
+  echo "Detected version : '${METEOR_VERSION}'";
+  if [[ "X${METEOR_VERSION}X" == "XX" ]]; then
+  	echo " ** A Meteor JS installation was expected. **";
+  	echo "Please install Meteor and run this script again.";
+  	echo "    curl https://install.meteor.com/ | sh;    ";
+    exit 1;
+  else
+    echo "Found ${METEOR_VERSION} installed already..";
+    echo ${METEOR_VERSION} > ${METEOR_VERSION_MEMORY};
+  fi;
+
 fi;
 
 cd ${SCRIPTPATH};
 echo "Working in ${SCRIPTPATH}";
 echo "Configure environment variables...";
+exit;
 
 . ./ManageShellVars.sh;
 
