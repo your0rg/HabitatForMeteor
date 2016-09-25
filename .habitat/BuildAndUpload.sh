@@ -14,11 +14,32 @@ RELEASE_TAG=${1};
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}.";
 cd ${SCRIPTPATH};
 
+echo -e "${PRTY} Checking current project commit status.";
+pushd .. >/dev/null;
+git status --porcelain -uno -b;
+
+GIT_STATUS=$( git status --porcelain -uno -b | wc -l );
+if (( ${GIT_STATUS} != 1 )); then
+  echo -e "
+  ERROR : You have uncommitted changes
+      This script will perform a version bump commit only.
+      All other changes *must* have been committed previously.
+    ";
+
+        echo -e "${PRTY} Quitting now.\nDone.";
+        exit 1;
+fi;
+popd >/dev/null;
+
+
 echo "${PRTY} Preparing absolute path names...";
 declare HABITAT_WORK=$(pwd);
+declare HABITAT_PLAN=${HABITAT_WORK}/plan.sh;
 declare BUILD_ARTIFACTS=${HABITAT_WORK}/results;
 declare RELEASE_NOTES=${HABITAT_WORK}/release_notes;
 declare RELEASE_NOTE_SUFFIX="_note.txt";
+
+declare METEOR_METADATA=${HABITAT_WORK}/../package.json;
 declare METEOR_BUNDLE=${BUILD_ARTIFACTS}/bundle;
 declare METEOR_VERSION_FLAG=${METEOR_BUNDLE}/version.txt;
 declare SERVER_EXECUTABLES=${METEOR_BUNDLE}/programs/server;
@@ -27,18 +48,19 @@ declare SERVER_EXECUTABLES=${METEOR_BUNDLE}/programs/server;
 
 # echo "Release tag is :: ${1}";
 mkdir -p ./${RELEASE_NOTES};
-if [[ ! -f ${RELEASE_NOTES}/${RELEASE_TAG}${RELEASE_NOTE_SUFFIX} ]]; then
+RELEASE_NOTE_FILE_NAME=${RELEASE_TAG}${RELEASE_NOTE_SUFFIX};
+if [[ ! -f ${RELEASE_NOTES}/${RELEASE_NOTE_FILE_NAME} ]]; then
   echo -e "\n\nERR: No release note file found for release tag '${RELEASE_TAG}'.
         A distinct release note file is required for each deployment.
         Expected the file...
-            '${RELEASE_NOTES}/${RELEASE_TAG}${RELEASE_NOTE_SUFFIX}'
+            '${RELEASE_NOTES}/$${RELEASE_NOTE_FILE_NAME}'
         ...to be a simple text file explaining the changes of this release.
         \n";
   exit 1;
 else
   echo -e "${PRTY} Will create, commit and push tag '${RELEASE_TAG}' 
           with commit message from
-            '${RELEASE_NOTES}/${RELEASE_TAG}${RELEASE_NOTE_SUFFIX}'
+            '${RELEASE_NOTES}/$${RELEASE_NOTE_FILE_NAME}'
   ";
 fi;
 
@@ -62,7 +84,6 @@ LATEST_REMOTE_VERSION_TAG=$(git ls-remote --refs --tags -t origin \
 COHERENT_VERSIONS=0;
 ERMSG="";
 set +e;
-
 
 
 
@@ -102,6 +123,7 @@ HART_FILE_SUFFIX="${TARGET_ARCHITECTURE}-${TARGET_OPERATING_SYSTEM}.hart";
 HART_FILE="${HART_FILE_PREFIX}-*-${HART_FILE_SUFFIX}";
 HART_FILE_MSG="${HART_FILE_PREFIX}-yyyymmddhhmmss-${HART_FILE_SUFFIX}";
 
+pwd;
 echo -e "${PRTY} Ready to start building.
                   *** Please confirm the following ***
          -->  Previous deployed application revision tag : ${HABITAT_PKG_VERSION}
@@ -110,12 +132,14 @@ echo -e "${PRTY} Ready to start building.
          -->                   Specified new release tag : ${RELEASE_TAG}
 
               *** If you proceed now you will ***
-         1) Set Meteor application revision number to ${RELEASE_TAG}
-         2) Rebuild Meteor application for deployment
-         3) Set Habitat package plan revision number to ${RELEASE_TAG}
-         4) Rebuild Habitat package for deployment
-         5) Push a new Git tag '${RELEASE_TAG}' to GitHub
-         6) Push the Habitat package to the Habitat public depot unique name:
+         1) Set the Meteor application revision number to ${RELEASE_TAG}
+         2) Commit all changes to the app (does not *add* files!)
+         3) Tag the commit and push to GitHub
+         4) Rebuild the application for deployment
+         5) Set Habitat package plan revision number to ${RELEASE_TAG}
+         6) Rebuild Habitat package for deployment
+         7) Push a new Git tag '${RELEASE_TAG}' to GitHub
+         8) Push the Habitat package to the Habitat public depot unique name:
                '${HART_FILE_MSG}''
 
             ";
@@ -132,29 +156,45 @@ case ${response} in
 esac
 
 
-if [[ -f ${METEOR_VERSION_FLAG} ]]; then
-  FLAG_VAL=$(cat ${METEOR_VERSION_FLAG});
-  if [[  "${FLAG_VAL}" = "${HABITAT_PKG_VERSION}"  ]]; then
-    echo -e "\n\nWARN: *NOT* rebuilding Meteor project.
-            Bundle '${FLAG_VAL}' exists already.
-            See '${METEOR_VERSION_FLAG}'\n";
-  else
-
-    echo "${PRTY} Stepping out to Meteor project directory";
-    pushd .. &>/dev/null;
-
-      echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
-      meteor npm install;
-
-      echo "${PRTY} Building Meteor and putting bundle in results directory...";
-      echo "         ** The 'source tree' WARNING can be safely ignored ** ";
-      meteor build ./.habitat/results --directory --server-only;
-      echo ${HABITAT_PKG_VERSION} > ${METEOR_VERSION_FLAG};
-
-    popd;
-
-  fi;
+if [[ ! -f ${METEOR_VERSION_FLAG} ]]; then
+  mkdir -p ${METEOR_BUNDLE};
+  echo "${RELEASE_TAG}" > ${METEOR_VERSION_FLAG};
 fi;
+
+echo "${PRTY} Set Meteor app metadata '${METEOR_METADATA}' version record 'version' to '${RELEASE_TAG}'...";
+setJSONNameValuePair ${METEOR_METADATA} version ${RELEASE_TAG};
+
+RELEASE_NOTE=$(cat ${RELEASE_NOTE_FILE_NAME});
+git comm
+
+
+FLAG_VAL=$(cat ${METEOR_VERSION_FLAG});
+if [[  "${FLAG_VAL}" = "${RELEASE_TAG}"  ]]; then
+  echo -e "\n\nWARN: *NOT* rebuilding Meteor project.
+          Bundle '${FLAG_VAL}' exists already.
+          See '${METEOR_VERSION_FLAG}'\n";
+else
+
+  echo "${PRTY} Stepping out to Meteor project directory";
+  pushd .. &>/dev/null;
+
+    echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
+    meteor npm install;
+
+    echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
+    meteor npm install;
+
+    echo "${PRTY} Building Meteor and putting bundle in results directory...";
+    echo "         ** The 'source tree' WARNING can be safely ignored ** ";
+    meteor build ./.habitat/results --directory --server-only;
+    echo ${HABITAT_PKG_VERSION} > ${METEOR_VERSION_FLAG};
+
+  popd;
+
+fi;
+
+echo "${PRTY} Set Habitat plan '${HABITAT_PLAN}' version record 'pkg_version' to '${RELEASE_TAG}'...";
+setTOMLNameValuePair ${HABITAT_PLAN} pkg_version ${RELEASE_TAG};
 
 HABITAT_REBUILD=true;
 for OLD_HART in ${BUILD_ARTIFACTS}/${HART_FILE}; do
