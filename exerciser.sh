@@ -32,6 +32,7 @@ sudo rm -fr ${HABITAT_WORK}/plan.sh;
 
 echo "${PRTY} Copying HabitatForMeteor files to target...";
 cp -r ${SCRIPTPATH}/.habitat ${TARGET_PROJECT};
+mv ${HABITAT_WORK}/target_gitignore ${HABITAT_WORK}/.gitignore ;
 
 echo -e "${PRTY} Preparing for using Habitat...\n\n      *** Yoo Hoo don't forget me ***\n\n";
 # ${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
