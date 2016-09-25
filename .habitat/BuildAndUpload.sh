@@ -44,8 +44,6 @@ declare METEOR_BUNDLE=${BUILD_ARTIFACTS}/bundle;
 declare METEOR_VERSION_FLAG=${METEOR_BUNDLE}/version.txt;
 declare SERVER_EXECUTABLES=${METEOR_BUNDLE}/programs/server;
 
-. ./scripts/utils.sh;
-
 # echo "Release tag is :: ${1}";
 mkdir -p ./${RELEASE_NOTES};
 RELEASE_NOTE_FILE_NAME=${RELEASE_TAG}${RELEASE_NOTE_SUFFIX};
@@ -53,7 +51,7 @@ if [[ ! -f ${RELEASE_NOTES}/${RELEASE_NOTE_FILE_NAME} ]]; then
   echo -e "\n\nERR: No release note file found for release tag '${RELEASE_TAG}'.
         A distinct release note file is required for each deployment.
         Expected the file...
-            '${RELEASE_NOTES}/$${RELEASE_NOTE_FILE_NAME}'
+            '${RELEASE_NOTES}/${RELEASE_NOTE_FILE_NAME}'
         ...to be a simple text file explaining the changes of this release.
         \n";
   exit 1;
@@ -84,6 +82,7 @@ LATEST_REMOTE_VERSION_TAG=$(git ls-remote --refs --tags -t origin \
 COHERENT_VERSIONS=0;
 ERMSG="";
 set +e;
+
 
 
 
@@ -156,6 +155,9 @@ case ${response} in
 esac
 
 
+
+
+
 if [[ ! -f ${METEOR_VERSION_FLAG} ]]; then
   mkdir -p ${METEOR_BUNDLE};
   echo "${RELEASE_TAG}" > ${METEOR_VERSION_FLAG};
@@ -165,7 +167,13 @@ echo "${PRTY} Set Meteor app metadata '${METEOR_METADATA}' version record 'versi
 setJSONNameValuePair ${METEOR_METADATA} version ${RELEASE_TAG};
 
 RELEASE_NOTE=$(cat ${RELEASE_NOTE_FILE_NAME});
-git comm
+
+echo "git commit -a -m ${RELEASE_NOTE};";
+
+        echo -e "${PRTY} Quitting now.\nDone.";
+        exit 1;
+
+
 
 
 FLAG_VAL=$(cat ${METEOR_VERSION_FLAG});
