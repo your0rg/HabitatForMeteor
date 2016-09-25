@@ -26,24 +26,40 @@ getJSONValueFromName() {
 HABITAT_PLAN_SH="plan.sh";
 METEOR_PACKAGE_JSON="../package.json";
 
-checkVersionsMatch(){
+checkSourceVersionsMatch() {
 
   HABITAT=${1-${HABITAT_PLAN_SH}};
   METEOR=${2-${METEOR_PACKAGE_JSON}};
 
+  getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT} pkg_name;
   getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
+  getJSONValueFromName METEOR_NAME ${METEOR} name;
   getJSONValueFromName METEOR_VERSION ${METEOR} version;
 
   # echo "Got ${HABITAT_PKG_VERSION}";
   # echo "Got ${METEOR_VERSION}";
+  OK=true;
+  if [[ "${HABITAT_PKG_NAME}" != "${METEOR_NAME}" ]]; then
+    echo "Please correct the names and try again.";
+    echo "${HABITAT} :: ${HABITAT_PKG_NAME}";
+    echo "${METEOR} :: ${METEOR_NAME}";
+    OK=false;
+  else
+    echo "Version names match.";
+  fi;
+
   if [[ "${HABITAT_PKG_VERSION}" != "${METEOR_VERSION}" ]]; then
-    echo "ERROR: Versioning Mismatch.  The version semantics of '${HABITAT}'' and '${METEOR}'' must match exactly.";
-    echo "Please correct that and try again.";
+    echo "Please correct version numbers and try again.";
     echo "${HABITAT} :: ${HABITAT_PKG_VERSION}";
     echo "${METEOR} :: ${METEOR_VERSION}";
-    exit 1;
+    OK=false;
   else
-    echo "Versions match.";
+    echo "Version numbers match.";
+  fi;
+
+  if [[ "${OK}" == "false" ]]; then
+    echo "ERROR: Version Mismatch.  The version semantics of '${HABITAT}'' and '${METEOR}'' must match exactly.";
+    exit 1;
   fi;
 }
 
@@ -103,41 +119,41 @@ setTOMLNameValuePair() {
   fi;
 }
 
-PLAN_SH="tmpxxx.toml";
-cat << TEOF > ${PLAN_SH}
-pkg_origin=your0rg
-pkg_name=tutorial
-pkg_version=0.01.05
-pkg_maintainer="Warehouseman <mhb.warehouseman@gmail.com>"
-pkg_license=('MIT')
-pkg_upstream_url=https://github.com/warehouseman/stocker
-TEOF
+# PLAN_SH="tmpxxx.toml";
+# cat << TEOF > ${PLAN_SH}
+# pkg_origin=your0rg
+# pkg_name=tutorial
+# pkg_version=0.01.06
+# pkg_maintainer="Warehouseman <mhb.warehouseman@gmail.com>"
+# pkg_license=('MIT')
+# pkg_upstream_url=https://github.com/warehouseman/stocker
+# TEOF
 
-PACKAGE_JSON="tmpxxx.json";
-cat << JEOF > ${PACKAGE_JSON}
-{
-  "repository": "https://github.com/your0rg/todos",
-  "version": "0.01.05",
-  "license": "MIT",
-  "name": "todos"
-}
-JEOF
+# PACKAGE_JSON="tmpxxx.json";
+# cat << JEOF > ${PACKAGE_JSON}
+# {
+#   "repository": "https://github.com/your0rg/todos",
+#   "version": "0.01.05",
+#   "license": "MIT",
+#   "name": "todos"
+# }
+# JEOF
 
-getTOMLValueFromName RSLT ${PLAN_SH} pkg_version;
-echo "From habitat plan :: ${RSLT}";
+# getTOMLValueFromName RSLT ${PLAN_SH} pkg_version;
+# echo "From habitat plan :: ${RSLT}";
 
-getJSONValueFromName RSLT ${PACKAGE_JSON} version;
-echo "From Meteor plan :: ${RSLT}";
+# getJSONValueFromName RSLT ${PACKAGE_JSON} version;
+# echo "From Meteor plan :: ${RSLT}";
 
-checkVersionsMatch ${PLAN_SH} ${PACKAGE_JSON};
-#checkVersionsMatch ../todos/.habitat/plan.sh ../todos/package.json;
+# checkSourceVersionsMatch ${PLAN_SH} ${PACKAGE_JSON};
+# #checkSourceVersionsMatch ../todos/.habitat/plan.sh ../todos/package.json;
 
-setJSONNameValuePair ${PACKAGE_JSON} version 0.1.1;
-setTOMLNameValuePair ${PLAN_SH} pkg_version 0.1.1;
+# setJSONNameValuePair ${PACKAGE_JSON} version 0.1.1;
+# setTOMLNameValuePair ${PLAN_SH} pkg_version 0.1.1;
 
-echo -e "...."
-cat ${PLAN_SH};
-echo -e "...."
-cat ${PACKAGE_JSON};
-echo -e "::::"
-rm -f tmpxxx.*;
+# echo -e "...."
+# cat ${PLAN_SH};
+# echo -e "...."
+# cat ${PACKAGE_JSON};
+# echo -e "::::"
+# rm -f tmpxxx.*;

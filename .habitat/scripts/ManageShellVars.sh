@@ -32,7 +32,7 @@ function saveShellVars()
 {
 
   echo -e "Saving shell variables to $1";
-  echo -e "#/bin/bash\n#  You can edit this, but it may be altered progrmmatically." > $1;
+  echo -e "#/bin/bash\n#  You can edit this, but it may be altered programmaticly." > $1;
   for varkey in "${!SHELLVARNAMES[@]}"; do
     X=${SHELLVARNAMES[$varkey]};
     eval "echo \"export ${X}='${!X}';\"  >> $1;";

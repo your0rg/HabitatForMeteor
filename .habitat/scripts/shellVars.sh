@@ -30,15 +30,20 @@ addShellVar 'GITHUB_PERSONAL_TOKEN' \
             'GitHub personal token : ${GITHUB_PERSONAL_TOKEN};' \
             '1';
 
-addShellVar 'TARGET_OPERATING_SYSTEM' \
-            'The operating system of the target host server ("linux" or "darwin"):: ' \
-            'Target host server operating system : ${TARGET_OPERATING_SYSTEM};' \
+addShellVar 'ORIGIN_KEY_ID' \
+            'Unique identifier of your Habitat origin ( eg; "core", "billmeyer" ) :: ' \
+            'Origin key identifier : ${ORIGIN_KEY_ID};' \
             '2';
 
-addShellVar 'ORIGIN_KEY_ID' \
-            'Unique identifier of your Habitat origin ( eg; "core", "billmeyer" ):: ' \
-            'Origin key identifier : ${ORIGIN_KEY_ID};' \
+addShellVar 'TARGET_OPERATING_SYSTEM' \
+            'The operating system of the target host server ("linux" or "darwin") :: ' \
+            'Target host server operating system : ${TARGET_OPERATING_SYSTEM};' \
             '3';
+
+addShellVar 'TARGET_ARCHITECTURE' \
+            'Whether this build will target 32 or 64 bit architecture ( eg; "x86_64" ) :: ' \
+            'Target architecture : ${TARGET_ARCHITECTURE};' \
+            '4';
 
 
 
