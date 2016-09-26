@@ -7,7 +7,7 @@ getTOMLValueFromName() {
   local gNAME=$3;
   [[ "X${FILE}X" != "XX" && -f ${FILE} ]] || { echo "getTOMLValueFromName expected a file name." >&2; exit 1; }
   [[ "X${gNAME}X" != "XX"          ]] || { echo "getTOMLValueFromName expected a mapping key name." >&2; exit 1; }
-  local TOMLRESULT=$(cat ${FILE} | grep "${gNAME} *=" | cut -d= -f2);
+  local TOMLRESULT=$(cat ${FILE} | grep -m1 "${gNAME} *=" | cut -d= -f2);
   eval $__TOMLVALUE="'$TOMLRESULT'";
 
 }
@@ -69,9 +69,7 @@ updateTOMLNameValuePair() {
 }
 
 updateJSONNameValuePair() {
-  jVAL="   ggggggggg";
-#  sed -i "/${2}/c${jVAL}" ${1};
-  sed -i "/${2}/c\ \ \"${2}\": \"${3}\"," ${1};
+  sed -i "/\"${2}\"/c\ \ \"${2}\": \"${3}\"," ${1};
   echo "Updated ${2}";
 }
 

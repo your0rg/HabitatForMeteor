@@ -3,7 +3,7 @@
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
-. ./shellVars.sh;
+. ./${1}shellVars.sh;
 
 USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
 

@@ -34,7 +34,7 @@ cd ${SCRIPTPATH};
 echo "${PRTY}Working in ${SCRIPTPATH}";
 echo "${PRTY}Configure environment variables...";
 
-. ./ManageShellVars.sh;
+. ./ManageShellVars.sh "";
 
 loadShellVars;
 

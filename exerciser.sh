@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #
+
+
 set -e;
 
 if [[ "X${1}X" == "XX" || "X${2}X" == "XX" ]]; then
@@ -36,6 +38,11 @@ mv ${HABITAT_WORK}/target_gitignore ${HABITAT_WORK}/.gitignore ;
 
 echo -e "${PRTY} Preparing for using Habitat...\n\n      *** Yoo Hoo don't forget me ***\n\n";
 # ${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
+
+set +e;
+git checkout -- package.json; git status;
+git tag -d ${RELEASE_TAG};
+set -e;
 
 echo -e "${PRTY} Building application with Meteor,
          packaging with Habitat and

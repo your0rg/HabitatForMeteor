@@ -11,6 +11,26 @@ if [[ "X${1}X" == "XX" ]]; then
 fi;
 RELEASE_TAG=${1};
 
+
+function getNewestHabitatBuildPackage() {
+  HART_FILE_TIMESTAMP="";
+  HABITAT_REBUILD=true;
+  for OLD_HART in "${BUILD_ARTIFACTS}"/*; do
+    THE_FILE="${OLD_HART#${BUILD_ARTIFACTS}}";
+    [ $(echo ${THE_FILE} | grep -c hart) -lt 1 ] && continue;
+    THE_FILE="${THE_FILE#/${HART_FILE_PREFIX}}";
+    HART_FILE_TIMESTAMP="${THE_FILE%${HART_FILE_SUFFIX}}";
+  done
+
+  set +e;
+  HART_FILE="${HART_FILE_PREFIX}${HART_FILE_TIMESTAMP}${HART_FILE_SUFFIX}";
+  if ls -l ${BUILD_ARTIFACTS}/${HART_FILE} &>/dev/null; then
+    HABITAT_REBUILD=false;
+  fi;
+
+  echo -e "HART_FILE_TIMESTAMP ==> ${HART_FILE_TIMESTAMP}";
+};
+
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}.";
 cd ${SCRIPTPATH};
 
@@ -31,6 +51,9 @@ if (( ${GIT_STATUS} != 1 )); then
 fi;
 popd >/dev/null;
 
+. ./scripts/ManageShellVars.sh "scripts/";
+
+loadShellVars;
 
 echo "${PRTY} Preparing absolute path names...";
 declare HABITAT_WORK=$(pwd);
@@ -47,6 +70,8 @@ declare SERVER_EXECUTABLES=${METEOR_BUNDLE}/programs/server;
 # echo "Release tag is :: ${1}";
 mkdir -p ./${RELEASE_NOTES};
 RELEASE_NOTE_FILE_NAME=${RELEASE_TAG}${RELEASE_NOTE_SUFFIX};
+RELEASE_NOTE_PATH=${RELEASE_NOTES}/${RELEASE_NOTE_FILE_NAME};
+
 if [[ ! -f ${RELEASE_NOTES}/${RELEASE_NOTE_FILE_NAME} ]]; then
   echo -e "\n\nERR: No release note file found for release tag '${RELEASE_TAG}'.
         A distinct release note file is required for each deployment.
@@ -70,6 +95,10 @@ getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT} pkg_name;
 getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
 
 LATEST_LOCAL_VERSION_TAG=$(git describe 2> /dev/null);
+if [[ "X${LATEST_LOCAL_VERSION_TAG}X" = "XX" ]]; then
+  LATEST_LOCAL_VERSION_TAG="0.0.0";
+fi;
+
 LATEST_REMOTE_VERSION_TAG=$(git ls-remote --refs --tags -t origin \
                           | awk '{print $2}' \
                           | cut -d '/' -f 3 \
@@ -77,6 +106,11 @@ LATEST_REMOTE_VERSION_TAG=$(git ls-remote --refs --tags -t origin \
                           | uniq \
                           | sort \
                           | tail -1);
+
+echo "Project metadata revision unique id     : '${HABITAT_PKG_NAME}-${HABITAT_PKG_VERSION}'";
+echo "Latest version tag locally              : '${LATEST_LOCAL_VERSION_TAG}'";
+echo "Latest version tag on remote repository : '${LATEST_REMOTE_VERSION_TAG}'";
+
 
 . ./scripts/semver.sh
 COHERENT_VERSIONS=0;
@@ -87,8 +121,6 @@ set +e;
 
 
 
-
-echo " R ${LATEST_REMOTE_VERSION_TAG}, L ${LATEST_LOCAL_VERSION_TAG}";
 
 if semverGT ${LATEST_REMOTE_VERSION_TAG} ${LATEST_LOCAL_VERSION_TAG}; then
   ERMSG=${ERMSG}"\n - Remote revision tag '${LATEST_REMOTE_VERSION_TAG}' is greater than local revision tag '${LATEST_LOCAL_VERSION_TAG}'!";
@@ -114,71 +146,17 @@ if (( COHERENT_VERSIONS > 0 )); then
 fi;
 set -e;
 
-USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
-. ${USER_VARS_FILE_NAME};
+echo "${PRTY} Set Meteor app metadata '${METEOR_METADATA}' version record 'version' to '${RELEASE_TAG}'...";
+setJSONNameValuePair ${METEOR_METADATA} version ${RELEASE_TAG} >/dev/null;
 
-HART_FILE_PREFIX="${ORIGIN_KEY_ID}-${HABITAT_PKG_NAME}-${RELEASE_TAG}";
-HART_FILE_SUFFIX="${TARGET_ARCHITECTURE}-${TARGET_OPERATING_SYSTEM}.hart";
-HART_FILE="${HART_FILE_PREFIX}-*-${HART_FILE_SUFFIX}";
-HART_FILE_MSG="${HART_FILE_PREFIX}-yyyymmddhhmmss-${HART_FILE_SUFFIX}";
-
-pwd;
-echo -e "${PRTY} Ready to start building.
-                  *** Please confirm the following ***
-         -->  Previous deployed application revision tag : ${HABITAT_PKG_VERSION}
-         -->          Most recent previous local Git tag : ${LATEST_LOCAL_VERSION_TAG}
-         -->         Most recent previous remote Git tag : ${LATEST_REMOTE_VERSION_TAG}
-         -->                   Specified new release tag : ${RELEASE_TAG}
-
-              *** If you proceed now you will ***
-         1) Set the Meteor application revision number to ${RELEASE_TAG}
-         2) Commit all changes to the app (does not *add* files!)
-         3) Tag the commit and push to GitHub
-         4) Rebuild the application for deployment
-         5) Set Habitat package plan revision number to ${RELEASE_TAG}
-         6) Rebuild Habitat package for deployment
-         7) Push a new Git tag '${RELEASE_TAG}' to GitHub
-         8) Push the Habitat package to the Habitat public depot unique name:
-               '${HART_FILE_MSG}''
-
-            ";
-
-read -r -p "Proceed? [y/N] " response;
-case ${response} in
-    [yY][eE][sS]|[yY]) 
-        echo "${PRTY} Continuing...";
-        ;;
-    *)
-        echo -e "${PRTY} Quitting now.\nDone.";
-        exit 1;
-        ;;
-esac
-
-
-
-
-
-if [[ ! -f ${METEOR_VERSION_FLAG} ]]; then
-  mkdir -p ${METEOR_BUNDLE};
-  echo "${RELEASE_TAG}" > ${METEOR_VERSION_FLAG};
+FLAG_VAL="";
+if [[ -f ${METEOR_VERSION_FLAG} ]]; then
+  FLAG_VAL=$(cat ${METEOR_VERSION_FLAG});
 fi;
 
-echo "${PRTY} Set Meteor app metadata '${METEOR_METADATA}' version record 'version' to '${RELEASE_TAG}'...";
-setJSONNameValuePair ${METEOR_METADATA} version ${RELEASE_TAG};
-
-RELEASE_NOTE=$(cat ${RELEASE_NOTE_FILE_NAME});
-
-echo "git commit -a -m ${RELEASE_NOTE};";
-
-        echo -e "${PRTY} Quitting now.\nDone.";
-        exit 1;
-
-
-
-
-FLAG_VAL=$(cat ${METEOR_VERSION_FLAG});
-if [[  "${FLAG_VAL}" = "${RELEASE_TAG}"  ]]; then
-  echo -e "\n\nWARN: *NOT* rebuilding Meteor project.
+echo "Existing Meteor bundle revision level '${FLAG_VAL}'. Build '${RELEASE_TAG}'?";
+if [[  "${FLAG_VAL}" == "${RELEASE_TAG}"  ]]; then
+  echo -e "\nWARN: *NOT* rebuilding Meteor project.
           Bundle '${FLAG_VAL}' exists already.
           See '${METEOR_VERSION_FLAG}'\n";
 else
@@ -189,27 +167,35 @@ else
     echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
     meteor npm install;
 
-    echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
-    meteor npm install;
-
     echo "${PRTY} Building Meteor and putting bundle in results directory...";
     echo "         ** The 'source tree' WARNING can be safely ignored ** ";
     meteor build ./.habitat/results --directory --server-only;
-    echo ${HABITAT_PKG_VERSION} > ${METEOR_VERSION_FLAG};
+
+    echo -e "${PRTY} Meteor project rebuilt.  Setting '${METEOR_VERSION_FLAG}'
+    to contain '${RELEASE_TAG}.'";
+    echo ${RELEASE_TAG} > ${METEOR_VERSION_FLAG};
 
   popd;
 
 fi;
 
+
+
+
 echo "${PRTY} Set Habitat plan '${HABITAT_PLAN}' version record 'pkg_version' to '${RELEASE_TAG}'...";
-setTOMLNameValuePair ${HABITAT_PLAN} pkg_version ${RELEASE_TAG};
+setTOMLNameValuePair ${HABITAT_PLAN} pkg_version ${RELEASE_TAG} >/dev/null;
+# unset HABITAT_PKG_VERSION;
+# getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
 
-HABITAT_REBUILD=true;
-for OLD_HART in ${BUILD_ARTIFACTS}/${HART_FILE}; do
-    [ -e "${OLD_HART}" ] && HABITAT_REBUILD=false;
-    break;
-done
 
+HART_FILE_PREFIX="${ORIGIN_KEY_ID}-${HABITAT_PKG_NAME}-${RELEASE_TAG}-";
+HART_FILE_SUFFIX="-${TARGET_ARCHITECTURE}-${TARGET_OPERATING_SYSTEM}.hart";
+HART_FILE="${HART_FILE_PREFIX}*${HART_FILE_SUFFIX}";
+HART_FILE_MSG="${HART_FILE_PREFIX}yyyymmddhhmmss${HART_FILE_SUFFIX}";
+
+getNewestHabitatBuildPackage;
+
+set -e;
 if [[ "${HABITAT_REBUILD}" = "false" ]]; then
   echo -e "\nWARN: *NOT* rebuilding Habitat package.
           A file exists already :
@@ -230,9 +216,65 @@ else
   sudo hab pkg build .
 
 fi;
-echo "${PRTY} We won't upload yet";
-echo "${PRTY} Quitting.";
-exit 1;
 
-echo "${PRTY} Uploading Habitat package to default depot...";
-sudo hab pkg upload --auth ${GITHUB_AUTH_TOKEN};
+getNewestHabitatBuildPackage;
+
+
+
+USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
+. ${USER_VARS_FILE_NAME};
+
+echo -e "${PRTY} Ready to commit changes.
+
+              *** Please confirm the following ***
+     -->  Previous deployed application revision tag : ${HABITAT_PKG_VERSION}
+     -->          Most recent previous local Git tag : ${LATEST_LOCAL_VERSION_TAG}
+     -->         Most recent previous remote Git tag : ${LATEST_REMOTE_VERSION_TAG}
+     -->                   Specified new release tag : ${RELEASE_TAG}
+
+          *** If you proceed now, you will ***
+     1) Set Habitat package plan revision number to ${RELEASE_TAG}
+     2) Push the Habitat package to the Habitat public depot as :
+             ${ORIGIN_KEY_ID} / ${HABITAT_PKG_NAME}
+             ${RELEASE_TAG} / ${HART_FILE_TIMESTAMP}
+     3) Set the project metadata revision number to ${RELEASE_TAG}
+     4) Commit all uncommitted app changes (not including untracked files!)
+     5) Tag the commit and push all to the remote repository
+
+            ";
+
+read -r -p "Proceed? [y/N] " response;
+case ${response} in
+    [yY][eE][sS]|[yY])
+        echo "${PRTY} Continuing...";
+        ;;
+    *)
+        echo -e "${PRTY} Quitting now.\nDone.";
+        exit 1;
+        ;;
+esac
+
+
+set -e;
+echo -e "${PRTY} Uploading Habitat package '${BUILD_ARTIFACTS}/${HART_FILE}' to default depot...
+           using ${GITHUB_PERSONAL_TOKEN}";
+# ls -l ${BUILD_ARTIFACTS}/${HART_FILE};
+
+        # echo -e "${PRTY} Quitting now.\nDone.\n\n\n\n";
+        # exit 1;
+sudo hab pkg upload ${BUILD_ARTIFACTS}/${HART_FILE} --auth ${GITHUB_PERSONAL_TOKEN};
+git remote update;
+git status -uno;
+
+
+
+
+
+
+echo "git commit --porcelain --all --file ${RELEASE_NOTE_PATH};";
+git commit --all --file ${RELEASE_NOTE_PATH};
+git tag --annotate --force --file=${RELEASE_NOTE_PATH} ${RELEASE_TAG};
+git push && git push origin ${RELEASE_TAG};
+
+        echo -e "${PRTY} Finishing now.\nDone.\n\n\n\n";
+        exit 1;
