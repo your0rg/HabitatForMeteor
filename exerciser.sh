@@ -16,7 +16,7 @@ SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 PRTY="XRSZ :: ";
 
-RELEASE_TAG=${2};
+RELEASE_TAG=0.1.12;
 echo "${PRTY} Stepping into target directory...";
 cd ${1};
 declare TARGET_PROJECT=$(pwd);
@@ -40,7 +40,9 @@ echo -e "${PRTY} Preparing for using Habitat...\n\n      *** Yoo Hoo don't forge
 # ${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
 
 set +e;
-git checkout -- package.json; git status;
+git checkout -- package.json;
+git checkout -- plan.sh;
+git status;
 git tag -d ${RELEASE_TAG};
 set -e;
 

@@ -45,7 +45,7 @@ checkSourceVersionsMatch() {
     echo "${METEOR} :: ${METEOR_NAME}";
     OK=false;
   else
-    echo "Version names match.";
+    echo "           Version names match.";
   fi;
 
   if [[ "${HABITAT_PKG_VERSION}" != "${METEOR_VERSION}" ]]; then
@@ -54,7 +54,7 @@ checkSourceVersionsMatch() {
     echo "${METEOR} :: ${METEOR_VERSION}";
     OK=false;
   else
-    echo "Version numbers match.";
+    echo "           Version numbers match.";
   fi;
 
   if [[ "${OK}" == "false" ]]; then
@@ -64,7 +64,7 @@ checkSourceVersionsMatch() {
 }
 
 updateTOMLNameValuePair() {
-  sed -i "/${2}/c${2}=${3}" ${1};
+  sed -i "0,/${2}/ s|.*${2}.*|${2}=${3}|" ${1};
   echo "Updated ${2}";
 }
 
@@ -109,7 +109,7 @@ setTOMLNameValuePair() {
   [[ "X${stNAME}X"  != "XX"          ]] || { echo "setTOMLNameValuePair expected a mapping key name." >&2; exit 1; }
   [[ "X${stVALUE}X" != "XX"          ]] || { echo "setTOMLNameValuePair expected a mapped value." >&2; exit 1; }
 
-  tEXISTS=$(cat ${stFILE} | grep -c "${stNAME} *=");
+  tEXISTS=$(cat ${stFILE} | grep -c -m1 "${stNAME} *=");
   if [[ ${tEXISTS} -gt 0 ]]; then
     updateTOMLNameValuePair ${stFILE} ${stNAME} ${stVALUE};
   else
