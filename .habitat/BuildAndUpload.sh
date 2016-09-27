@@ -35,19 +35,33 @@ function quitIfAnyUncommittedChanges() {
 
   echo -e "${PRTY} Checking current project commit status.";
   pushd .. >/dev/null;
-  # git status --porcelain -uno -b;
 
-  GIT_STATUS=$( git status --porcelain -uno -b | wc -l );
-  if (( ${GIT_STATUS} != 1 )); then
-    echo -e "
-    ERROR : You have uncommitted changes
-        This script will perform a version bump commit only.
-        All other changes *must* have been committed previously.
-      ";
+    # git status --porcelain -uno -b;
 
-          echo -e "${PRTY} Quitting now.\nDone.";
-          exit 1;
-  fi;
+    GIT_STATUS=$( git status --porcelain -uno -b | wc -l );
+    if (( ${GIT_STATUS} != 1 )); then
+      echo -e "
+      ERROR : You have uncommitted changes
+          This script will perform a version bump commit only.
+          All other changes *must* have been committed previously.
+        ";
+
+            echo -e "${PRTY} Quitting now.\nDone.";
+            exit 1;
+    fi;
+
+    UNTRACKED_FILES=$(git ls-files --others --exclude-standard | wc -l);
+    if [[ "${UNTRACKED_FILES}" -gt "0" ]]; then
+      echo -e "
+      ERROR : You have untracked files
+          This script will perform a version bump commit only.
+          All other changes *must* have been committed previously.
+          If those files are required to present, but not archived, add them .gitignore
+        ";
+
+            echo -e "${PRTY} Quitting now.\nDone.";
+            exit 1;
+    fi;
   popd >/dev/null;
 
 }
@@ -263,7 +277,6 @@ quitIfVersionSemanticsAreIncoherent;
 buildMeteorProjectBundleIfNotExist;
 
 buildHabitatArchivePackageIfNotExist;
-
 
 
 
