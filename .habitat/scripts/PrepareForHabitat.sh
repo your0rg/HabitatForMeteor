@@ -8,6 +8,13 @@ PRTY="PREP >> ";
 ENVVARSDIRTY=false;
 ENVVARSDIRTY=true;
 
+pushd .habitat >/dev/null;
+  mv target_gitignore .gitignore
+  pushd release_notes >/dev/null;
+    mv target_gitignore .gitignore
+  popd >/dev/null;
+popd >/dev/null;
+
 METEOR_VERSION="";
 METEOR_VERSION_MEMORY=${HOME}/.meteorVersion;
 if [ -f ${METEOR_VERSION_MEMORY} ]; then
@@ -49,9 +56,9 @@ sudo apt -y install jq;
 
 ##     'semver_bash'    parses and compares version numbers
 SEMVER_UTIL="semver_bash";
-SU_VERSION="0.1.0-beta.02";
+SU_VERSION="0.1.0-beta.03";
 SEMVER_TAR="${SEMVER_UTIL}-${SU_VERSION}";
-#                                https://github.com/warehouseman/semver_bash/archive/v0.1.0-beta.02.tar.gz
+#                                https://github.com/warehouseman/semver_bash/archive/v0.1.0-beta.03.tar.gz
 wget -nc -O ${SEMVER_TAR}.tar.gz https://github.com/warehouseman/${SEMVER_UTIL}/archive/v${SU_VERSION}.tar.gz;
 tar zxvf ${SEMVER_TAR}.tar.gz ${SEMVER_TAR}/semver.sh;
 mv ${SEMVER_TAR}/semver.sh .;

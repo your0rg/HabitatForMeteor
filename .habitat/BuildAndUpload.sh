@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
@@ -86,12 +87,13 @@ function detectGitRepoProblem() {
   allFilesTracked || appendToDefectReport "Untracked files
   This script will perform a version bump commit only.
   All other changes *must* have been committed previously.
-  If those files are required to present, but not archived, add them .gitignore
+  If those files are required to present, but not
+  archived, add them to .gitignore
         ";
 
 };
 
-function prepareAbsolutePathNames(){
+function prepareAbsolutePathNames() {
 
   echo "${PRTY} Preparing absolute path names...";
   export HABITAT_WORK=$(pwd);
@@ -115,7 +117,7 @@ function prepareAbsolutePathNames(){
 };
 
 
-function detectReleaseDescriptorFile() {
+function detectMissingReleaseDescriptorFile() {
 
   MSG="${PRTY} This release, '${RELEASE_TAG}', will be described by the note : 
        '${RELEASE_NOTE_PATH}'";
@@ -202,6 +204,7 @@ detectSourceVersionsMismatch() {
 
 
 
+
   # getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT} pkg_origin;
 
   # [ "${HABITAT_PKG_ORIGIN}" = "${ORIGIN_KEY_ID}" ] || appendToDefectReport "Origin Identifier Error
@@ -269,9 +272,6 @@ function detectIncoherentVersionSemantics() {
   # echo "           Project metadata revision unique id     : '${HABITAT_PKG_NAME}-${HABITAT_PKG_VERSION}'";
   # echo "           Latest version tag locally              : '${LATEST_LOCAL_VERSION_TAG}'";
   # echo "           Latest version tag on remote repository : '${LATEST_REMOTE_VERSION_TAG}'";
-
-
-
 
 
 
@@ -435,6 +435,7 @@ function uploadHabitatArchiveFileToDepot() {
 
 }
 
+
 HABITAT_PKG_NAME="";
 HABITAT_PKG_VERSION="";
 HABITAT_PKG_ORIGIN="";
@@ -459,7 +460,7 @@ prepareAbsolutePathNames;
 
 detectIncompletePackageJSON;
 
-detectReleaseDescriptorFile;
+detectMissingReleaseDescriptorFile;
 
 detectIncoherentVersionSemantics;
 
@@ -500,7 +501,6 @@ case ${response} in
         ;;
 esac
 
-
 uploadHabitatArchiveFileToDepot;
 
 git remote update;
@@ -516,9 +516,7 @@ fi;
 
 git status -uno;
 
-
 echo "git commit --porcelain --all --file ${RELEASE_NOTE_PATH};";
 git commit --all --file ${RELEASE_NOTE_PATH};
 git tag --annotate --force --file=${RELEASE_NOTE_PATH} ${RELEASE_TAG};
 git push && git push origin ${RELEASE_TAG};
-
