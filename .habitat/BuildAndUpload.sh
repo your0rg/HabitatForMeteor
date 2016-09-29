@@ -330,14 +330,15 @@ function detectIncoherentVersionSemantics() {
 }
 
 function detectMissingHabitatOriginKey() {
-  sudo hab origin key export your0rg --type public >/dev/null || appendToDefectReport "Missing Habitat Origin Key.
+  sudo hab origin key export your0rg --type public 2>/dev/null || appendToDefectReport "Missing Habitat Origin Key.
     A Habitat origin key must be generated or imported.
     Eg; 
-        'sudo hab setup'
+        'sudo hab setup;  # First time use only!'
     or
-        'echo \"\${yourHabitatOriginKey}\" > sudo hab origin key import'
-    TEMPORARY NOTE: An unresolved issue means that the kay must 
+        'echo \"\${yourHabitatOrigin}-yyyymmddhhmmss.pub\" > sudo hab origin key import';
+        'echo \"\${yourHabitatOrigin}-yyyymmddhhmmss.sig.key\" > sudo hab origin key import';
   ";
+#     TEMPORARY NOTE: An unresolved issue means that the key must
 
 }
 

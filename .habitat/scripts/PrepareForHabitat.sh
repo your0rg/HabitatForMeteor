@@ -9,9 +9,9 @@ ENVVARSDIRTY=false;
 ENVVARSDIRTY=true;
 
 pushd .habitat >/dev/null;
-  mv target_gitignore .gitignore
+  mv target_gitignore .gitignore >/dev/null;
   pushd release_notes >/dev/null;
-    mv target_gitignore .gitignore
+    mv target_gitignore .gitignore >/dev/null;
   popd >/dev/null;
 popd >/dev/null;
 
