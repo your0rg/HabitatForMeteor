@@ -1,6 +1,6 @@
 pkg_origin=your0rg
 pkg_name=tutorial
-pkg_version=0.1.10
+pkg_version=0.0.2
 pkg_maintainer="Warehouseman <mhb.warehouseman@gmail.com>"
 pkg_license=('MIT')
 pkg_upstream_url=https://github.com/warehouseman/stocker

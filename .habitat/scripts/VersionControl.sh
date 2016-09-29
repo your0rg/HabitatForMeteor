@@ -26,42 +26,42 @@ getJSONValueFromName() {
 HABITAT_PLAN_SH="plan.sh";
 METEOR_PACKAGE_JSON="../package.json";
 
-checkSourceVersionsMatch() {
+# checkSourceVersionsMatch() {
 
-  HABITAT=${1-${HABITAT_PLAN_SH}};
-  METEOR=${2-${METEOR_PACKAGE_JSON}};
+#   HABITAT=${1-${HABITAT_PLAN_SH}};
+#   METEOR=${2-${METEOR_PACKAGE_JSON}};
 
-  getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT} pkg_name;
-  getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
-  getJSONValueFromName METEOR_NAME ${METEOR} name;
-  getJSONValueFromName METEOR_VERSION ${METEOR} version;
+#   getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT} pkg_name;
+#   getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
+#   getJSONValueFromName METEOR_NAME ${METEOR} name;
+#   getJSONValueFromName METEOR_VERSION ${METEOR} version;
 
-  # echo "Got ${HABITAT_PKG_VERSION}";
-  # echo "Got ${METEOR_VERSION}";
-  OK=true;
-  if [[ "${HABITAT_PKG_NAME}" != "${METEOR_NAME}" ]]; then
-    echo "Please correct the names and try again.";
-    echo "${HABITAT} :: ${HABITAT_PKG_NAME}";
-    echo "${METEOR} :: ${METEOR_NAME}";
-    OK=false;
-  else
-    echo "           Version names match.";
-  fi;
+#   # echo "Got ${HABITAT_PKG_VERSION}";
+#   # echo "Got ${METEOR_VERSION}";
+#   OK=true;
+#   if [[ "${HABITAT_PKG_NAME}" != "${METEOR_NAME}" ]]; then
+#     echo "Please correct the names and try again.";
+#     echo "${HABITAT} :: ${HABITAT_PKG_NAME}";
+#     echo "${METEOR} :: ${METEOR_NAME}";
+#     OK=false;
+#   else
+#     echo "           Version names match.";
+#   fi;
 
-  if [[ "${HABITAT_PKG_VERSION}" != "${METEOR_VERSION}" ]]; then
-    echo "Please correct version numbers and try again.";
-    echo "${HABITAT} :: ${HABITAT_PKG_VERSION}";
-    echo "${METEOR} :: ${METEOR_VERSION}";
-    OK=false;
-  else
-    echo "           Version numbers match.";
-  fi;
+#   if [[ "${HABITAT_PKG_VERSION}" != "${METEOR_VERSION}" ]]; then
+#     echo "Please correct version numbers and try again.";
+#     echo "${HABITAT} :: ${HABITAT_PKG_VERSION}";
+#     echo "${METEOR} :: ${METEOR_VERSION}";
+#     OK=false;
+#   else
+#     echo "           Version numbers match.";
+#   fi;
 
-  if [[ "${OK}" == "false" ]]; then
-    echo "ERROR: Version Mismatch.  The version semantics of '${HABITAT}'' and '${METEOR}'' must match exactly.";
-    exit 1;
-  fi;
-}
+#   if [[ "${OK}" == "false" ]]; then
+#     echo "ERROR: Version Mismatch.  The version semantics of '${HABITAT}'' and '${METEOR}'' must match exactly.";
+#     exit 1;
+#   fi;
+# }
 
 updateTOMLNameValuePair() {
   sed -i "0,/${2}/ s|.*${2}.*|${2}=${3}|" ${1};

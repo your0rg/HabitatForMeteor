@@ -10,7 +10,7 @@ USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
 function loadShellVars() {
 
   if [ -f ${USER_VARS_FILE_NAME} ]; then
-    source ${USER_VARS_FILE_NAME}
+    source ${USER_VARS_FILE_NAME};
   else
 
     for varkey in "${!SHELLVARNAMES[@]}"; do

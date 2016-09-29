@@ -6,6 +6,7 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 
 PRTY="PREP >> ";
 ENVVARSDIRTY=false;
+ENVVARSDIRTY=true;
 
 METEOR_VERSION="";
 METEOR_VERSION_MEMORY=${HOME}/.meteorVersion;
@@ -38,12 +39,12 @@ echo "${PRTY}Configure environment variables...";
 
 loadShellVars;
 
-PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "ORIGIN_KEY_ID" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
+PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
 [ "${ENVVARSDIRTY}" = "true" ] && askUserForParameters PARM_NAMES[@];
 
 echo "${PRTY}Installing script dependencies";
 
-##         'jq'         parses JSON data
+##         'jq'         parses JSON data   "ORIGIN_KEY_ID" 
 sudo apt -y install jq;
 
 ##     'semver_bash'    parses and compares version numbers
