@@ -1,5 +1,21 @@
 #!/bin/bash
 #
+
+function usage() {
+	echo -e "USAGE :: ${0} <file_to_watch> <command_to_execute> <parm_1> <parm_2> <parm_n>";
+}
+
+if [[ "X$1X" = "XX" ]]; then
+  usage;
+  exit 1;
+fi;
+
+if [[ "X$2X" = "XX" ]]; then
+  usage;
+  exit 1;
+fi;
+
+
 WATCHED_FILE="$1" # Name of file
 THE_COMMAND_TO_RUN="${*:2}" # Command to run on change (takes rest of line)
 # PREVIOUS_SAVE_TIME="$(ls --full-time ${WATCHED_FILE} | awk '{ print $7 }')" # Get latest save time

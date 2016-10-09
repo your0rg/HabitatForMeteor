@@ -64,14 +64,11 @@ set -e;
 #   exit;
 # fi;
 
-
-
 TARGET_PROJECT="${1}";
 RELEASE_TAG="${2}";
 
-TARGET_PROJECT="../vTodos";
-RELEASE_TAG="0.0.4";
-
+TARGET_PROJECT="../todos";
+RELEASE_TAG="0.0.1";
 
 
 echo "Some tasks need to be run as root...";
@@ -91,28 +88,29 @@ echo -e "\n";
 
 
 echo "${PRTY} Stepping into target directory...";
-cd ../vTodos;
+cd ${TARGET_PROJECT};
 declare TARGET_PROJECT_PATH=$(pwd);
 declare HABITAT_WORK=${TARGET_PROJECT_PATH}/.habitat;
 
 if [ ! -d ${TARGET_PROJECT_PATH}/.meteor ]; then
-	echo "Quitting!  Found no directory ${TARGET_PROJECT_PATH}/.meteor.";
+   echo "Quitting!  Found no directory ${TARGET_PROJECT_PATH}/.meteor.";
     exit;
 fi;
 
+if [ ! -d ${TARGET_PROJECT_PATH}/.habitat ]; then
 
-echo "${PRTY} Purging previous HabitatForMeteor files from target...";
-sudo rm -fr ${HABITAT_WORK}/utils;
-sudo rm -fr ${HABITAT_WORK}/BuildAndUpload.sh;
-sudo rm -fr ${HABITAT_WORK}/plan.sh;
+   echo "${PRTY} Purging previous HabitatForMeteor files from target...";
+   sudo rm -fr ${HABITAT_WORK}/utils;
+   sudo rm -fr ${HABITAT_WORK}/BuildAndUpload.sh;
+   sudo rm -fr ${HABITAT_WORK}/plan.sh;
 
+   echo "${PRTY} Copying HabitatForMeteor files to target...";
+   cp -r ${SCRIPTPATH}/.habitat ${TARGET_PROJECT_PATH};
 
-echo "${PRTY} Copying HabitatForMeteor files to target...";
-cp -r ${SCRIPTPATH}/.habitat ${TARGET_PROJECT_PATH};
+   echo -e "${PRTY} Preparing for using Habitat...\n\n      *** Yoo Hoo don't forget me ***\n\n";
+   ${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
 
-
-echo -e "${PRTY} Preparing for using Habitat...\n\n      *** Yoo Hoo don't forget me ***\n\n";
-${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
+fi;
 
 set +e;
 git checkout -- package.json &>/dev/null;
@@ -121,8 +119,15 @@ git status;
 git tag -d ${RELEASE_TAG} &>/dev/null;
 set -e;
 
-
 echo -e "${PRTY} Building application with Meteor,
          packaging with Habitat and
          uploading to Habitat depot...";
 ${HABITAT_WORK}/BuildAndUpload.sh ${RELEASE_TAG};
+
+hidden() {
+  "name": "todos",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": "https://github.com/FleetingClouds/todos",
+
+}

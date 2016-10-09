@@ -5,6 +5,7 @@ getTOMLValueFromName() {
   local __TOMLVALUE=$1;
   local FILE=$2;
   local gNAME=$3;
+  
   [[ "X${FILE}X" != "XX" && -f ${FILE} ]] || { echo "getTOMLValueFromName expected a file name." >&2; exit 1; }
   [[ "X${gNAME}X" != "XX"          ]] || { echo "getTOMLValueFromName expected a mapping key name." >&2; exit 1; }
   local TOMLRESULT=$(cat ${FILE} | grep -m1 "${gNAME} *=" | cut -d= -f2);

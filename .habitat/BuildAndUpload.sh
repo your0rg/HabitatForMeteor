@@ -174,9 +174,7 @@ detectSourceVersionsMismatch() {
   HABITAT=${1-${HABITAT_PLAN_SH}};
   METEOR=${2-${METEOR_PACKAGE_JSON}};
 
-  getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT} pkg_name;
   getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
-  getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT} pkg_origin;
 
   getJSONValueFromName METEOR_NAME ${METEOR} name;
   getJSONValueFromName METEOR_VERSION ${METEOR} version;
@@ -329,18 +327,32 @@ function detectIncoherentVersionSemantics() {
 
 }
 
+
+
 function detectMissingHabitatOriginKey() {
-  sudo hab origin key export your0rg --type public 2>/dev/null || appendToDefectReport "Missing Habitat Origin Key.
+  sudo hab origin key export ${HABITAT_PKG_ORIGIN} --type public 2>/dev/null || appendToDefectReport "Missing Habitat Origin Key.
     A Habitat origin key must be generated or imported.
-    Eg; 
-        'sudo hab setup;  # First time use only!'
-    or
-        'echo \"\${yourHabitatOrigin}-yyyymmddhhmmss.pub\" > sudo hab origin key import';
-        'echo \"\${yourHabitatOrigin}-yyyymmddhhmmss.sig.key\" > sudo hab origin key import';
+    Eg;
+    If keys exist...
+
+cat \${somewhere}/${HABITAT_PKG_ORIGIN}-\${yyyymmddhhmmss}.pub | sudo hab origin key import; echo "";
+cat \${somewhere}/${HABITAT_PKG_ORIGIN}-\${yyyymmddhhmmss}.sig.key | sudo hab origin key import; echo "";
+    ...or...
+
+sudo hab setup;  # First time use only!'
+    ...or...
+
+KEY_STAMP=\$(hab origin key generate fleetingclouds | tail -n 1  | cut -d'-' -f2 | cut -d'.' -f1);
+cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | sudo hab origin key import; echo "";
+cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | sudo hab origin key import; echo "";
+
   ";
 #     TEMPORARY NOTE: An unresolved issue means that the key must
-
+  echo -e "\n";
 }
+
+
+
 
 function buildMeteorProjectBundleIfNotExist() {
 
@@ -366,7 +378,7 @@ function buildMeteorProjectBundleIfNotExist() {
       meteor npm install;
 
       echo "${PRTY} Building Meteor and putting bundle in results directory...";
-      echo "         ** The 'source tree' WARNING can be safely ignored ** ";
+      echo "         ** The 'source tree' WARNING can safely be ignored ** ";
       meteor build ./.habitat/results --directory --server-only;
 
       echo -e "${PRTY} Meteor project rebuilt.
@@ -448,14 +460,20 @@ echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}.";
 cd ${SCRIPTPATH};
 
 . ./scripts/utils.sh;
+. ./scripts/VersionControl.sh;
+. ./scripts/ManageShellVars.sh "scripts/";   loadShellVars;
+echo "Using Habitat plan = ${SCRIPTPATH}/${HABITAT_PLAN_SH}";
+
 
 set +e;
+
+getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT_PLAN_SH} pkg_origin;
+getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT_PLAN_SH} pkg_name;
+echo -e "${PRTY} Beginning to build Habitat package '${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}'";
 
 detectMissingHabitatOriginKey;
 
 detectGitRepoProblem;
-
-. ./scripts/ManageShellVars.sh "scripts/";   loadShellVars;
 
 prepareAbsolutePathNames;
 
@@ -471,6 +489,8 @@ showDefectReport;
 buildMeteorProjectBundleIfNotExist;
 
 buildHabitatArchivePackageIfNotExist;
+
+
 
 echo -e "${PRTY} Ready to commit changes.
 

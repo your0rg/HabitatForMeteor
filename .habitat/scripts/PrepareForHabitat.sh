@@ -8,12 +8,24 @@ PRTY="PREP >> ";
 ENVVARSDIRTY=false;
 ENVVARSDIRTY=true;
 
-pushd .habitat >/dev/null;
-  mv target_gitignore .gitignore >/dev/null;
-  pushd release_notes >/dev/null;
-    mv target_gitignore .gitignore >/dev/null;
+function prepareGitIgnoreFiles() {
+  pushd .habitat;
+    mv target_gitignore .gitignore; # >/dev/null;
+    pushd release_notes >/dev/null;
+      mv target_gitignore .gitignore; # >/dev/null;
+    popd >/dev/null;
   popd >/dev/null;
-popd >/dev/null;
+}
+
+function addHabitatFilesToGit() {
+  git add .habitat/.gitignore;
+  git add .habitat/release_notes/.gitignore;
+  git add .habitat/.gitignore;
+  git add .habitat/default.toml
+  git add .habitat/director.toml
+  git add .habitat/hooks/
+  git add .habitat/plan.sh
+}
 
 METEOR_VERSION="";
 METEOR_VERSION_MEMORY=${HOME}/.meteorVersion;
@@ -23,13 +35,14 @@ if [ -f ${METEOR_VERSION_MEMORY} ]; then
 else
 
   echo "${PRTY}Verifying installed Meteor version (give us a minute...).";
-  METEOR_VERSION=$(meteor --version);
-  # METEOR_VERSION=$(meteor --version)  &>/dev/null;
+  # METEOR_VERSION=$(meteor --version);
+  METEOR_VERSION=$(meteor --version)  &>/dev/null;
   echo "${PRTY}Detected version : '${METEOR_VERSION}'";
   if [[ "X${METEOR_VERSION}X" == "XX" ]]; then
   	echo "${PRTY} ** A Meteor JS installation was expected. **";
-  	echo "${PRTY}Please install Meteor and run this script again.";
+    echo "${PRTY}Please install Meteor using ...";
   	echo "${PRTY}    curl https://install.meteor.com/ | sh;    ";
+    echo "${PRTY}...then rerun this script ('${0}').";
     exit 1;
   else
     echo "${PRTY}Found ${METEOR_VERSION} installed already..";
@@ -37,6 +50,10 @@ else
   fi;
 
 fi;
+
+
+prepareGitIgnoreFiles;
+addHabitatFilesToGit;
 
 cd ${SCRIPTPATH};
 echo "${PRTY}Working in ${SCRIPTPATH}";
@@ -70,9 +87,10 @@ rm -fr ${SEMVER_TAR}*;
 # exit 1;
 
 
+
 echo "${PRTY}Verifying installed Habitat version.";
-HABITAT_VERSION=$(hab --version);
-# HABITAT_VERSION=$(hab --version); &>/dev/null;
+# HABITAT_VERSION=$(hab --version);
+HABITAT_VERSION=$(hab --version); &>/dev/null;
 echo "${PRTY}Detected Habitat version : '${HABITAT_VERSION}'";
 HAB_ALREADY="";
 if [[ "X${HABITAT_VERSION}X" == "XX" ]]; then

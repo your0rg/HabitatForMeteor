@@ -1,9 +1,9 @@
-pkg_origin=your0rg
-pkg_name=tutorial
-pkg_version=0.0.4
-pkg_maintainer="Warehouseman <mhb.warehouseman@gmail.com>"
+pkg_origin=fleetingclouds
+pkg_name=todos
+pkg_version=0.0.1
+pkg_maintainer="Fleeting Clouds <martinhbramwell@gmail.com>"
 pkg_license=('MIT')
-pkg_upstream_url=https://github.com/warehouseman/stocker
+pkg_upstream_url=https://github.com/FleetingClouds/todos
 
 pkg_source="unused. source code is supplied dynamically locally"
 
