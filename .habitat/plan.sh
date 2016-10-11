@@ -1,6 +1,6 @@
 pkg_origin=fleetingclouds
 pkg_name=todos
-pkg_version=0.0.1
+pkg_version=0.0.3
 pkg_maintainer="Fleeting Clouds <martinhbramwell@gmail.com>"
 pkg_license=('MIT')
 pkg_upstream_url=https://github.com/FleetingClouds/todos

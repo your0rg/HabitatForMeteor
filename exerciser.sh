@@ -68,7 +68,7 @@ TARGET_PROJECT="${1}";
 RELEASE_TAG="${2}";
 
 TARGET_PROJECT="../todos";
-RELEASE_TAG="0.0.1";
+RELEASE_TAG="0.0.4";
 
 
 echo "Some tasks need to be run as root...";
@@ -81,8 +81,8 @@ PRTY="XRSZ :: ";
 echo "${PRTY} Matching plan.sh settings to release level...";
 HABITAT_PLAN_FILE=".habitat/plan.sh";
 HABITAT_FIELD="pkg_version";
-sed -i "0,/${HABITAT_FIELD}/ s|.*${HABITAT_FIELD}.*|${HABITAT_FIELD}=${RELEASE_TAG}|" ${HABITAT_PLAN_FILE}; 
-echo -e "\nPlan Metadata\n"; 
+sed -i "0,/${HABITAT_FIELD}/ s|.*${HABITAT_FIELD}.*|${HABITAT_FIELD}=${RELEASE_TAG}|" ${HABITAT_PLAN_FILE};
+echo -e "\nPlan Metadata\n";
 head -n 5 ${HABITAT_PLAN_FILE};
 echo -e "\n";
 
@@ -107,7 +107,7 @@ if [ ! -d ${TARGET_PROJECT_PATH}/.habitat ]; then
    echo "${PRTY} Copying HabitatForMeteor files to target...";
    cp -r ${SCRIPTPATH}/.habitat ${TARGET_PROJECT_PATH};
 
-   echo -e "${PRTY} Preparing for using Habitat...\n\n      *** Yoo Hoo don't forget me ***\n\n";
+   echo -e "${PRTY} Preparing for using Habitat...\n\n";
    ${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
 
 fi;

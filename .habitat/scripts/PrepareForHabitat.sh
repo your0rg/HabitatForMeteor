@@ -27,11 +27,15 @@ function addHabitatFilesToGit() {
   git add .habitat/plan.sh
 }
 
+set -e;
+
 METEOR_VERSION="";
 METEOR_VERSION_MEMORY=${HOME}/.meteorVersion;
 if [ -f ${METEOR_VERSION_MEMORY} ]; then
+
   METEOR_VERSION=$(cat ${METEOR_VERSION_MEMORY});
   echo "${PRTY}Previously, found ${METEOR_VERSION} installed.";
+
 else
 
   echo "${PRTY}Verifying installed Meteor version (give us a minute...).";
@@ -68,7 +72,7 @@ PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTU
 
 echo "${PRTY}Installing script dependencies";
 
-##         'jq'         parses JSON data   "ORIGIN_KEY_ID" 
+##         'jq'         parses JSON data   "ORIGIN_KEY_ID"
 sudo apt -y install jq;
 
 ##     'semver_bash'    parses and compares version numbers
@@ -85,7 +89,6 @@ rm -fr ${SEMVER_TAR}*;
 # semverLT 0.0.5 0.0.5; echo $?;
 # semverLT 0.0.5 0.0.8; echo $?;
 # exit 1;
-
 
 
 echo "${PRTY}Verifying installed Habitat version.";

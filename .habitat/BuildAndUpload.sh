@@ -32,6 +32,8 @@ function getNewestHabitatBuildPackageIfAny() {
 
 };
 
+
+
 # function detectUncommittedChanges() {
 
 #   echo -e "${PRTY} Checking current project commit status.";
@@ -119,7 +121,7 @@ function prepareAbsolutePathNames() {
 
 function detectMissingReleaseDescriptorFile() {
 
-  MSG="${PRTY} This release, '${RELEASE_TAG}', will be described by the note : 
+  MSG="${PRTY} This release, '${RELEASE_TAG}', will be described by the note :
        '${RELEASE_NOTE_PATH}'";
   [ -f ${RELEASE_NOTE_PATH} ] && echo -e "${MSG}" && return;
 
@@ -138,7 +140,7 @@ function detectMissingReleaseDescriptorFile() {
   #         \n";
   #   exit 1;
   # else
-  #   echo -e "${PRTY} This release '${RELEASE_TAG}' will be described by the note : 
+  #   echo -e "${PRTY} This release '${RELEASE_TAG}' will be described by the note :
   #     '${RELEASE_NOTE_PATH}'
   #   ";
   # fi;
@@ -199,8 +201,6 @@ detectSourceVersionsMismatch() {
     >> ${HABITAT} :: ${HABITAT_PKG_VERSION}
     >> ${METEOR} :: ${METEOR_VERSION}
   ";
-
-
 
 
   # getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT} pkg_origin;
@@ -299,13 +299,13 @@ function detectIncoherentVersionSemantics() {
 
 
   # if semverGT ${LATEST_REMOTE_VERSION_TAG} ${LATEST_LOCAL_VERSION_TAG}; then
-  #   ERMSG=${ERMSG}"\n - Remote revision tag '${LATEST_REMOTE_VERSION_TAG}' 
+  #   ERMSG=${ERMSG}"\n - Remote revision tag '${LATEST_REMOTE_VERSION_TAG}'
   #    is greater than local revision tag '${LATEST_LOCAL_VERSION_TAG}'!";
   #   ((COHERENT_VERSIONS++));
   # fi;
 
   # if semverGT ${LATEST_LOCAL_VERSION_TAG} ${HABITAT_PKG_VERSION}; then
-  #   ERMSG=${ERMSG}"\n - Local revision tag '${LATEST_LOCAL_VERSION_TAG}' 
+  #   ERMSG=${ERMSG}"\n - Local revision tag '${LATEST_LOCAL_VERSION_TAG}'
   #    is greater than application revision tag '${HABITAT_PKG_VERSION}'!";
   #   ((COHERENT_VERSIONS++));
   # fi;
@@ -414,7 +414,7 @@ function buildHabitatArchivePackageIfNotExist() {
 
     echo "${PRTY} Beginning building '${BUILD_ARTIFACTS}/${HART_FILE_MSG}'...";
     echo -e "${PRTY} Stepping into the server executables sub-directory
-         of the Meteor bundle directory... 
+         of the Meteor bundle directory...
          ${HART_FILE_PREFIX}*${HART_FILE_SUFFIX}";
 
     pushd ${SERVER_EXECUTABLES} >/dev/null;
