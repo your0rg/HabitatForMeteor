@@ -1,6 +1,6 @@
 # Message of the Day
 message = "Hello, World!"
 
-mongo_url = "mongodb://localhost:27017/todos"
+mongo_url = "mongodb://meteor:coo4cocoa@localhost:27017/todos"
 root_url = "http://localhost"
 port = "3838"
