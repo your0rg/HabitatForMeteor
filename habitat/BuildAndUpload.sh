@@ -448,6 +448,27 @@ function uploadHabitatArchiveFileToDepot() {
 
 }
 
+# Retry a command on failure.
+# ${1} - the max number of attempts
+# ${2}... - the command to run
+function retry() {
+    local -r -i LIMIT="${1}";
+    local -r COMMAND_TO_RUN="${2}";
+    local -i COUNT=1;
+
+    until ${COMMAND_TO_RUN}
+    do
+        if (( COUNT == LIMIT ))
+        then
+            echo "Attempt ${COUNT} failed and there are no more attempts left!"
+            return 1
+        else
+            echo "Attempt ${COUNT} failed! Trying again in ${COUNT} seconds..."
+            sleep $(( COUNT++ ))
+        fi
+    done
+}
+
 
 HABITAT_PKG_NAME="";
 HABITAT_PKG_VERSION="";

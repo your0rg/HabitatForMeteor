@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 
-. ./.habitat/scripts/utils.sh;
+. ./habitat/scripts/utils.sh;
 
 # declare -a DEFECT_REPORT;
 # function appendToDefectReport() {
@@ -79,7 +79,7 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 PRTY="XRSZ :: ";
 
 echo "${PRTY} Matching plan.sh settings to release level...";
-HABITAT_PLAN_FILE=".habitat/plan.sh";
+HABITAT_PLAN_FILE="habitat/plan.sh";
 HABITAT_FIELD="pkg_version";
 sed -i "0,/${HABITAT_FIELD}/ s|.*${HABITAT_FIELD}.*|${HABITAT_FIELD}=${RELEASE_TAG}|" ${HABITAT_PLAN_FILE};
 echo -e "\nPlan Metadata\n";
@@ -91,32 +91,33 @@ echo "${PRTY} Stepping into target directory...";
 cd ${TARGET_PROJECT};
 declare TARGET_PROJECT_PATH=$(pwd);
 declare HABITAT_WORK=${TARGET_PROJECT_PATH}/.habitat;
+mkdir -p ${HABITAT_WORK};
 
 if [ ! -d ${TARGET_PROJECT_PATH}/.meteor ]; then
    echo "Quitting!  Found no directory ${TARGET_PROJECT_PATH}/.meteor.";
     exit;
 fi;
 
-if [ ! -d ${TARGET_PROJECT_PATH}/.habitat ]; then
+if [ -d ${TARGET_PROJECT_PATH}/.habitat ]; then
 
-   echo "${PRTY} Purging previous HabitatForMeteor files from target...";
-   sudo rm -fr ${HABITAT_WORK}/utils;
-   sudo rm -fr ${HABITAT_WORK}/BuildAndUpload.sh;
-   sudo rm -fr ${HABITAT_WORK}/plan.sh;
-
-   echo "${PRTY} Copying HabitatForMeteor files to target...";
-   cp -r ${SCRIPTPATH}/.habitat ${TARGET_PROJECT_PATH};
-
-   echo -e "${PRTY} Preparing for using Habitat...\n\n";
-   ${HABITAT_WORK}/scripts/PrepareForHabitat.sh;
+    echo "${PRTY} Purging previous HabitatForMeteor files from target...";
+    sudo rm -fr ${HABITAT_WORK}/scripts;
+    sudo rm -fr ${HABITAT_WORK}/BuildAndUpload.sh;
+    sudo rm -fr ${HABITAT_WORK}/plan.sh;
 
 fi;
 
-set +e;
-git checkout -- package.json &>/dev/null;
-git checkout -- .habitat/plan.sh &>/dev/null;
-git status;
-git tag -d ${RELEASE_TAG} &>/dev/null;
+echo "${PRTY} Copying HabitatForMeteor files to target...";
+cp -r ${SCRIPTPATH}/habitat/* ${HABITAT_WORK};
+
+echo -e "${PRTY} Preparing for using Habitat...\n\n";
+${HABITAT_WORK}/scripts/PrepareForHabitatBuild.sh;
+
+# set +e;
+# git checkout -- package.json &>/dev/null;
+# git checkout -- .habitat/plan.sh &>/dev/null;
+# git status;
+# git tag -d ${RELEASE_TAG} &>/dev/null;
 set -e;
 
 echo -e "${PRTY} Building application with Meteor,
