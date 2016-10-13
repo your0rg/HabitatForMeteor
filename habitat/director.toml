@@ -1,6 +1,0 @@
-# Start billmeyer.mongodb with --group tutorial and --org your0rg
-# Additionally, pass in --permanent-peer to the start command
-[cfg.services.billmeyer.mongodb.tutorial.your0rg]
-start = "--permanent-peer --strategy at-once"
-
-[cfg.services.your0rg.tutorial.tutorial.your0rg]

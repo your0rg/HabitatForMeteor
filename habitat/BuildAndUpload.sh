@@ -32,31 +32,6 @@ function getNewestHabitatBuildPackageIfAny() {
 
 };
 
-
-
-# function detectUncommittedChanges() {
-
-#   echo -e "${PRTY} Checking current project commit status.";
-#   pushd .. >/dev/null;
-
-#     # git status --porcelain -uno -b;
-
-#     GIT_STATUS=$( git status --porcelain -uno -b | wc -l );
-#     if (( ${GIT_STATUS} != 1 )); then
-#       echo -e "
-#       ERROR : You have uncommitted changes
-#           This script will perform a version bump commit only.
-#           All other changes *must* have been committed previously.
-#         ";
-
-#             echo -e "${PRTY} Quitting now.\nDone.";
-#             exit 1;
-#     fi;
-
-#   popd >/dev/null;
-
-# }
-
 function allFilesTracked() {
 
   echo -e "${PRTY} Checking for untracked files.";
@@ -89,8 +64,8 @@ function detectGitRepoProblem() {
   allFilesTracked || appendToDefectReport "Untracked files
   This script will perform a version bump commit only.
   All other changes *must* have been committed previously.
-  If those files are required to present, but not
-  archived, add them to .gitignore
+  If those files are required, but must not be archived, then
+  add them to .gitignore.
         ";
 
 };
@@ -130,20 +105,6 @@ function detectMissingReleaseDescriptorFile() {
           Expected a simple text file explaining the changes of this release at :
               '${RELEASE_NOTE_PATH}'
           \n";
-
-  # if [[ ! -f ${RELEASE_NOTE_PATH} ]]; then
-  #   echo -e "\n\nERR: No release note file found for release tag '${RELEASE_TAG}'.
-  #         A distinct release note file is required for each deployment.
-  #         Expected the file...
-  #             '${RELEASE_NOTE_PATH}'
-  #         ...to be a simple text file explaining the changes of this release.
-  #         \n";
-  #   exit 1;
-  # else
-  #   echo -e "${PRTY} This release '${RELEASE_TAG}' will be described by the note :
-  #     '${RELEASE_NOTE_PATH}'
-  #   ";
-  # fi;
 
 }
 
@@ -202,41 +163,6 @@ detectSourceVersionsMismatch() {
     >> ${METEOR} :: ${METEOR_VERSION}
   ";
 
-
-  # getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT} pkg_origin;
-
-  # [ "${HABITAT_PKG_ORIGIN}" = "${ORIGIN_KEY_ID}" ] || appendToDefectReport "Origin Identifier Error
-  #   Please correct the origin identifiers and try again.
-  #   >> ${HABITAT} :: ${HABITAT_PKG_ORIGIN}
-  #   >> ${HOME}/.userVars.sh :: ${ORIGIN_KEY_ID}
-  # ";
-
-
-
-  # OK=true;
-  # if [[ "${HABITAT_PKG_NAME}" != "${METEOR_NAME}" ]]; then
-  #   echo "Please correct the names and try again.";
-  #   echo "${HABITAT} :: ${HABITAT_PKG_NAME}";
-  #   echo "${METEOR} :: ${METEOR_NAME}";
-  #   OK=false;
-  # else
-  #   echo "           Version names match.";
-  # fi;
-
-#   if [[ "${HABITAT_PKG_VERSION}" != "${METEOR_VERSION}" ]]; then
-#     echo "Please correct version numbers and try again.";
-#     echo "${HABITAT} :: ${HABITAT_PKG_VERSION}";
-#     echo "${METEOR} :: ${METEOR_VERSION}";
-#     OK=false;
-#   else
-#     echo "           Version numbers match.";
-#   fi;
-
-#   if [[ "${OK}" == "false" ]]; then
-#     echo "ERROR: Version Mismatch.
-#  The version semantics of '${HABITAT}'' and '${METEOR}'' must match exactly.";
-# #    exit 1;
-#   fi;
 }
 
 
@@ -296,34 +222,6 @@ function detectIncoherentVersionSemantics() {
   semverGT ${HABITAT_PKG_VERSION} ${RELEASE_TAG} && appendToDefectReport "${MSGA}
     Application revision tag '${HABITAT_PKG_VERSION}' ${iGT} specified tag '${RELEASE_TAG}'!
   ";
-
-
-  # if semverGT ${LATEST_REMOTE_VERSION_TAG} ${LATEST_LOCAL_VERSION_TAG}; then
-  #   ERMSG=${ERMSG}"\n - Remote revision tag '${LATEST_REMOTE_VERSION_TAG}'
-  #    is greater than local revision tag '${LATEST_LOCAL_VERSION_TAG}'!";
-  #   ((COHERENT_VERSIONS++));
-  # fi;
-
-  # if semverGT ${LATEST_LOCAL_VERSION_TAG} ${HABITAT_PKG_VERSION}; then
-  #   ERMSG=${ERMSG}"\n - Local revision tag '${LATEST_LOCAL_VERSION_TAG}'
-  #    is greater than application revision tag '${HABITAT_PKG_VERSION}'!";
-  #   ((COHERENT_VERSIONS++));
-  # fi;
-
-  # if semverGT ${HABITAT_PKG_VERSION} ${RELEASE_TAG}; then
-  #   ERMSG=${ERMSG}"\n - Application revision tag '${HABITAT_PKG_VERSION}'
-  #    is greater than specified tag '${RELEASE_TAG}'!";
-  #   ((COHERENT_VERSIONS++));
-  # fi;
-
-  # if (( COHERENT_VERSIONS > 0 )); then
-  #   PLRL=""; (( COHERENT_VERSIONS > 0 )) && PLRL="s";
-  #   echo -e "${PRTY} Revision coherence error${PLRL}${ERMSG}";
-  #   echo -e "      ***  Unsafe to proceed. Revision numbers are out of order ***";
-  #   echo -e "\n${PRTY} Quitting now.\nDone.";
-  #   exit 1;
-  # fi;
-  # set -e;
 
 }
 
@@ -451,7 +349,7 @@ function uploadHabitatArchiveFileToDepot() {
 # Retry a command on failure.
 # ${1} - the max number of attempts
 # ${2}... - the command to run
-function retry() {
+function retryCommand() {
     local -r -i LIMIT="${1}";
     local -r COMMAND_TO_RUN="${2}";
     local -i COUNT=1;
@@ -468,6 +366,46 @@ function retry() {
         fi
     done
 }
+
+function findHabitatArchiveFileInDepot() {
+  sudo hab pkg search ${HABITAT_PKG_ORIGIN} | grep ${1};
+}
+
+
+function verifyHabitatArchiveFileIsInDepot() {
+
+  set -e;
+  LAST_BUILD_ENV=${SCRIPTPATH}/results/last_build.env;
+  if [[ -f ${LAST_BUILD_ENV} ]]; then
+
+    getTOMLValueFromName PKG_IDENT ${LAST_BUILD_ENV} pkg_ident;
+    echo -e "${PRTY} Last Habitat generated package was '${PKG_IDENT}'.";
+
+    PKG_INTENDED_IDENT=${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}/${HABITAT_PKG_VERSION}/${HABITAT_PKG_TIMESTAMP};
+    if [[ ${PKG_IDENT} = ${PKG_INTENDED_IDENT} ]]; then
+      echo -e "${PRTY} Searching for our Habitat package '${PKG_INTENDED_IDENT}' in default depot...";
+      set +e;
+      retryCommand 10 findHabitatArchiveFileInDepot ${PKG_IDENT}  || {
+        echo -e "Timed out waiting for package to appear at the depot.
+                  Don't know how to resolve.  ** Release tags not committed. **";
+        echo -e "${PRTY} Finishing now.\nDone.\n\n\n\n";
+          exit 1;
+      }
+      set -e;
+
+    fi;
+
+  else
+
+    echo -e "${PRTY} Cannot read Habitat's record of the last file generated.
+          It's expected at '${LAST_BUILD_ENV}'";
+    exit 1;
+
+  fi;
+  set +e;
+
+}
+
 
 
 HABITAT_PKG_NAME="";
@@ -512,7 +450,6 @@ buildMeteorProjectBundleIfNotExist;
 buildHabitatArchivePackageIfNotExist;
 
 
-
 echo -e "${PRTY} Ready to commit changes.
 
               *** Please confirm the following ***
@@ -545,11 +482,13 @@ esac
 
 uploadHabitatArchiveFileToDepot;
 
+verifyHabitatArchiveFileIsInDepot;
+
 git remote update;
 GIT_DIFF_COUNT=$(git diff origin/master --name-only  | wc -l)
 if [[ "${GIT_DIFF_COUNT}" != "0" ]]; then
   echo -e "ERROR ::  Unexpected change in remote repository.
-     Don't know how to resolve.
+     Don't know how to resolve.    ** Release tags not committed. **
      The following file(s) have changed : ";
   git diff origin/master --name-only | sed "/plan.sh\|package.json/d";
   echo -e "${PRTY} Finishing now.\nDone.\n\n\n\n";

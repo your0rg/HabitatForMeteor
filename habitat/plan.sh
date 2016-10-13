@@ -1,6 +1,6 @@
 pkg_origin=fleetingclouds
 pkg_name=todos
-pkg_version=0.0.4
+pkg_version=0.0.5
 pkg_maintainer="Fleeting Clouds <martinhbramwell@gmail.com>"
 pkg_license=('MIT')
 pkg_upstream_url=https://github.com/FleetingClouds/todos
@@ -52,7 +52,7 @@ do_build() {
     pushd ./results/bundle/programs/server;
     npm install;
     popd;
-  else 
+  else
     build_line "Build. Error:";
     build_line "A previously built Meteor bundle is required in the directory './.habitat/results/.";
     build_line "You need to execute the following command (or sumilar) before using 'hab'";
