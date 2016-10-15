@@ -34,6 +34,8 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 * connects by RPC to your remote host to prepare Habitat with its own user 'sudoer' account
 * connects by RPC to your remote host to create a `systemd` unit file for boot-time &/or manual launch of your application
 
+![Habitat For Meteor](https://docs.google.com/drawings/d/19HVhiUMscFOl4vGXtzgbcbGn8rcltuxkBuRa6YrxiZk/edit?usp=sharing)
+
 ### Getting started
 
 #### The first steps
