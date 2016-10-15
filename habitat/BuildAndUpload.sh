@@ -4,7 +4,7 @@
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
-PRTY="  ==>  ";
+PRTY="BLDUPD  ==>  ";
 
 if [[ "X${1}X" == "XX" ]]; then
     echo "Usage :: ${0} releaseTag";
@@ -82,7 +82,7 @@ function prepareAbsolutePathNames() {
   export METEOR_BUNDLE=${BUILD_ARTIFACTS}/bundle;
   export SERVER_EXECUTABLES=${METEOR_BUNDLE}/programs/server;
 
-  mkdir -p ./${RELEASE_NOTES};
+  mkdir -p ${RELEASE_NOTES};
 
   export RELEASE_NOTE_FILE_NAME=${RELEASE_TAG}${RELEASE_NOTE_SUFFIX};
   export RELEASE_NOTE_PATH=${RELEASE_NOTES}/${RELEASE_NOTE_FILE_NAME};
@@ -201,7 +201,10 @@ function detectIncoherentVersionSemantics() {
 
 
 
-  . ./scripts/semver.sh
+  echo -e set -e;
+  loadSemVerScript;
+  . ./semver.sh
+  . ./scripts/semver.sh;
   # COHERENT_VERSIONS=0;
   # ERMSG="";
   # set +e;

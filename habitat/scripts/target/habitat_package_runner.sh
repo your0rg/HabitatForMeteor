@@ -4,19 +4,33 @@ SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
 SCRIPTNAME=$(basename "${SCRIPT}");
 
+function usage() {
+  echo -e "USAGE : ./${SCRIPTNAME} \${YOUR_ORG} \${YOUR_PKG} [\${YOUR_PKG_VERSION}] [\${YOUR_PKG_TIMESTAMP}]
+  Where : * The four arguments correspond to the four parts of a Habitat package.
+          * Args one and two are obligatory.  Args three and four are optional.
+          * All must be lowercase letting.
+  ${1}";
+  exit 1;
+}
+
+export YOUR_ORG=${1};
+export YOUR_PKG=${2};
+export YOUR_PKG_VERSION=${3};
+export YOUR_PKG_TIMESTAMP=${4};
 
 # #################################
 #     settings
-export YOUR_ORG=fleetingclouds;
-export YOUR_PKG=todos;
-export YOUR_PKG_VERSION=;
-export YOUR_PKG_TIMESTAMP=;
+# export YOUR_ORG=fleetingclouds;
+# export YOUR_PKG=todos;
+# export YOUR_PKG_VERSION=;
+# export YOUR_PKG_TIMESTAMP=;
 # #################################
 
+if [[ "X${YOUR_ORG}X" = "XX" ]]; then usage "YOUR_ORG=${YOUR_ORG}"; fi;
+if [[ "X${YOUR_PKG}X" = "XX" ]]; then usage "YOUR_PKG=${YOUR_PKG}"; fi;
 
 VERSION_PATH="/${YOUR_PKG_VERSION}";
 if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then unset VERSION_PATH; fi;
-
 
 TIMESTAMP_PATH="/${YOUR_PKG_TIMESTAMP}";
 if [[ "X${YOUR_PKG_TIMESTAMP}X" = "XX" ]]; then unset TIMESTAMP_PATH; fi;
@@ -31,7 +45,7 @@ TOML_FILE=${SERVICE_UID}.toml;
 WORK_DIR=/hab/svc/${PACKAGE_PATH};
 DNLD_DIR=/hab/pkgs/${SERVICE_PATH};
 
-TOML_FILE_PATH=${WORK_DIR}/${YOUR_ORG}_${YOUR_PKG}.toml;
+TOML_FILE_PATH=${WORK_DIR}/${TOML_FILE};
 
 
 PRETTY="\n  ==> Runner ::";
@@ -49,9 +63,8 @@ sudo systemctl disable ${UNIT_FILE} >> ${LOG} 2>&1;
 echo -e "${PRETTY} Deleting the '${SERVICE_UID}' systemd unit file, in case there's one already . . ." | tee -a ${LOG};
 sudo rm /etc/systemd/system/${UNIT_FILE} >> ${LOG} 2>&1;
 
-echo -e "${PRETTY} Deleting director toml file from '${TOML_FILE_PATH}', in case there's one already . . ." | tee -a ${LOG};
-sudo mkdir -p ${TOML_FILE_PATH};
-sudo rm -fr ${TOML_FILE_PATH}/${TOML_FILE} >> ${LOG};
+echo -e "${PRETTY} Deleting director toml file '${TOML_FILE_PATH}', in case there's one already . . ." | tee -a ${LOG};
+sudo rm -fr ${TOML_FILE_PATH} >> ${LOG};
 
 echo -e "${PRETTY} Ensuring Habitat Supervisor is available" | tee -a ${LOG};
 sudo hab install core/hab-sup >> ${LOG} 2>&1;
@@ -73,13 +86,13 @@ YOUR_PKG_VERSION=$(echo ${PACKAGE_UUID} | cut -d / -f 1);
 YOUR_PKG_TIMESTAMP=$(echo ${PACKAGE_UUID} | cut -d / -f 2);
 
 echo -e "${PRETTY} Package universal unique ID is :: '${SERVICE_PATH}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}'" >>  ${LOG};
-if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then 
-	echo "Invalid package version '${YOUR_PKG_VERSION}'."  | tee -a ${LOG};
-	exit 1;
+if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then
+  echo "Invalid package version '${YOUR_PKG_VERSION}'."  | tee -a ${LOG};
+  exit 1;
 fi;
-if [[ "${#YOUR_PKG_TIMESTAMP}" != "14" ]]; then 
-	echo "Invalid package timestamp '${YOUR_PKG_TIMESTAMP}'."  | tee -a ${LOG};
-	exit 1;
+if [[ "${#YOUR_PKG_TIMESTAMP}" != "14" ]]; then
+  echo "Invalid package timestamp '${YOUR_PKG_TIMESTAMP}'."  | tee -a ${LOG};
+  exit 1;
 fi;
 
 
@@ -97,21 +110,24 @@ use admin
 db.createUser({user: "admin",pwd:"password",roles:[{role:"root",db:"admin"}]})
 EOFA
 
-echo -e "${PRETTY} Creating 'todos' db and owner 'meteor'" | tee -a ${LOG};
+echo -e "${PRETTY} Creating '${YOUR_PKG}' db and owner 'meteor'" | tee -a ${LOG};
 mongo -u admin -p password admin >> ${LOG} <<EOFM
-use todos
-db.createUser({user: "meteor",pwd:"coocoo4cocoa",roles:[{role:"dbOwner",db:"todos"},"readWrite"]})
+use ${YOUR_PKG}
+db.createUser({user: "meteor",pwd:"coocoo4cocoa",roles:[{role:"dbOwner",db:"${YOUR_PKG}"},"readWrite"]})
 EOFM
 
 # ps aux | grep mongo;
 sudo pkill hab-sup;
 wait;
 
+### ${YOUR_ORG}/${YOUR_PKG}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}/
 
 echo -e "${PRETTY} Creating director toml file '${TOML_FILE_PATH}' from template" | tee -a ${LOG};
 ${SCRIPTPATH}/package.toml.template.sh > ${SCRIPTPATH}/${TOML_FILE};
-echo -e "${PRETTY} Copying director toml file to '${TOML_FILE_PATH}' directory" | tee -a ${LOG};
-sudo cp ${SCRIPTPATH}/${TOML_FILE} ${TOML_FILE_PATH} >> ${LOG};
+echo -e "${PRETTY} Copying director toml file to '${WORK_DIR}' directory" | tee -a ${LOG};
+# echo -e "sudo cp ${SCRIPTPATH}/${TOML_FILE} ${WORK_DIR} >> ${LOG};";
+# exit;
+sudo cp ${SCRIPTPATH}/${TOML_FILE} ${WORK_DIR} >> ${LOG};
 
 echo -e "${PRETTY} Creating systemd unit file to 'systemd' directory" | tee -a ${LOG};
 ${SCRIPTPATH}/package.service.template.sh > ${SCRIPTPATH}/${UNIT_FILE};

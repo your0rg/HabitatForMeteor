@@ -9,7 +9,7 @@ After=syslog.target network.target remote-fs.target nss-lookup.target
 Environment="LC_ALL=C"
 Type=simple
 PIDFile=/run/habitat_${YOUR_ORG}_${YOUR_PKG}.pid
-ExecStart=/bin/hab-director start -c /hab/svc/${YOUR_ORG}/${YOUR_PKG}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}/${YOUR_ORG}_${YOUR_PKG}.toml
+ExecStart=/bin/hab-director start -c /hab/svc/${YOUR_ORG}/${YOUR_PKG}/${YOUR_ORG}_${YOUR_PKG}.toml
 ExecReload=/bin/kill -s HUP \$MAINPID
 ExecStop=/bin/kill -s QUIT \$MAINPID
 PrivateTmp=true

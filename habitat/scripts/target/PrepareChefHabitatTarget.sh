@@ -1,13 +1,22 @@
 #!/bin/bash
 #
+PRETTY="TGTSRV ==> ";
 
-HAB_USER=${1};
-HAB_PASSWD=${2};
-PRETTY="\n  ==> On target server :";
+SCRIPT=$(readlink -f "$0");
+SCRIPTPATH=$(dirname "$SCRIPT");
+export LOG=/tmp/HabitatPreparation.log;
+echo -e "Habitat Preparation Log :: $(date)
+=======================================================" > ${LOG};
+echo -e "\n${PRETTY} Changing working location to ${SCRIPTPATH}."  | tee -a ${LOG};
+cd ${SCRIPTPATH};
+
+HAB_USER='hab';
+HAB_PASSWD=$(cat ./HabUserPwd.txt);
 
 HAB_DIR=/home/${HAB_USER};
 HAB_SSH_DIR=${HAB_DIR}/.ssh;
 HAB_SSH_AXS=${HAB_SSH_DIR}/authorized_keys;
+HAB_SSH_KEY_NAME=authorized_key;
 
 downloadHabToPathDir() {
 
@@ -56,10 +65,10 @@ downloadHabToPathDir() {
   INST_DIR=$( ls -d ${PATTERN} );
   # echo -e "Install from ${INST_DIR}/hab to ${DEST_DIR}";
 
-  sudo mv ${INST_DIR}/hab ${DEST_DIR};
+  sudo -A mv ${INST_DIR}/hab ${DEST_DIR};
   DEST_FILE=${DEST_DIR}/hab;
-  sudo chmod 755 ${DEST_FILE};
-  sudo chown root:root ${DEST_FILE};
+  sudo -A chmod 755 ${DEST_FILE};
+  sudo -A chown root:root ${DEST_FILE};
 
   rm -fr ${PATTERN};
 
@@ -71,49 +80,53 @@ function usage() {
 
 GOOD_PWD=$(echo -e "${HAB_PASSWD}" | grep -cE "^.{8,}$"  2>/dev/null);
 if [ "${GOOD_PWD}" -lt "1" ]; then
-  echo -e "ERROR : Password must be 8 chars minimum.";
+  echo -e "ERROR : Password must be 8 chars minimum."  | tee -a ${LOG};
   usage;
   exit 1;
 fi;
 
-if [ ! -f "id_rsa.pub" ]; then
-  echo -e "ERROR : A ssh certificate is required.  Found no file : '$(pwd)/id_rsa.pub'";
+HABITAT_USER_SSH_KEY_NAME="authorized_key";
+if [ ! -f "${HABITAT_USER_SSH_KEY_NAME}" ]; then
+  echo -e "ERROR : A ssh certificate is required.  Found no file : '$(pwd)/${HABITAT_USER_SSH_KEY_NAME}'"  | tee -a ${LOG};
   usage;
   exit 1;
 fi;
 
-echo -e "${PRETTY} ensuring mongo-shell is installed.  ";
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927;
+export SUDO_ASKPASS=${HOME}/.supwd.sh;
+
+echo -e "${PRETTY} ensuring mongo-shell is installed.  "  | tee -a ${LOG};
+sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 &>/dev/null;
 echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
-         | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list;
-sudo apt-get update;
+         | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
+# echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
+#          | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
+sudo -A apt-get update >>  ${LOG};
+sudo -A apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
 
-sudo apt install -y mongodb-org-shell=3.2.10;
+echo -e "${PRETTY} purging any existing user '${HAB_USER}' . . .  " | tee -a ${LOG};
+sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG};
+sudo -A rm -fr "/etc/sudoers.d/${HAB_USER}" >>  ${LOG};
 
+echo -e "${PRETTY} creating user '${HAB_USER}' . . .  " | tee -a ${LOG};
+sudo -A adduser --disabled-password --gecos "" ${HAB_USER} >>  ${LOG};
 
-echo -e "${PRETTY} purging any existing user '${HAB_USER}' . . .  ";
-sudo deluser --quiet --remove-home ${HAB_USER}  > /dev/null 2>&1;
-sudo rm -fr "/etc/sudoers.d/${HAB_USER}";
+echo -e "${PRETTY} ensuring command 'mkpassword' exists . . .  " | tee -a ${LOG};
+sudo -A apt-get install -y whois  >>  ${LOG};
 
-echo -e "${PRETTY} creating user '${HAB_USER}' . . .  ";
-sudo adduser --disabled-password --gecos "" ${HAB_USER};
+echo -e "${PRETTY} setting password for user '${HAB_USER}' . . .  " | tee -a ${LOG};
+sudo -A usermod --password $( mkpasswd ${HAB_PASSWD} ) ${HAB_USER};
 
-echo -e "${PRETTY} ensuring command 'mkpassword' exists . . .  ";
-sudo apt-get install -y whois > /dev/null;
+echo -e "${PRETTY} adding user '${HAB_USER}' to sudoers . . .  " | tee -a ${LOG};
+sudo -A usermod -aG sudo ${HAB_USER};
 
-echo -e "${PRETTY} setting password for user '${HAB_USER}' . . .  ";
-sudo usermod --password $( mkpasswd ${HAB_PASSWD} ) ${HAB_USER};
+echo -e "${PRETTY} let '${HAB_USER}' account use sudo without password . . .  " | tee -a ${LOG};
+echo -e "${HAB_USER} ALL=(ALL) NOPASSWD:ALL" | (sudo -A su -c "EDITOR='tee' visudo -f /etc/sudoers.d/${HAB_USER}") > /dev/null;
 
-echo -e "${PRETTY} adding user '${HAB_USER}' to sudoers . . .  ";
-sudo usermod -aG sudo ${HAB_USER};
-
-echo -e "${PRETTY} let '${HAB_USER}' account use sudo without password . . .  ";
-echo -e "${HAB_USER} ALL=(ALL) NOPASSWD:ALL" | (sudo su -c "EDITOR='tee' visudo -f /etc/sudoers.d/${HAB_USER}") > /dev/null;
-
-echo -e "${PRETTY} adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  ";
-sudo mkdir -p ${HAB_SSH_DIR};
-sudo cp id_rsa.pub ${HAB_SSH_AXS};
-sudo chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
+echo -e "${PRETTY} adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  " | tee -a ${LOG};
+sudo -A mkdir -p ${HAB_SSH_DIR};
+sudo -A cp ${HAB_SSH_KEY_NAME} ${HAB_SSH_AXS};
+sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
+# cat ${HAB_SSH_AXS};
 
 echo -e "${PRETTY} obtaining 'hab'.";
 

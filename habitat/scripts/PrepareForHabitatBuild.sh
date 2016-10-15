@@ -21,10 +21,9 @@ function addHabitatFilesToGit() {
   git add .habitat/.gitignore;
   git add .habitat/release_notes/.gitignore;
   git add .habitat/.gitignore;
-  git add .habitat/default.toml
-  git add .habitat/director.toml
-  git add .habitat/hooks/
-  git add .habitat/plan.sh
+  git add .habitat/default.toml;
+  git add .habitat/hooks/;
+  git add .habitat/plan.sh;
 }
 
 set -e;
