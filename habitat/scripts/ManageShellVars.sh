@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname "$SCRIPT")
+
+SCRIPT=$(readlink -m "$0");
+# SCRPTPTH=$(dirname "$SCRIPT")
 
 . ./${1}shellVars.sh;
 
@@ -27,6 +28,7 @@ function loadShellVars() {
   # echo -e "GITHUB_ORGANIZATION_NAME = ${GITHUB_ORGANIZATION_NAME}\n";
 
 }
+
 
 function saveShellVars()
 {
@@ -104,4 +106,5 @@ function askUserForParameters()
 
 # ";
 # exit;
+
 

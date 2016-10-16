@@ -54,7 +54,7 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 1. Run `Update_or_Install_H4M_into_Meteor_App.sh ${ path of your app };`, for first time use, and if there are updates. This script will insert HabitatForMeteor into a hidden directory `.habitat` in your project, with suitable `.gitignore` files.  Only a few files will need to be added under version control.
 
-1. Switch to the root of your app ( same level as the `.meteor` dir) and run `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  This script will 
+1. Switch to the root of your app ( same level as the `.meteor` dir ) and run `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  This script will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( this won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat. It records these values in `${HOME}/.userVars.sh`.  One required constant is a GitHub token, to be used to interact with Habitat's package depot.  The token gives visibility only to GitHub email addresses. ( Refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/) )
 
 
 ### Contributing

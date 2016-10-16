@@ -45,7 +45,8 @@ downloadHabToPathDir() {
   # echo "DWNLD ${INST_URL}";
   # echo "TOWRD ${DEST_DIR}";
 
-  wget --quiet --no-clobber -O ${INST_TRGT} ${INST_URL} > /dev/null;
+  set +e; wget --quiet --no-clobber -O ${INST_TRGT} ${INST_URL}; set -e;
+  # > /dev/null;
   rm -fr ${PATTERN};
   tar zxf ${INST_TRGT};
 
