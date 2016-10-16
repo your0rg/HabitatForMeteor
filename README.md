@@ -31,7 +31,7 @@ Also, this is a "feeler" project to see if there is much community interest.  I 
 
 Habitat4Meteor has a lot of moving parts because it interacts with a number of different services :
 
-* pulls Habitat and Meteor and installs them on your development machine if necessary
+* pulls Habitat and installs it on your development machine if necessary
 * builds your Meteor applications
 * assembles your Meteor Node packages into Habitat packages
 * adjusts your applications' version numbering and creates releases in GitHub
@@ -46,11 +46,15 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 1. Prepare two Xubuntu Xenial Xerus virtual machines and give them distinct names that suggest developer machine and target server (`dev` & `srv`).  Set up their hosts files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without turning to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
 
-2. Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from dev machine without password. 
+1. Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from dev machine without password.
 
-3. Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into you machine.
+1. Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into you machine into, for example, ${HOME}/projects.
 
-4. Fork this repo [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor)
+1. Fork this repo [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor) into, for example, ${HOME}/tools.
+
+1. Run `Update_or_Install_H4M_into_Meteor_App.sh ${ path of your app };`, for first time use, and if there are updates. This script will insert HabitatForMeteor into a hidden directory `.habitat` in your project, with suitable `.gitignore` files.  Only a few files will need to be added under version control.
+
+1. Switch to the root of your app ( same level as the `.meteor` dir) and run `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  This script will 
 
 
 ### Contributing

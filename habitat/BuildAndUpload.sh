@@ -433,6 +433,9 @@ getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT_PLAN_SH} pkg_origin;
 getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT_PLAN_SH} pkg_name;
 echo -e "${PRTY} Beginning to build Habitat package '${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}'";
 
+echo -e "${PRTY} Some steps require 'sudo' ...";
+sudo ls -l >/dev/null;
+
 detectMissingHabitatOriginKey;
 
 detectGitRepoProblem;

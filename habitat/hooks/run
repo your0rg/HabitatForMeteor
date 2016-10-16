@@ -2,11 +2,12 @@
 #
 cd {{pkg.svc_var_path}}
 
-echo "######################################";
-echo "##########   {{cfg.mongo_url}} ";
-echo "##########   {{cfg.root_url}} ";
-echo "##########   {{cfg.port}} ";
-echo "######################################";
+echo "###########################################################";
+echo "########## Mongo connector    {{cfg.mongo_url}} ";
+echo "########## Meteor app URL     {{cfg.root_url}} ";
+echo "########## Meteor app port    {{cfg.port}} ";
+echo "########## Current directory  {{pkg.svc_var_path}} ";
+echo "###########################################################";
 
 export MONGO_URL={{cfg.mongo_url}};
 export ROOT_URL={{cfg.root_url}};
