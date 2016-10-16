@@ -1,10 +1,10 @@
 # HabitatForMeteor
-A Habitat packager for Meteor DevOps
+## A Habitat packager for Meteor DevOps
 
 Until, now there have been two main choices for deploying Meteor applications :
 
 1. `Galaxy`, is an option for those with the money and a direct say in infrastructure decisions.
-1. `mup` is a single purpose hack for small budget operations.
+1. `mup`, is a single purpose hack for small budget operations.
 
 HabitatForMeteor is for everyone else.
 
@@ -17,11 +17,15 @@ Building on that, HabitatForMeteor...
 1. Sets up your development machine with the tools to wrap you Meteor application into a Habitat deployment package.
 2. Sets up a remote host with the Habitat deployment environment.
 3. Provides a single command to build a deployment package and publish it to a Habitat Depot.
-4. Provides a single command to pull a deployment package from a depot and deploy it to your remote host, **along with MongoDB, NodeJS, Nginx and the necessary connections between them**.
+4. Provides a single command to pull a deployment package from a depot and deploy it to your remote host, *along with MongoDB, NodeJS, Nginx and the necessary connections between them*.
+
+## Caution
 
 This is an alpha stage project, and Habitat itself is early beta, so please expect some teething pains.
 
 So far, HabitatForMeteor has only been developed and tested on pairs of Xubuntu Xenial Xerus virtual machines.  In the spirit of "release early, release often", the focus has been on ensuring easy accessibility for anyone willing to set up such an environment and give it a whirl.
+
+Also, this is a "feeler" project to see if there is much community interest.  I have used BASH shell scripting throughout.  If there is broader interest, (among Windows server users, particularly, for example), I'd rewrite in a more accessible language.  Since this is a Meteor project, using Node on the client might make sense.  For the server-side Python would be the most accessible, while Rust would be the coolest, and compatible with Habitat itself.
 
 ### Complexity
 
@@ -47,3 +51,15 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 3. Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into you machine.
 
 4. Fork this repo [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor)
+
+
+### Contributing
+
+The main contribution we look for at the mopment is alpha testing.  Spin up a pair of Ubuntu 16.04 flavored machines and follow the instructions.  Post an issue if you hit a snag or ambiguity in the instructions.
+
+#### Stuff missing
+
+1. *Staging*: We need a way to structure pushing to different servers.  Right now it is development direct to production.
+
+1. *Continuous Integration*: In any project, with or without HabitatFor Meteor, each normal commit should fire off a rebuild in a CI server.  Commits which add a new release note should activate HabitatForMeteor to build and test in a staging server.
+2. 
