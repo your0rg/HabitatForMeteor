@@ -138,9 +138,9 @@ echo -e "\n${PRTY} Your development environment is ready for HabitatForMeteor.
 
             ...and run...
 
-              ./.habitat/BuildAndUpload.sh;
+              ./.habitat/BuildAndUpload.sh \${ a release tag };
 
 done
-.  .  .  .  .  .  .  .  .  .  .  .  
+.  .  .  .  .  .  .  .  .  .  .  .
 ";
 popd;

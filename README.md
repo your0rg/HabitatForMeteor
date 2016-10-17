@@ -44,7 +44,7 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 #### The first steps
 
-1. Prepare two Xubuntu Xenial Xerus virtual machines and give them distinct names that suggest developer machine and target server (`dev` & `srv`).  Set up their hosts files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without turning to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
+1. Prepare two Xubuntu Xenial Xerus virtual machines with at least 10G disk space and give them distinct names that suggest developer machine and target server (`dev` & `srv`).  Set up their hosts files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without turning to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
 
 1. Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from dev machine without password.
 
@@ -56,10 +56,28 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 1. Switch to the root of your app ( same level as the `.meteor` dir ) and run `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  This script will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( this won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat. It records these values in `${HOME}/.userVars.sh`.  One required constant is a GitHub token, to be used to interact with Habitat's package depot.  The token gives visibility only to GitHub email addresses. ( Refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/) )
 
+1. The point of using Habitat is ease of deployment, but deployment needs to be a controlled process.  There are several places where the version number is specified and they must all agree.  The next step will fail if their is disagreement or if somehow downstream ( git repo ) version numbers are greater than the current release.  Some other, intentionally redundant, meta information is also required.  The complete list is:
+
+ - `./package.json` - must have four additional fields not Supplied by MDG :
+     -   "name": "todos",
+     -   "version": "0.0.1",
+     -   "license": "MIT",
+     -   "repository": "https://github.com/FleetingClouds/todos",
+
+ - `./habitat/plan.sh` - must indicate the same version in
+     -    pkg_version=0.0.1
+
+ - `./habitat/release_notes/0.0.1_note.txt` - is identified by file name only, you can put what you want in it.
+
+ - `the argument to the script in the next step` - The same version number as in the previous 3 places must also be supplied as an argument to the script, `./.habitat/BuildAndUpload.sh`.
+
+
+1. In the root of your app (as before), run ./.habitat/BuildAndUpload.sh ${ some release tag number }
+
 
 ### Contributing
 
-The main contribution we look for at the mopment is alpha testing.  Spin up a pair of Ubuntu 16.04 flavored machines and follow the instructions.  Post an issue if you hit a snag or ambiguity in the instructions.
+The main contribution we look for at the moment is alpha testing.  Spin up a pair of Ubuntu 16.04 flavored machines and follow the instructions.  Post an issue if you hit a snag or ambiguity in the instructions.
 
 #### Stuff missing
 

@@ -201,7 +201,7 @@ function detectIncoherentVersionSemantics() {
 
 
 
-  echo -e set -e;
+#  echo -e; set -e;
   loadSemVerScript;
   . ./semver.sh
   . ./scripts/semver.sh;
