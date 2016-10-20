@@ -1,23 +1,5 @@
 #!/bin/bash
 #
-PRETTY="TGTSRV ==> ";
-
-SCRIPT=$(readlink -f "$0");
-SCRIPTPATH=$(dirname "$SCRIPT");
-export LOG=/tmp/HabitatPreparation.log;
-echo -e "Habitat Preparation Log :: $(date)
-=======================================================" > ${LOG};
-echo -e "\n${PRETTY} Changing working location to ${SCRIPTPATH}."  | tee -a ${LOG};
-cd ${SCRIPTPATH};
-
-HAB_USER='hab';
-HAB_PASSWD=$(cat ./HabUserPwd.txt);
-
-HAB_DIR=/home/${HAB_USER};
-HAB_SSH_DIR=${HAB_DIR}/.ssh;
-HAB_SSH_AXS=${HAB_SSH_DIR}/authorized_keys;
-HAB_SSH_KEY_NAME=authorized_key;
-
 downloadHabToPathDir() {
 
   INST_HOST="https://api.bintray.com";
@@ -57,14 +39,16 @@ downloadHabToPathDir() {
 
   PATTERN="hab-*-${ARCH}-${OS}";
 
-  # echo -e "DWNLD ${INST_URL}";
-  wget --quiet --no-clobber -O ${INST_TRGT} ${INST_URL} > /dev/null;
+  echo -e "${PRTY} Getting ${INST_URL} ...";
+  set +e; wget --quiet --no-clobber -O ${INST_TRGT} ${INST_URL} > /dev/null;  set -e;
   rm -fr ${PATTERN};
+  echo -e "${PRTY} Unpacking ${INST_TRGT} ...";
   tar zxf ${INST_TRGT};
 
   INST_DIR=$( ls -d ${PATTERN} );
   # echo -e "Install from ${INST_DIR}/hab to ${DEST_DIR}";
 
+  echo -e "${PRTY} Relocating '${INST_DIR}/hab' to '${DEST_DIR}' ...";
   sudo -A mv ${INST_DIR}/hab ${DEST_DIR};
   DEST_FILE=${DEST_DIR}/hab;
   sudo -A chmod 755 ${DEST_FILE};
@@ -78,12 +62,49 @@ function usage() {
   echo -e "USAGE : ./PrepareChefHabitat.sh HABITAT_USER_NAME HABITAT_USER_PASSWORD";
 }
 
-GOOD_PWD=$(echo -e "${HAB_PASSWD}" | grep -cE "^.{8,}$"  2>/dev/null);
-if [ "${GOOD_PWD}" -lt "1" ]; then
-  echo -e "ERROR : Password must be 8 chars minimum."  | tee -a ${LOG};
+PASSWORD_MINIMUM_LENGTH=4;
+function errorUnsuitablePassword() {
+  echo -e "\n\n    *** '${1}' is not a viable password***
+                   -- Minimum size is ${PASSWORD_MINIMUM_LENGTH} chars --"  | tee -a ${LOG};
   usage;
-  exit 1;
-fi;
+}
+
+set -e;
+
+PRTY=" TGTSRV  --> ";
+
+SCRIPT=$(readlink -f "$0");
+SCRIPTPATH=$(dirname "$SCRIPT");
+export LOG=/tmp/HabitatPreparation.log;
+echo -e "Habitat Preparation Log :: $(date)
+=======================================================" > ${LOG};
+echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}."  | tee -a ${LOG};
+cd ${SCRIPTPATH};
+
+HAB_USER='hab';
+# HABITAT_USER_PWD=$(cat ./HabUserPwd.txt);
+
+HAB_DIR=/home/${HAB_USER};
+HAB_SSH_DIR=${HAB_DIR}/.ssh;
+HAB_SSH_AXS=${HAB_SSH_DIR}/authorized_keys;
+HAB_SSH_KEY_NAME=authorized_key;
+
+source secrets.sh;
+# echo -e "${PRTY} MONGODB_PWD=${MONGODB_PWD}";
+# echo -e "${PRTY} TARGET_USER_PWD=${TARGET_USER_PWD}";
+# echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
+# echo -e "${PRTY} HABITAT_USER_SSH_KEY_PATH=${HABITAT_USER_SSH_KEY_PATH}";
+
+
+# GOOD_PWD=$(echo -e "${HABITAT_USER_PWD}" | grep -cE "^.{8,}$"  2>/dev/null);
+# if [ "${GOOD_PWD}" -lt "1" ]; then
+#   echo -e "ERROR : Password must be 8 chars minimum."  | tee -a ${LOG};
+#   usage;
+#   exit 1;
+# fi;
+# ----------------
+echo -e "${PRTY} Validating user's sudo password... ";
+[[ 0 -lt $(echo ${HABITAT_USER_PWD} | grep -cE "^.{${PASSWORD_MINIMUM_LENGTH},}$") ]] ||  errorUnsuitablePassword ${HABITAT_USER_PWD};
 
 HABITAT_USER_SSH_KEY_NAME="authorized_key";
 if [ ! -f "${HABITAT_USER_SSH_KEY_NAME}" ]; then
@@ -92,45 +113,67 @@ if [ ! -f "${HABITAT_USER_SSH_KEY_NAME}" ]; then
   exit 1;
 fi;
 
-export SUDO_ASKPASS=${HOME}/.supwd.sh;
 
-echo -e "${PRETTY} ensuring mongo-shell is installed.  "  | tee -a ${LOG};
+export SUDO_ASKPASS=${HOME}/.ssh/.supwd.sh;
+
+echo -e "${PRTY} Ensuring mongo-shell is installed.  "  | tee -a ${LOG};
+
 sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 &>/dev/null;
 echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
          | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
-# echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
-#          | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
-sudo -A apt-get update >>  ${LOG};
-sudo -A apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get update >>  ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
 
-echo -e "${PRETTY} purging any existing user '${HAB_USER}' . . .  " | tee -a ${LOG};
+echo -e "${PRTY} Purging any existing user '${HAB_USER}' . . .  " | tee -a ${LOG};
 sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG};
 sudo -A rm -fr "/etc/sudoers.d/${HAB_USER}" >>  ${LOG};
 
-echo -e "${PRETTY} creating user '${HAB_USER}' . . .  " | tee -a ${LOG};
+echo -e "${PRTY} Creating user '${HAB_USER}' . . .  " | tee -a ${LOG};
 sudo -A adduser --disabled-password --gecos "" ${HAB_USER} >>  ${LOG};
 
-echo -e "${PRETTY} ensuring command 'mkpassword' exists . . .  " | tee -a ${LOG};
-sudo -A apt-get install -y whois  >>  ${LOG};
+echo -e "${PRTY} Ensuring command 'mkpassword' exists . . .  " | tee -a ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y whois  >>  ${LOG};
 
-echo -e "${PRETTY} setting password for user '${HAB_USER}' . . .  " | tee -a ${LOG};
-sudo -A usermod --password $( mkpasswd ${HAB_PASSWD} ) ${HAB_USER};
+echo -e "${PRTY} Setting password for user '${HAB_USER}' . . .  " | tee -a ${LOG};
+sudo -A usermod --password $( mkpasswd ${HABITAT_USER_PWD} ) ${HAB_USER};
 
-echo -e "${PRETTY} adding user '${HAB_USER}' to sudoers . . .  " | tee -a ${LOG};
+echo -e "${PRTY} Adding user '${HAB_USER}' to sudoers . . .  " | tee -a ${LOG};
 sudo -A usermod -aG sudo ${HAB_USER};
 
-echo -e "${PRETTY} let '${HAB_USER}' account use sudo without password . . .  " | tee -a ${LOG};
-echo -e "${HAB_USER} ALL=(ALL) NOPASSWD:ALL" | (sudo -A su -c "EDITOR='tee' visudo -f /etc/sudoers.d/${HAB_USER}") > /dev/null;
-
-echo -e "${PRETTY} adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  " | tee -a ${LOG};
+echo -e "${PRTY} Adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  " | tee -a ${LOG};
 sudo -A mkdir -p ${HAB_SSH_DIR};
-sudo -A cp ${HAB_SSH_KEY_NAME} ${HAB_SSH_AXS};
+# sudo -A touch ${HAB_SSH_DIR}/${HAB_SSH_AXS};
+sudo -A cp ${HABITAT_USER_SSH_KEY_NAME} ${HAB_SSH_AXS};
 sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
 # cat ${HAB_SSH_AXS};
 
-echo -e "${PRETTY} obtaining 'hab'.";
+
+
+echo -e "${PRTY} Setting up SUDO_ASK_PASS env var...";
+KY_SUDO_ASK_PASS="SUDO_ASKPASS";
+VL_SUDO_ASK_PASS=".supwd.sh";
+EXPORT_SUDO_ASK_PASS="export ${KY_SUDO_ASK_PASS}=\"\${HOME}/.ssh/${VL_SUDO_ASK_PASS}\"";
+export BASH_LOGIN="${HOME}/.bash_login";
+touch ${BASH_LOGIN};
+CNTSAP=$(cat ${BASH_LOGIN} | grep ${KY_SUDO_ASK_PASS} | grep -c ${VL_SUDO_ASK_PASS});
+if [[ "${CNTSAP}" -lt "1" ]]; then
+  echo ${EXPORT_SUDO_ASK_PASS} > ${BASH_LOGIN};
+# else
+#   echo -e "Already is : $(cat ${BASH_LOGIN})";
+fi;
+
+
+
+
+
+echo -e "${PRTY} Obtaining 'hab'.";
 
 DEST_DIR="/usr/local/bin";
 downloadHabToPathDir linux ${DEST_DIR};
-echo -e "${PRETTY} installed 'hab' to '${DEST_DIR}'.\n\n";
+echo -e "${PRTY} Installed 'hab' to '${DEST_DIR}'.\n\n";
+
+
+echo -e "
+                    Quitting target RPC... :: $(date)";
+exit;
 

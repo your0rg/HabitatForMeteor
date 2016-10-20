@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cat <<END
+cat <<EOSST
 [Unit]
 Description=A Habitat Execution for MongoDB, Meteor (under NodeJS) and Nginx.
 After=syslog.target network.target remote-fs.target nss-lookup.target
@@ -18,4 +18,4 @@ Group=hab
 
 [Install]
 WantedBy=multi-user.target
-END
+EOSST
