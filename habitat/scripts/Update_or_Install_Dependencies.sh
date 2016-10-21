@@ -38,7 +38,7 @@ function addHabitatFilesToGit() {
   git add .habitat/plan.sh;
 }
 
-function installMeteor() {
+function isMeteorInstalled() {
 
 	METEOR_VERSION="";
 	METEOR_VERSION_MEMORY=${HOME}/.meteorVersion;
@@ -78,7 +78,6 @@ echo -e "${PRTY}Working in ${SCRIPTPATH}/../..";
 
 prepareGitIgnoreFiles;
 addHabitatFilesToGit;
-installMeteor;
 
 cd ${SCRIPTPATH};
 echo -e "${PRTY}Working in ${SCRIPTPATH}";
@@ -94,6 +93,7 @@ echo -e "\n${PRTY}Installing script dependencies";
 
 ##         'jq'         parses JSON data   "ORIGIN_KEY_ID"
 sudo apt -y install jq;
+sudo apt -y install curl;
 
 ##     'semver_bash'    parses and compares version numbers
 SEMVER_UTIL="semver_bash";
@@ -110,6 +110,7 @@ rm -fr ${SEMVER_TAR}*;
 # semverLT 0.0.5 0.0.8; echo $?;
 # exit 1;
 
+isMeteorInstalled;
 
 echo -e "\n${PRTY}Verifying installed Habitat version.";
 # HABITAT_VERSION=$(hab --version);

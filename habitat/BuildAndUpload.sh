@@ -231,6 +231,7 @@ function detectIncoherentVersionSemantics() {
 
 
 function detectMissingHabitatOriginKey() {
+
   sudo hab origin key export ${HABITAT_PKG_ORIGIN} --type public 2>/dev/null || appendToDefectReport "Missing Habitat Origin Key.
     A Habitat origin key must be generated or imported.
     Eg;
@@ -248,8 +249,16 @@ cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | sudo hab o
 cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | sudo hab origin key import; echo "";
 
   ";
-#     TEMPORARY NOTE: An unresolved issue means that the key must
+#     TEMPORARY NOTE: An unresolved issue means that the key must be available in ~/.hab/cache/keys as well as in /hab/cache/keys
   echo -e "\n";
+}
+
+
+function ensureUserAlsoHasGlobalOriginKey() {
+
+  sudo cp /hab/cache/keys/${HABITAT_PKG_ORIGIN}-*.pub     ~/.hab/cache/keys;
+  sudo cp /hab/cache/keys/${HABITAT_PKG_ORIGIN}-*.sig.key ~/.hab/cache/keys;
+
 }
 
 
@@ -450,6 +459,7 @@ detectIncoherentVersionSemantics;
 
 showDefectReport;
 
+ensureUserAlsoHasGlobalOriginKey;
 
 buildMeteorProjectBundleIfNotExist;
 
