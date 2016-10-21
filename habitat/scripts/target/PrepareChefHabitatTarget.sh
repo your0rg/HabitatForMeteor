@@ -125,7 +125,7 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get update >>  ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
 
 echo -e "${PRTY} Purging any existing user '${HAB_USER}' . . .  " | tee -a ${LOG};
-sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG};
+set +e; sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG}; set -e;
 sudo -A rm -fr "/etc/sudoers.d/${HAB_USER}" >>  ${LOG};
 
 echo -e "${PRTY} Creating user '${HAB_USER}' . . .  " | tee -a ${LOG};
@@ -155,15 +155,13 @@ VL_SUDO_ASK_PASS=".supwd.sh";
 EXPORT_SUDO_ASK_PASS="export ${KY_SUDO_ASK_PASS}=\"\${HOME}/.ssh/${VL_SUDO_ASK_PASS}\"";
 export BASH_LOGIN="${HOME}/.bash_login";
 touch ${BASH_LOGIN};
-CNTSAP=$(cat ${BASH_LOGIN} | grep ${KY_SUDO_ASK_PASS} | grep -c ${VL_SUDO_ASK_PASS});
+cat ${BASH_LOGIN};
+set +e; CNTSAP=$(cat ${BASH_LOGIN} | grep ${KY_SUDO_ASK_PASS} | grep -c ${VL_SUDO_ASK_PASS}); set -e;
 if [[ "${CNTSAP}" -lt "1" ]]; then
   echo ${EXPORT_SUDO_ASK_PASS} > ${BASH_LOGIN};
 # else
 #   echo -e "Already is : $(cat ${BASH_LOGIN})";
 fi;
-
-
-
 
 
 echo -e "${PRTY} Obtaining 'hab'.";

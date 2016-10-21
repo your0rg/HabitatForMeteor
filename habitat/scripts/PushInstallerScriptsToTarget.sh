@@ -137,9 +137,14 @@ ping -c 1 ${TARGET_SERVER} >/dev/null || errorCannotPingRemoteServer "${TARGET_S
 
 
 # ----------------
+echo -e "${PRTY} Start up SSH agent... [   exec ssh-agent bash; ssh-add;  ]";
+eval $(ssh-agent) > /dev/null;
+ssh-add > /dev/null;
+
+
+# ----------------
 echo -e "${PRTY} Testing SSH using... [   ssh ${TARGET_USER}@${TARGET_SERVER} 'whoami';  ]";
 if [[ "X${TARGET_USER}X" = "XX" ]]; then errorNoUserAccountSpecified "null"; fi;
-#  without problemsssh -oBatchMode=yes -l you habsrv whoami
 REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${TARGET_USER} ${TARGET_SERVER} whoami) || errorCannotCallRemoteProcedure "${TARGET_USER}@${TARGET_SERVER}";
 [[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${TARGET_USER}") ]] ||  errorUnexpectedRPCResult;
 
