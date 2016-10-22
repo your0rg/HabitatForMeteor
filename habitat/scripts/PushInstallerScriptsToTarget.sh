@@ -11,6 +11,8 @@ function usage() {
         TARGET_HOST is the host where the project will be installed.
         TARGET_USER is a previously prepared 'sudoer' account on '\${TARGET_HOST}'.
         TARGET_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_HOST}'.
+            ( example file : ${SCRIPTPATH}/target/secrest.sh.example )
+
   ";
   exit 1;
 }

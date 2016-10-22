@@ -32,6 +32,17 @@ function getNewestHabitatBuildPackageIfAny() {
 
 };
 
+function startSSHAgent() {
+
+  echo -e "${PRTY} Starting 'ssh-agent' ...";
+  if [ -z "${SSH_AUTH_SOCK}" ]; then
+    eval $(ssh-agent -s);
+    echo -e "${PRTY} Started 'ssh-agent' ...";
+    ssh-add;
+  fi;
+
+};
+
 function allFilesTracked() {
 
   echo -e "${PRTY} Checking for untracked files.";
@@ -165,6 +176,18 @@ detectSourceVersionsMismatch() {
 
 }
 
+function loadSemVerToolkit() {
+
+#  echo -e; set -e;
+  loadSemVerScript;
+  . ./semver.sh
+  . ./scripts/semver.sh;
+  # COHERENT_VERSIONS=0;
+  # ERMSG="";
+  # set +e;
+
+}
+
 
 function detectIncoherentVersionSemantics() {
 
@@ -197,17 +220,6 @@ function detectIncoherentVersionSemantics() {
   # echo "           Latest version tag locally              : '${LATEST_LOCAL_VERSION_TAG}'";
   # echo "           Latest version tag on remote repository : '${LATEST_REMOTE_VERSION_TAG}'";
 
-
-
-
-
-#  echo -e; set -e;
-  loadSemVerScript;
-  . ./semver.sh
-  . ./scripts/semver.sh;
-  # COHERENT_VERSIONS=0;
-  # ERMSG="";
-  # set +e;
 
 
   local iGT="is greater than";
@@ -383,6 +395,41 @@ function findHabitatArchiveFileInDepot() {
   sudo hab pkg search ${HABITAT_PKG_ORIGIN} | grep ${1};
 }
 
+export LATEST_PUBLISHED_PACKAGE_VERSION="0.0.0-aa0";
+function determineLatestPackagePublished() {
+
+  local PACKAGE_PATH=${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME};
+#  echo -e "Finding ::  ${PACKAGE_PATH} ";
+#  echo -e "Found ::  $(sudo hab pkg search ${HABITAT_PKG_ORIGIN}) ";
+  local PACKAGES=($(sudo hab pkg search ${HABITAT_PKG_ORIGIN}));
+  local LATEST_VERSION="${LATEST_PUBLISHED_PACKAGE_VERSION}";
+  for PACKAGE in "${PACKAGES[@]}"
+  do
+    VERSION=${PACKAGE#${PACKAGE_PATH}/};
+    UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
+    semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
+#    echo -e "Package :  ${UNIQUE_VERSION} ${LATEST_VERSION} ";
+  done
+
+  LATEST_PUBLISHED_PACKAGE_VERSION=${LATEST_VERSION};
+#  echo -e "Quitting with '${LATEST_VERSION}'... ";
+
+}
+
+function detectPackageAlreadyPublished() {
+
+  determineLatestPackagePublished;
+  semverGT ${RELEASE_TAG} ${LATEST_PUBLISHED_PACKAGE_VERSION} && return 0;
+  echo -e "
+                    *** Cannot continue ***
+         A version '${RELEASE_TAG}', would not be greater than the latest
+         published version on Habitat depot, '${LATEST_PUBLISHED_PACKAGE_VERSION}'!
+  ";
+  lastMessage;
+  exit 1;
+
+}
+
 
 function verifyHabitatArchiveFileIsInDepot() {
 
@@ -419,6 +466,30 @@ function verifyHabitatArchiveFileIsInDepot() {
 }
 
 
+function lastMessage() {
+  pushd ${SCRIPTPATH}/.. >/dev/null;
+  echo -e "
+              Your package is published on the Habitat depot.
+
+        * Next Step * : Prepare your target host for deploying the package by
+             placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
+
+        cd $(pwd);
+        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \${TARGET_HOST} \${TARGET_USER} \${TARGET_SECRETS_FILE};
+
+      Where :
+        TARGET_HOST is the host where the project will be installed.
+        TARGET_USER is a previously prepared 'sudoer' account on '\${TARGET_HOST}'.
+        TARGET_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_HOST}'.
+            ( example file : ${SCRIPTPATH}/scripts/target/secrets.sh.example )
+
+
+  .  .  .  .  .  .  .  .  .  .  .  .
+  ";
+  popd >/dev/null;
+}
+
+
 
 HABITAT_PKG_NAME="";
 HABITAT_PKG_VERSION="";
@@ -444,6 +515,12 @@ echo -e "${PRTY} Beginning to build Habitat package '${HABITAT_PKG_ORIGIN}/${HAB
 
 echo -e "${PRTY} Some steps require 'sudo' ...";
 sudo ls -l >/dev/null;
+
+loadSemVerToolkit;
+
+detectPackageAlreadyPublished;
+
+startSSHAgent;
 
 detectMissingHabitatOriginKey;
 
@@ -517,3 +594,6 @@ echo "git commit --porcelain --all --file ${RELEASE_NOTE_PATH};";
 git commit --all --file ${RELEASE_NOTE_PATH};
 git tag --annotate --force --file=${RELEASE_NOTE_PATH} ${RELEASE_TAG};
 git push && git push origin ${RELEASE_TAG};
+
+lastMessage;
+
