@@ -119,6 +119,33 @@ function detectMissingReleaseDescriptorFile() {
 
 }
 
+function detectIncompletePlansh() {
+
+  echo "${PRTY} Confirming '${HABITAT_PLAN}' has all required fields.";
+
+  MSGB="In the file,'";
+  MSGM="', missing field : '";
+  MSGE="'.\n";
+
+  FLD="pkg_origin";
+  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+
+  FLD="pkg_name";
+  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+
+  FLD="pkg_version";
+  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+
+  FLD="pkg_maintainer";
+  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+
+  FLD="pkg_upstream_url";
+  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+
+
+}
+
+
 function detectIncompletePackageJSON() {
 
   echo "${PRTY} Confirming '${METEOR_METADATA}' has all required fields.";
@@ -142,6 +169,8 @@ function detectIncompletePackageJSON() {
   jsonLacksElement "${JSN}" ${FLD} && appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
 }
+
+
 
 detectSourceVersionsMismatch() {
 
@@ -241,9 +270,13 @@ function detectIncoherentVersionSemantics() {
 }
 
 
-
 function detectMissingHabitatOriginKey() {
 
+  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
+    appendToDefectReport "Could not get origin key. No Habitat Origin is defined.
+    ";
+    return;
+  fi;
   sudo hab origin key export ${HABITAT_PKG_ORIGIN} --type public 2>/dev/null || appendToDefectReport "Missing Habitat Origin Key.
     A Habitat origin key must be generated or imported.
     Eg;
@@ -256,15 +289,19 @@ cat \${somewhere}/${HABITAT_PKG_ORIGIN}-\${yyyymmddhhmmss}.sig.key | sudo hab or
 sudo hab setup;  # First time use only!'
     ...or...
 
-KEY_STAMP=\$(hab origin key generate fleetingclouds | tail -n 1  | cut -d'-' -f2 | cut -d'.' -f1);
-cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | sudo hab origin key import; echo "";
-cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | sudo hab origin key import; echo "";
+export TRY=\"* Generated origin key pair ${HABITAT_PKG_ORIGIN}-\";
+STMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1); 
+export STMP=\${STMP%.};
+export KEY_STAMP=\${STMP#\${TRY}};
+cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | hab origin key import; echo "";
+cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | hab origin key import; echo "";
 
-  ";
+";
 #     TEMPORARY NOTE: An unresolved issue means that the key must be available in ~/.hab/cache/keys as well as in /hab/cache/keys
   echo -e "\n";
 }
 
+# KEY_STAMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1  | cut -d'-' -f2 | cut -d'.' -f1);
 
 function ensureUserAlsoHasGlobalOriginKey() {
 
@@ -272,8 +309,6 @@ function ensureUserAlsoHasGlobalOriginKey() {
   sudo cp /hab/cache/keys/${HABITAT_PKG_ORIGIN}-*.sig.key ~/.hab/cache/keys;
 
 }
-
-
 
 
 function buildMeteorProjectBundleIfNotExist() {
@@ -392,29 +427,47 @@ function retryCommand() {
 }
 
 function findHabitatArchiveFileInDepot() {
+  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
+    appendToDefectReport "No Habitat Origin is defined
+        ";
+    return;
+  fi;
   sudo hab pkg search ${HABITAT_PKG_ORIGIN} | grep ${1};
 }
 
 export LATEST_PUBLISHED_PACKAGE_VERSION="0.0.0-aa0";
 function determineLatestPackagePublished() {
 
+  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
+    appendToDefectReport "Could not determine latest package published. No Habitat Origin is defined.
+        ";
+    return;
+  fi;
   local PACKAGE_PATH=${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME};
 #  echo -e "Finding ::  ${PACKAGE_PATH} ";
 #  echo -e "Found ::  $(sudo hab pkg search ${HABITAT_PKG_ORIGIN}) ";
   local PACKAGES=($(sudo hab pkg search ${HABITAT_PKG_ORIGIN}));
-  local LATEST_VERSION="${LATEST_PUBLISHED_PACKAGE_VERSION}";
-  for PACKAGE in "${PACKAGES[@]}"
-  do
-    VERSION=${PACKAGE#${PACKAGE_PATH}/};
-    UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
-    semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
-#    echo -e "Package :  ${UNIQUE_VERSION} ${LATEST_VERSION} ";
-  done
+  export PKG_CHK=$(echo ${PACKAGES[@]} | grep -c "No packages found");
+  if (( ${PKG_CHK} > 0 )); then
+    local LATEST_VERSION="0.0.0-alpha0.0";
+  else
+    local LATEST_VERSION="${LATEST_PUBLISHED_PACKAGE_VERSION}";
+    for PACKAGE in "${PACKAGES[@]}"
+    do
+      VERSION=${PACKAGE#${PACKAGE_PATH}/};
+      UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
+      semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
+  #    echo -e "Package :  ${UNIQUE_VERSION} ${LATEST_VERSION} ";
+    done
+
+  fi;
 
   LATEST_PUBLISHED_PACKAGE_VERSION=${LATEST_VERSION};
 #  echo -e "Quitting with '${LATEST_VERSION}'... ";
 
 }
+
+
 
 function detectPackageAlreadyPublished() {
 
@@ -423,7 +476,8 @@ function detectPackageAlreadyPublished() {
   echo -e "
                     *** Cannot continue ***
          A version '${RELEASE_TAG}', would not be greater than the latest
-         published version on Habitat depot, '${LATEST_PUBLISHED_PACKAGE_VERSION}'!
+         published version on Habitat depot, '${LATEST_PUBLISHED_PACKAGE_VERSION}'
+         for '${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}'!
   ";
   lastMessage;
   exit 1;
@@ -516,17 +570,20 @@ echo -e "${PRTY} Beginning to build Habitat package '${HABITAT_PKG_ORIGIN}/${HAB
 echo -e "${PRTY} Some steps require 'sudo' ...";
 sudo ls -l >/dev/null;
 
+
 loadSemVerToolkit;
 
-detectPackageAlreadyPublished;
-
 startSSHAgent;
-
-detectMissingHabitatOriginKey;
 
 detectGitRepoProblem;
 
 prepareAbsolutePathNames;
+
+detectIncompletePlansh;
+
+detectMissingHabitatOriginKey;
+
+detectPackageAlreadyPublished;
 
 detectIncompletePackageJSON;
 
@@ -541,6 +598,7 @@ ensureUserAlsoHasGlobalOriginKey;
 buildMeteorProjectBundleIfNotExist;
 
 buildHabitatArchivePackageIfNotExist;
+
 
 
 echo -e "${PRTY} Ready to commit changes.
@@ -596,4 +654,5 @@ git tag --annotate --force --file=${RELEASE_NOTE_PATH} ${RELEASE_TAG};
 git push && git push origin ${RELEASE_TAG};
 
 lastMessage;
+
 

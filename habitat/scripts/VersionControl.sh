@@ -8,7 +8,7 @@ getTOMLValueFromName() {
   
   [[ "X${FILE}X" != "XX" && -f ${FILE} ]] || { echo "getTOMLValueFromName expected a file name." >&2; exit 1; }
   [[ "X${gNAME}X" != "XX"          ]] || { echo "getTOMLValueFromName expected a mapping key name." >&2; exit 1; }
-  local TOMLRESULT=$(cat ${FILE} | grep -m1 "${gNAME} *=" | cut -d= -f2);
+  local TOMLRESULT=$(cat ${FILE} | grep "${gNAME} *="  | grep -v -m1 ^[[:space:]]*[#\;] | cut -d= -f2);
   eval $__TOMLVALUE="'$TOMLRESULT'";
 
 }
@@ -22,6 +22,18 @@ getJSONValueFromName() {
   local JSONRESULT=$(jq -r ".${gNAME}" < ${FILE});
   eval $__JSONVALUE="'$JSONRESULT'";
 }
+
+function planLacksElement() {
+
+  local VALUE="";
+  getTOMLValueFromName VALUE ${1} ${2};
+  if [[ "XX" == "X${VALUE}X" ]]; then 
+    return 0;
+  fi;
+  return 1;
+
+}
+
 
 
 HABITAT_PLAN_SH="plan.sh";

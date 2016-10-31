@@ -1,15 +1,56 @@
-pkg_origin=fleetingclouds
-pkg_name=todos
-pkg_version=0.0.8
-pkg_maintainer="Fleeting Clouds <martinhbramwell@gmail.com>"
+############################################################################
+#                                                                          #
+#  ******  A Chef Habitat plan file for packaging Meteor projects ******   #
+#                                                                          #
+############################################################################
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#                                                                          #
+#             You    * DO *    need to change these settings ...           #
+#                                                                          #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+#               Name of Habitat origin.  E.g. --  pkg_origin=yourself-yourorg
+pkg_origin=
+
+#              Name of Habitat package.  E.g. --  pkg_name=todos
+pkg_name=
+
+#       Package formal release version.  E.g. --  pkg_version=0.1.1
+pkg_version=
+
+#        How you wish to be identified.  E.g. --  pkg_maintainer="Yourself <yourself.yourorg@gmail.com>"
+pkg_maintainer=
+
+# Where your source code is published..  E.g. --  pkg_upstream_url=https://github.com/yourse1f-yourorg/todos
+pkg_upstream_url=
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#                                                                          #
+#               You  * should *  look over these settings ...              #
+#                                                                          #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#                 The same license as your project  E.g. --  pkg_license=('MIT')
 pkg_license=('MIT')
-pkg_upstream_url=https://github.com/FleetingClouds/todos
+
+# The port this package should expose to the world  E.g. --  pkg_expose=(3000)
+pkg_expose=(3000)
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#                                                                          #
+#             You  * DO NOT *  need to change these settings ...           #
+#                                                                          #
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 pkg_source="unused. source code is supplied dynamically locally"
 
 pkg_deps=(core/node)
-pkg_expose=(3030)
-
 do_download() { # 01
   return 0;     # Nothing to download
 }

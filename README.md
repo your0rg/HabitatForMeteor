@@ -62,7 +62,7 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 1. *Get Habitat For Meteor* :: Fork this repo [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor) as, for example, `${HOME}/tools/HabitatForMeteor`.
 
 1. *Prepare Example Project* :: Run `Update_or_Install_H4M_into_Meteor_App.sh`, for first time use, or if there are updates.
-Eg; ```Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos;```
+Eg; ```./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos;```
 This script will insert HabitatForMeteor into a hidden directory `.habitat` in your project, with suitable `.gitignore` files.  It will `git add` a few files to your version control, but not commit them.
 
 1. *Initialize Example Project* :: Switch to the root of your app ( same level as the `.meteor` dir ) and run `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  This script will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( this won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat. It records these values in `${HOME}/.userVars.sh`.  One required constant is a GitHub token, to be used to interact with Habitat's package depot.  The token gives visibility only to GitHub email addresses. ( Refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/) )
@@ -148,3 +148,20 @@ The main contribution we look for at the moment is alpha testing.  Spin up a pai
 1. *Staging*: We need a way to structure pushing to different servers.  Right now it is development direct to production.
 
 1. *Continuous Integration*: In any project, with or without HabitatFor Meteor, each normal commit should fire off a rebuild in a CI server.  Commits which add a new release note should activate HabitatForMeteor to build and test in a staging server.
+
+
+#### Typical development REPL loop ( my usage ) 
+
+##### Tools Directory
+
+cd tools/HabitatForMeteor/
+./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos/
+./run_on_save.sh ./habitat/BuildAndUpload.sh ./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos
+
+
+##### Application Directory
+
+cd ~/projects/todos
+./.habitat/scripts/Update_or_Install_Dependencies.sh;
+../../tools/HabitatForMeteor/run_on_save.sh .habitat/BuildAndUpload.sh .habitat/BuildAndUpload.sh 
+
