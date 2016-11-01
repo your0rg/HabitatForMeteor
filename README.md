@@ -59,6 +59,8 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.  Make sure you get to the point of having an issues free build and local execution.  Recently, (Meteor 1.4.2, Oct 2016) I had to do : 
 
+
+    ```
     #
     # Optimize file chnage responsivity
     echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
@@ -71,6 +73,8 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
     #
     # Start it up, look for any other issues and test on URL :: [localhost:3000](http://localhost:3000/).
     meteor
+    ```
+
 
 1. *Get Habitat For Meteor* :: Fork this repo [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor) as, for example, `${HOME}/tools/HabitatForMeteor`.
 
