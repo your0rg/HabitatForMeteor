@@ -178,7 +178,7 @@ The main contribution we look for at the moment is alpha testing.  Spin up a pai
 
 ##### Application Directory
 
-  cd ~/projects/todos
-  ./.habitat/scripts/Update_or_Install_Dependencies.sh;
-  ../../tools/HabitatForMeteor/run_on_save.sh .habitat/BuildAndUpload.sh .habitat/BuildAndUpload.sh 
+    cd ~/projects/todos
+    ./.habitat/scripts/Update_or_Install_Dependencies.sh;
+    ../../tools/HabitatForMeteor/run_on_save.sh .habitat/BuildAndUpload.sh .habitat/BuildAndUpload.sh 
 
