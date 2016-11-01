@@ -105,7 +105,7 @@ loadSemVerScript;
 . ./semver.sh
 
 
-PRTY="PDStT  ==> ";
+PRTY="PIStT  ==> ";
 
 TARGET_SERVER=${1};
 TARGET_USER=${2};

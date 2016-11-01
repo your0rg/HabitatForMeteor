@@ -50,7 +50,9 @@ pkg_expose=(3000)
 
 pkg_source="unused. source code is supplied dynamically locally"
 
-pkg_deps=(core/node)
+# pkg_deps=(core/node)
+pkg_deps=(looprock/node/4.4.7)
+
 do_download() { # 01
   return 0;     # Nothing to download
 }

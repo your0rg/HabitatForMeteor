@@ -53,11 +53,24 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 #### Client side preparations
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 10G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without turning to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 12G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without turning to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
 
 1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from dev machine without password.
 
-1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.
+1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.  Make sure you get to the point of having an issues free build and local execution.  Recently, (Meteor 1.4.2, Oct 2016) I had to do : 
+
+    #
+    # Optimize file chnage responsivity
+    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+    #
+    # Install all NodeJS packages dependencies
+    meteor npm install
+    #
+    # Also install the one that change since the last release of 'meteor/todos'
+    meteor npm install --save bcrypt
+    #
+    # Start it up, look for any other issues and test on URL :: [localhost:3000](http://localhost:3000/).
+    meteor
 
 1. *Get Habitat For Meteor* :: Fork this repo [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor) as, for example, `${HOME}/tools/HabitatForMeteor`.
 
@@ -154,14 +167,14 @@ The main contribution we look for at the moment is alpha testing.  Spin up a pai
 
 ##### Tools Directory
 
-cd tools/HabitatForMeteor/
-./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos/
-./run_on_save.sh ./habitat/BuildAndUpload.sh ./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos
+    cd ~/tools/HabitatForMeteor/
+    ./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos/
+    ./run_on_save.sh ./habitat/BuildAndUpload.sh ./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos
 
 
 ##### Application Directory
 
-cd ~/projects/todos
-./.habitat/scripts/Update_or_Install_Dependencies.sh;
-../../tools/HabitatForMeteor/run_on_save.sh .habitat/BuildAndUpload.sh .habitat/BuildAndUpload.sh 
+  cd ~/projects/todos
+  ./.habitat/scripts/Update_or_Install_Dependencies.sh;
+  ../../tools/HabitatForMeteor/run_on_save.sh .habitat/BuildAndUpload.sh .habitat/BuildAndUpload.sh 
 

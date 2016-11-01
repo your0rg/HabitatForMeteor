@@ -272,6 +272,7 @@ function detectIncoherentVersionSemantics() {
 
 function detectMissingHabitatOriginKey() {
 
+  echo "${PRTY} Confirming availability of Habitat Origin key for '${HABITAT_PKG_ORIGIN}'.";
   if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
     appendToDefectReport "Could not get origin key. No Habitat Origin is defined.
     ";
@@ -471,6 +472,7 @@ function determineLatestPackagePublished() {
 
 function detectPackageAlreadyPublished() {
 
+  echo "${PRTY} Determining if package, '${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}/${RELEASE_TAG}', was already published .";
   determineLatestPackagePublished;
   semverGT ${RELEASE_TAG} ${LATEST_PUBLISHED_PACKAGE_VERSION} && return 0;
   echo -e "
@@ -648,9 +650,11 @@ fi;
 
 git status -uno;
 
-echo "git commit --porcelain --all --file ${RELEASE_NOTE_PATH};";
+echo "Calling :: git commit --porcelain --all --file ${RELEASE_NOTE_PATH};";
 git commit --all --file ${RELEASE_NOTE_PATH};
+echo "Calling :: git tag --annotate --force --file=${RELEASE_NOTE_PATH} ${RELEASE_TAG};";
 git tag --annotate --force --file=${RELEASE_NOTE_PATH} ${RELEASE_TAG};
+echo "Calling :: git push && git push origin ${RELEASE_TAG};";
 git push && git push origin ${RELEASE_TAG};
 
 lastMessage;
