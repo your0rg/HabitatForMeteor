@@ -23,7 +23,7 @@ Controlling your live applications' infrastructure begins to look a lot like, an
 
 Briefly, HabitatForMeteor...
 
-1. Sets up your development machine with the tools to wrap you Meteor application into a Habitat deployment package.
+1. Sets up your development machine with the tools to wrap your Meteor application into a Habitat deployment package.
 2. Sets up a remote host with the Habitat deployment environment.
 3. Provides a single command to build a deployment package and publish it to a Habitat Depot.
 4. Provides a single command to pull a deployment package from a depot and deploy it to your remote host, *along with MongoDB, NodeJS, Nginx and the necessary connections between them*.
@@ -53,9 +53,9 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 #### Client side preparations
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 12G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without turning to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 12G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After a while, you should be able to use the Xubuntu desktop on the developer VM only, without needing to go to the server machine desktop, such that the target VM can be an Ubuntu server install rather than Xubuntu.
 
-1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from dev machine without password.
+1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `dev` machine to `srv` machine without password.
 
 1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.  Make sure you get to the point of having an issues free build and local execution.  Recently, (Meteor 1.4.2, Oct 2016) I had to do : 
 
@@ -102,7 +102,7 @@ This script will insert HabitatForMeteor into a hidden directory `.habitat` in y
 
     - `latest release number in GitHub` - must be less than or equal to the one in the local repo
 
-    - `latest version in the Habitat Depot` - must be less than or equal to the one in the GitHub (BUG : verifying that one is not implemented yet)
+    - `latest version in the Habitat Depot` - must be less than or equal to the one in the GitHub
 
 1. *Commit & Push Example Project* :: Finally you must commit your project entirely.  That is: no files remaining to add, no files remaining to commit. Files that need to be in your project, but not under version control must be ignored explicitly by reference in a `.gitignore` file.
 
@@ -144,15 +144,11 @@ There are a number of considerations.
 The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons, basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC.  On the other hand, the `sudo` password for the habitat user account will be kept available for future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
 
 1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
-```./.habitat/scripts/PushInstallerScriptsToTarget.sh habtrg yourself yourpassword ${HOME}/.ssh/habitat/habpwdfile ${HOME}/.ssh/id_rsa.pub``` The required arguments are :
+```./.habitat/scripts/PushInstallerScriptsToTarget.sh meteor_server yourself /home/you/projects/todos/.habitat/scripts/target/secrets.sh``` The required arguments are :
 
-    - TARGET_SERVER is the host where the project will be installed.
+    - TARGET_HOST is the host where the project will be installed.
     - TARGET_USER is a previously prepared 'sudoer' account on '${TARGET_HOST}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
-    - TARGET_USER_PWD is required for 'sudo' operations by '${TARGET_USER}' account. This is the password the aforementioned user must supply before performing `sudo` operations.
-    - HABITAT_USER_PWD_FILE_PATH points to a file containing the password for the Habitat user, which will be created,
-    - HABITAT_USER_SSH_KEY_PATH  points to a file containing a SSH key to be used for future deployments.
-    - RELEASE_TAG is the release to be installed on ${TARGET_HOST}.
-
+    - TARGET_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
 
 1. ** ::
 
