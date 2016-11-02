@@ -88,8 +88,8 @@ if [ -f ${HABITAT_WORK}/plan.sh ]; then
 
   echo "${PRTY} Detecting changes ...";
   set +e;
-  FILE="plan.sh";
-  diff ${HABITAT_PATH}/${FILE} ${HABITAT_WORK}/${FILE} >/dev/null || collectChanges ${FILE};
+  # FILE="plan.sh";
+  # diff ${HABITAT_PATH}/${FILE} ${HABITAT_WORK}/${FILE} >/dev/null || collectChanges ${FILE};
   FILE="default.toml";
   diff ${HABITAT_PATH}/${FILE} ${HABITAT_WORK}/${FILE} >/dev/null || collectChanges ${FILE};
   FILE="hooks/init";
@@ -112,13 +112,22 @@ fi;
 
 
 echo -e "\n${PRTY} Your application is ready for HabitatForMeteor.
-            If you change your mind, just delete the directory '.habitat'.
+
+            If you change your mind, just delete the directory '${TARGET_PROJECT}.habitat'.
             If you choose to continue you can delete this directory '${SCRIPTFULLPATH}'.
-            Next step : switch to your application root directory...
+
+            Next steps :
+
+            1/. switch to your application root directory...
 
               cd ${TARGET_PROJECT};
 
-            ...and run...
+            2/. copy the file...
+                  ./.habitat/plan.sh.example'
+                            ... to ...
+                  ./.habitat/plan.sh'
+                                   ... and configure as needed.
+            3/. run the script...
 
               ./.habitat/scripts/Update_or_Install_Dependencies.sh;
 

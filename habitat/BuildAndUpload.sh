@@ -290,9 +290,9 @@ cat \${somewhere}/${HABITAT_PKG_ORIGIN}-\${yyyymmddhhmmss}.sig.key | sudo hab or
 sudo hab setup;  # First time use only!'
     ...or...
 
-export TRY=\"* Generated origin key pair ${HABITAT_PKG_ORIGIN}-\";
 STMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1); 
 export STMP=\${STMP%.};
+export TRY=\"* Generated origin key pair ${HABITAT_PKG_ORIGIN}-\";
 export KEY_STAMP=\${STMP#\${TRY}};
 cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | hab origin key import; echo "";
 cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | hab origin key import; echo "";

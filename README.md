@@ -2,7 +2,7 @@
 
 #### TL;DR
 
-Use Chef Habitat for Meteor app deployment.  Bundle up your app with all the necessary installation and configuration instructions, get similar bundles for MongoDB and NGinx, define them as a single logical unit with their connections parameters and then launch the unit automatically at boot-time as a single entity.  Manage remotely using Habitat's supervisory tools.
+Use Habitat by Chef for Meteor app deployment.  Bundle up your app with all the necessary installation and configuration instructions, get similar bundles for MongoDB and NGinx, define them as a single logical unit with their connections parameters and then launch the unit automatically at boot-time as a single entity.  Manage remotely using Habitat's supervisory tools.
 
 ## A Habitat packager for Meteor DevOps
 
@@ -15,7 +15,7 @@ HabitatForMeteor is for everyone else.
 
 If you take DevOps seriously, you know about [Chef](https://www.chef.io/chef), and very likely automate your infrastructure with it already.
 
-[Chef Habitat](https://www.habitat.sh/) is their new product, dedicated to standardizing deployment of any and all server-side applications.  Habitat understands very large installations and offers powerful capabilities for managing multiple logical groupings of services.  One specialized supervisor is the `Director` which permits launching a logical group of services, in a single machine, as though they are a single unit.
+[Habitat by Chef](https://www.habitat.sh/) is their new product, dedicated to standardizing deployment of any and all server-side applications.  Habitat understands very large installations and offers powerful capabilities for managing multiple logical groupings of services.  One specialized supervisor is the `Director` which permits launching a logical group of services, in a single machine, as though they are a single unit.
 
 Production Meteor applications need MongoDB, NodeJS and NGinx in order to run.  By using Habitat, we can bundle up the Node package of our application with all the instructions necessary to run it in NodeJS and connect it to MongoDB.  Habitat makes available similar bundles for MongoDB and NGinx.  We can define an outer "Director" bundle that includes all three together as a logical unit that launches at boot-time via `systemd` and can be reconfigured remotely using Habitat's management tools.
 
@@ -57,22 +57,35 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `dev` machine to `srv` machine without password.
 
-1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.  Make sure you get to the point of having an issues free build and local execution.  Recently, (Meteor 1.4.2, Oct 2016) I had to do : 
+1. *Install Meteor* :: Find the latest correct command in the Meteor documentation page [Install](https://www.meteor.com/install). It's unlikely to change, at las look it was :
+    ```
+    curl https://install.meteor.com/ | sh;
+    ```
 
+
+1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.
+
+1. Decide whether you want to run with the latest version of the `todos` project, the latest release of Meteor, or Meteor version `1.4.2`, against which this project was tested. *Note that*, if you run ```meteor version``` while in the top-level directory of the `todos` project, then `meteor` will download the version specified in `.meteor/release`  and report **that** as the current installed version of Meteor.  On the other hand if you run ```meteor version``` from outside any Meteor project directory it will tell you the version of Meteor that you most recemtly used.  This generates the text to put into `.meteor/release` if you choose to use the your installed Meteor version :
 
     ```
+    MV=$(meteor --version);MV=${MV/#Meteor /METEOR@}; echo ${MV};
+    ```
+
+
+1. Make sure you get to the point of having an issues free build and local execution.  Recently, (Oct 2016), for Meteor 1.4.2, I had to do :
+    ```
     #
-    # Optimize file chnage responsivity
-    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+    # Optimize file change responsivity
+    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
     #
     # Install all NodeJS packages dependencies
     meteor npm install
     #
     # Also install the one that change since the last release of 'meteor/todos'
-    meteor npm install --save bcrypt
+    meteor npm install --save bcrypt;
     #
     # Start it up, look for any other issues and test on URL :: [localhost:3000](http://localhost:3000/).
-    meteor
+    meteor;
     ```
 
 
@@ -82,14 +95,34 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 Eg; ```./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos;```
 This script will insert HabitatForMeteor into a hidden directory `.habitat` in your project, with suitable `.gitignore` files.  It will `git add` a few files to your version control, but not commit them.
 
-1. *Initialize Example Project* :: Switch to the root of your app ( same level as the `.meteor` dir ) and run `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  This script will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( this won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat. It records these values in `${HOME}/.userVars.sh`.  One required constant is a GitHub token, to be used to interact with Habitat's package depot.  The token gives visibility only to GitHub email addresses. ( Refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/) )
+1. *Prepare Habitat package build configuration in the file `./.habitat/plan.sh`* :: Switch to the root of your app ( same level as the `.meteor` dir ), then save the file `./.habitat/plan.sh.example` as `./.habitat/plan.sh`. Edit `./.habitat/plan.sh` establishing these five settings :
 
-1. *Tag Example Project Version* :: The point of using Habitat is ease of deployment, but deployment needs to be a controlled process.  There are several places where the version number is specified and they must all agree.  The next step will fail if their is disagreement or if somehow downstream ( git repo ) version numbers are greater than the current release.  Additional, intentionally redundant meta information is also required.  The complete list is:
+    ```
+    #               Name of Habitat origin.  E.g. --  pkg_origin=yourse1f-yourorg
+    pkg_origin=
+    #              Name of Habitat package.  E.g. --  pkg_name=todos
+    pkg_name=
+    #       Package formal release version.  E.g. --  pkg_version=0.1.1
+    pkg_version=
+    #        How you wish to be identified.  E.g. --  pkg_maintainer="Yourself <yourse1f.yourorg@gmail.com>"
+    pkg_maintainer=
+    # Where your source code is published..  E.g. --  pkg_upstream_url=https://github.com/yourse1f-yourorg/todos
+    pkg_upstream_url=
+
+    ```
+
+1. *Obtain a GitHub Personal Token* :: To work with Habitat you need to warehouse your packages in a Habitat Depot.  You can build your own Depot if necessary.  Here we will use [Habitat's free public depot](https://app.habitat.sh/). To create a depot account you simply need to authenticate via GitHub, using a GitHub Personal Token. Habitat only needs a token that expoases your GitHub email addresses. Refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/), to learn how to get one.
+
+1. *Initialize Example Project* :: Run the script `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  It will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( this won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat, including the GitHub Personal Token, mentioned above. It records these values in `${HOME}/.userVars.sh`.
+
+1. *Tag Example Project Version* :: The point of using Habitat is ease of deployment, but deployment needs to be a controlled process.  There are several places where the current project version number is specified and they **must all agree**.  The next step will fail if their is disagreement or if somehow downstream ( git repo ) version numbers are greater than the current version.  Additional, intentionally redundant, meta information is also required.  The complete list is:
     - `./package.json` - must have four additional fields not Supplied by MDG :
-        -   "name": "todos",
-        -   "version": "**0.1.4**",
-        -   "license": "MIT",
-        -   "repository": "https://github.com/yourOrg/todos",
+        ```
+          "name": "todos",
+          "version": "0.1.4",
+          "license": "MIT",
+          "repository": "https://github.com/yourse1f-yourorg/todos",
+        ```
 
     - `./habitat/plan.sh` - must indicate the same version in
         -    pkg_version=**0.1.4**

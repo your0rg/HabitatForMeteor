@@ -11,7 +11,7 @@
 #                                                                          #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-#               Name of Habitat origin.  E.g. --  pkg_origin=yourself-yourorg
+#               Name of Habitat origin.  E.g. --  pkg_origin=yourse1f-yourorg
 pkg_origin=
 
 #              Name of Habitat package.  E.g. --  pkg_name=todos
@@ -20,7 +20,7 @@ pkg_name=
 #       Package formal release version.  E.g. --  pkg_version=0.1.1
 pkg_version=
 
-#        How you wish to be identified.  E.g. --  pkg_maintainer="Yourself <yourself.yourorg@gmail.com>"
+#        How you wish to be identified.  E.g. --  pkg_maintainer="Yourself <yourse1f.yourorg@gmail.com>"
 pkg_maintainer=
 
 # Where your source code is published..  E.g. --  pkg_upstream_url=https://github.com/yourse1f-yourorg/todos
