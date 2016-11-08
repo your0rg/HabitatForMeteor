@@ -7,18 +7,23 @@ SCRIPTNAME=$(basename "${SCRIPT}");
 source ${HOME}/.bash_login;
 
 function usage() {
-  echo -e "USAGE : ./${SCRIPTNAME} \${USER_TOML_FILE_PATH} \${YOUR_ORG} \${YOUR_PKG} [\${YOUR_PKG_VERSION}] [\${YOUR_PKG_TIMESTAMP}]
-  Where : * The four arguments correspond to the four parts of a Habitat package UUID.
-          * The first and second are obligatory.  Three and four are optional.
+  echo -e "USAGE :
+
+   ./${SCRIPTNAME} \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} [\${YOUR_PKG_VERSION}] [\${YOUR_PKG_TIMESTAMP}]
+
+  Where : * The first argument identifies URL by which the application will be found.
+          * The last four arguments correspond to the four parts of a Habitat package UUID.
+          * Of those, the first and second are obligatory.  The third and fourth are optional.
           * All must be lowercase letting.
   ${1}";
   exit 1;
 }
 
-export YOUR_ORG=${1};
-export YOUR_PKG=${2};
-export YOUR_PKG_VERSION=${3};
-export YOUR_PKG_TIMESTAMP=${4};
+export VIRTUAL_HOST_DOMAIN_NAME=${1};
+export YOUR_ORG=${2};
+export YOUR_PKG=${3};
+export YOUR_PKG_VERSION=${4};
+export YOUR_PKG_TIMESTAMP=${5};
 
 # #################################
 #     settings
@@ -31,6 +36,7 @@ export YOUR_PKG_TIMESTAMP=${4};
 # if [[ "X${USER_TOML_FILE_PATH}X" = "XX" ]]; then usage "USER_TOML_FILE_PATH=${USER_TOML_FILE_PATH}"; fi;
 TARGET_SECRETS_FILE=${SCRIPTPATH}/secrets.sh;
 
+if [[ "X${VIRTUAL_HOST_DOMAIN_NAME}X" = "XX" ]]; then usage "VIRTUAL_HOST_DOMAIN_NAME=${VIRTUAL_HOST_DOMAIN_NAME}"; fi;
 if [[ "X${YOUR_ORG}X" = "XX" ]]; then usage "YOUR_ORG=${YOUR_ORG}"; fi;
 if [[ "X${YOUR_PKG}X" = "XX" ]]; then usage "YOUR_PKG=${YOUR_PKG}"; fi;
 
@@ -54,11 +60,88 @@ UNIT_FILE=${SERVICE_UID}.service;
 WORK_DIR=/hab/svc/${YOUR_PKG};
 META_DIR=/hab/svc/${PACKAGE_PATH};
 DNLD_DIR=/hab/pkgs/${SERVICE_PATH};
+NGINX_DIR=/hab/svc/nginx;
 
 USER_TOML_FILE="user.toml";
 USER_TOML_FILE_PATH=${WORK_DIR}/${USER_TOML_FILE};
 DIRECTOR_TOML_FILE=${SERVICE_UID}.toml;
 DIRECTOR_TOML_FILE_PATH=${META_DIR}/${DIRECTOR_TOML_FILE};
+
+NGINX_TOML_FILE_PATH=${NGINX_DIR}/${USER_TOML_FILE};
+
+NGINX_WORK_DIRECTORY="/etc/nginx";
+NGINX_VHOSTS_DEFINITIONS="${NGINX_WORK_DIRECTORY}/sites-available";
+NGINX_VHOSTS_PUBLICATIONS="${NGINX_WORK_DIRECTORY}/sites-enabled";
+NGINX_VHOSTS_CERTIFICATES="${NGINX_WORK_DIRECTORY}/tls";
+NGINX_ROOT_DIRECTORY="${NGINX_WORK_DIRECTORY}/www-data";
+NGINX_VIRTUAL_HOST_FILE_PATH=${NGINX_VHOSTS_DEFINITIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+pushd HabitatPkgInstallerScripts >/dev/null;
+
+echo -e "${PRETTY} Creating Nginx virtual host directory structure." | tee -a ${LOG};
+sudo -A mkdir -p ${NGINX_VHOSTS_DEFINITIONS};
+sudo -A mkdir -p ${NGINX_VHOSTS_PUBLICATIONS};
+sudo -A mkdir -p ${NGINX_VHOSTS_CERTIFICATES};
+sudo -A mkdir -p ${NGINX_ROOT_DIRECTORY};
+sh ${SCRIPTPATH}/index.html.template.sh > index.html;
+sudo -A cp index.html ${NGINX_ROOT_DIRECTORY};
+
+declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
+declare CERT_PATH=$(echo ${!CP});
+# sudo -A mkdir -p ${CERT_PATH};
+# sudo -A chown -R hab:hab ${CERT_PATH};
+# ls -l "${CERT_PATH}";
+echo -e "${PRETTY} Moving '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate from '${CERT_PATH}'
+                                    to ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
+sudo -A mkdir -p ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME};
+sudo -A cp ${CERT_PATH}/server.* ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME};
+sudo -A chown -R hab:hab ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}/server.*;
+sudo -A chmod -R go-rwx,u+rw ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}/server.*;
+
+echo -e "${PRETTY} Creating Nginx virtual host file '${NGINX_VIRTUAL_HOST_FILE_PATH}' from template." | tee -a ${LOG};
+sh ${SCRIPTPATH}/virtual.host.conf.template.sh > ${VIRTUAL_HOST_DOMAIN_NAME};
+sudo -A cp ${VIRTUAL_HOST_DOMAIN_NAME} ${NGINX_VHOSTS_DEFINITIONS};
+
+echo -e "${PRETTY} Enabling Nginx virtual host ${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
+sudo -A ln -sf ${NGINX_VIRTUAL_HOST_FILE_PATH} ${NGINX_VHOSTS_PUBLICATIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+LOG_DIR="/var/log/nginx";
+VHOST_LOG_DIR="${LOG_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}";
+echo -e "${PRETTY} Creating logging destinations for virtual host : ${VHOST_LOG_DIR}." | tee -a ${LOG};
+sudo -A mkdir -p ${VHOST_LOG_DIR};
+sudo -A touch ${VHOST_LOG_DIR}/access.log;
+sudo -A touch ${VHOST_LOG_DIR}/error.log;
+
+
+echo -e "${PRETTY} Creating Nginx user toml file '${NGINX_TOML_FILE_PATH}' from template." | tee -a ${LOG};
+sudo -A mkdir -p ${NGINX_DIR};
+sh ${SCRIPTPATH}/nginx.user.toml.template.sh > nginx.user.toml;
+sudo -A cp nginx.user.toml ${NGINX_TOML_FILE_PATH};
+
+echo -e "${PRETTY} Preparing site certificates passphrase file." | tee -a ${LOG};
+export GLOBAL_CERT_PASSWORD_PATH=$( dirname "${GLOBAL_CERT_PASSWORD_FILE}");
+export GLOBAL_CERT_PWD_FILE=$(basename "${GLOBAL_CERT_PASSWORD_FILE}");
+
+mkdir -p ${GLOBAL_CERT_PASSWORD_PATH};
+sudo -A touch ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
+TMP=$(sudo -A cat ${CERT_PATH}/server.pp);
+CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c ${TMP});
+if [[ ${CNT} -lt 1 ]]; then
+  echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
+fi;
+
+ls -l ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
+
+
+# echo -e "~~~~~~~~~~~~~~~~~~
+# Quitting  ...
+# ";
+# popd;
+# exit;
+
+
+
+
 
 
 PRETTY="\n  ==> Runner ::";
@@ -128,7 +211,7 @@ EOFA
 echo -e "${PRETTY} Creating '${YOUR_PKG}' db and owner 'meteor'" | tee -a ${LOG};
 mongo -u admin -p password admin >> ${LOG} <<EOFM
 use ${YOUR_PKG}
-db.createUser({user: "meteor",pwd:"coocoo4cocoa",roles:[{role:"dbOwner",db:"${YOUR_PKG}"},"readWrite"]})
+db.createUser({user: "meteor",pwd:"${MONGODB_PWD}",roles:[{role:"dbOwner",db:"${YOUR_PKG}"},"readWrite"]})
 EOFM
 
 # ps aux | grep mongo;
@@ -136,7 +219,6 @@ sudo -A pkill hab-sup;
 wait;
 
 ### ${YOUR_ORG}/${YOUR_PKG}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}/
-
 
 
 sudo -A mkdir -p ${META_DIR};
@@ -153,7 +235,7 @@ echo -e "${PRETTY} Copying unit file to 'systemd' directory" | tee -a ${LOG};
 sudo -A cp ${SCRIPTPATH}/${UNIT_FILE} /etc/systemd/system >> ${LOG};
 
 echo -e "${PRETTY} Creating user toml file '${USER_TOML_FILE_PATH}' from template" | tee -a ${LOG};
-${SCRIPTPATH}/user.toml.template.sh > ${SCRIPTPATH}/${USER_TOML_FILE};
+${SCRIPTPATH}/app.user.toml.template.sh > ${SCRIPTPATH}/${USER_TOML_FILE};
 echo -e "${PRETTY} Copying user toml file to '${WORK_DIR}' directory" | tee -a ${LOG};
 sudo -A cp ${SCRIPTPATH}/${USER_TOML_FILE} ${WORK_DIR} >> ${LOG};
 
@@ -221,3 +303,4 @@ exit 0;
 # sudo -A rm -fr /home/hab/nginx;
 
 # sudo -A updatedb && locate nginx;
+# ----

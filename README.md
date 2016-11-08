@@ -189,14 +189,14 @@ The first is that the initialization script will create a new user named `hab` t
     ```
     export TARGET_HOST="meteor_server";
     export TARGET_USER="yourself";
-    export TARGET_SECRETS_FILE="/home/you/projects/todos/.habitat/scripts/target/secrets.sh";
-    ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_HOST} ${TARGET_USER} ${TARGET_SECRETS_FILE};
+    export SOURCE_SECRETS_FILE="/home/you/projects/todos/.habitat/scripts/target/secrets.sh";
+    ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_HOST} ${TARGET_USER} ${SOURCE_SECRETS_FILE};
     ```
 The required arguments are :
 
     - TARGET_HOST is the host where the project will be installed.
     - TARGET_USER is a previously prepared 'sudoer' account on '${TARGET_HOST}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
-    - TARGET_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
+    - SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
 
 1. ** ::
 
