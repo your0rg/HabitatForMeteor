@@ -9,7 +9,7 @@ Use [Habitat by Chef](https://www.habitat.sh/) for [Meteor](www.meteor.com) app 
 Until, now there have been two main choices for deploying Meteor applications :
 
 1. `Galaxy`, is an option for those with the money and a direct say in infrastructure decisions.
-1. `mup`, is a single purpose hack for small budget operations.
+1. `mup`, is a ([now unsupported](https://voice.kadira.io/its-time-thank-you-bye-meteor-115dd649a8#.yymuveqzg)) single purpose hack for small budget operations.
 
 HabitatForMeteor is for everyone else.
 

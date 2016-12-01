@@ -51,9 +51,9 @@ function showDefectReport() {
 
 }
 
-function jsonLacksElement() {
-  echo ${1} | jq ".${2}"  | grep -c null >/dev/null;
-  return $?;
+function jsonDoesHaveElement() {
+  if [[ "1" -gt $(echo ${1} | jq ".${2}"  | grep -c null >/dev/null) ]]; then return 0; fi;
+  return 1;
 }
 
 # echo "go";

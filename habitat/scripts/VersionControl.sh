@@ -23,14 +23,14 @@ getJSONValueFromName() {
   eval $__JSONVALUE="'$JSONRESULT'";
 }
 
-function planLacksElement() {
+function planDoesHaveElement() {
 
   local VALUE="";
   getTOMLValueFromName VALUE ${1} ${2};
-  if [[ "XX" == "X${VALUE}X" ]]; then 
-    return 0;
+  if [[ "XX" == "X${VALUE}X" ]]; then
+    return 1;
   fi;
-  return 1;
+  return 0;
 
 }
 
