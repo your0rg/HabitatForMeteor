@@ -47,13 +47,15 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 * connects by RPC to your remote host to prepare Habitat with its own user 'sudoer' account
 * connects by RPC to your remote host to create a `systemd` unit file for boot-time &/or manual launch of your application
 
+Initial set up may be a bit of a pain, and can take some time, but the end result is single click deploy **and** release management:  ready for inclusion in serious continuous deployment systems.
+
 ![Habitat For Meteor](https://docs.google.com/drawings/d/19HVhiUMscFOl4vGXtzgbcbGn8rcltuxkBuRa6YrxiZk/pub?w=960&h=720)
 
 ### Getting started
 
 #### Client side preparations
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 12G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After gaining confidence in HabitaForMeteor, you should be able to use the Xubuntu desktop on the developer VM only, going to the server machine via SSH, such that the target VM can be a server install with no GUI needed.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 12G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After gaining confidence in HabitatForMeteor, you should be able to use the Xubuntu desktop on the developer VM only, going to the server machine via SSH, such that the target VM can be a server install with no GUI needed.
 
 1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `dev` machine to `srv` machine without password.
 
@@ -65,7 +67,7 @@ Habitat4Meteor has a lot of moving parts because it interacts with a number of d
 
 1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.
 
-1. Decide whether you want to run with the latest version of the `todos` project, the latest release of Meteor, or Meteor version `1.4.2`, against which this project was tested. *Note that*, if you run ```meteor version``` while in the top-level directory of the `todos` project, then `meteor` will download the version specified in `.meteor/release`  and report **that** as the current installed version of Meteor.  On the other hand if you run ```meteor version``` from outside any Meteor project directory it will tell you the version of Meteor that you most recemtly used.  This generates the text that you would need to put into `.meteor/release` if you choose to use the your installed Meteor version :
+1. Decide whether you want to run with the latest version of the `todos` project, the latest release of Meteor, or Meteor version `1.4.2.3`, against which this project was tested. *Note that*, if you run ```meteor version``` while in the top-level directory of the `todos` project, then `meteor` will download the version specified in `.meteor/release`  and report **that** as the current installed version of Meteor.  On the other hand if you run ```meteor version``` from outside any Meteor project directory it will tell you the version of Meteor that you most recemtly used.  This generates the text that you would need to put into `.meteor/release` if you choose to use your installed Meteor version :
 
     ```
     MV=$(meteor --version);MV=${MV/#Meteor /METEOR@}; echo ${MV};
@@ -118,12 +120,12 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
 
     ```
 
-1. *Obtain a GitHub Personal Token* :: To work with Habitat you need to warehouse your packages in a Habitat Depot.  You can build your own Depot if necessary.  Here we will use [Habitat's free public depot](https://app.habitat.sh/). To sign into a Depot web interface you simply need to authenticate via GitHub. Your package depository will be instantiated automatically.  To interact with a Depot via its API, you **must** use a *GitHub Personal Token*. The Depot only needs a token that exposes your GitHub email addresses. Refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/), to learn how to get one.
+1. *Obtain a GitHub Personal Token* :: To work with Habitat you need to warehouse your packages in a Habitat Depot.  You can build your own Depot if necessary.  Here we will use [Habitat's free public depot](https://app.habitat.sh/). To sign into a Depot web interface you simply need to authenticate via GitHub. Your package depository will be instantiated automatically.  To interact with a Depot via its API, you **must** use a *GitHub Personal Token*. The Depot only needs a token that exposes your GitHub email addresses. Following steps will guide you through using the token; for now, refer to, [Setting up hab to authenticate to the depot](https://www.habitat.sh/docs/share-packages-overview/), to learn how to get one.
 
-1. *Initialize Example Project* :: Run the script `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  It will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( Meteor installation won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat, including the *GitHub Personal Token*, mentioned above. It records these values in `${HOME}/.userVars.sh`.
+1. *Initialize Example Project* :: This is a one time install, with occasional repetitions in the future for the purpose of keeping up to  date.  Run the script `./.habitat/scripts/Update_or_Install_Dependencies.sh;`  It will perform some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary:  ensures non-varying files are ignored by `git`, adds the varying files to your git repo, reminds that a Meteor installation is required ( Meteor installation won't be automated ), installs Habitat and installs dependencies like `jq`and `semver`.  The script prompts for several constants that need to be set in order that you get the correct version of Habitat, including the *GitHub Personal Token*, mentioned above. It records these values in `${HOME}/.userVars.sh`.
 
-1. *Tag Example Project Version* :: The point of using Habitat is ease of deployment, but deployment needs to be a controlled process.  There are several places where the current project version number is specified and **they must all agree**.  The next step will fail if their is disagreement or if somehow downstream ( git repo ) version numbers are greater than the current version.  Additional, intentionally redundant, meta information is also required.  The complete list is:
-    - `./package.json` - must have four additional fields not supplied by Meteor :
+1. *Tag Example Project Version* :: Ease of deployment is the point Habitat, but deployment needs to be a controlled process.  There are several places where the current project version number is specified and **they must all agree**.  The next step will fail if their is disagreement or if somehow downstream ( git repo ) version numbers are greater than the current version.  Additional, intentionally redundant, meta information is also required.  The complete list is:
+    - `./package.json` - must have four additional fields not supplied in the repo `meteor/todos` :
         ```
           "name": "todos",
           "version": "0.1.4",
@@ -146,6 +148,34 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
 
 1. *Commit & Push Example Project* :: Finally you must commit your project entirely.  That is: no files remaining to add, no files remaining to commit. Files that need to be in your project, but not under version control must be ignored explicitly by reference in a `.gitignore` file.
 
+
+1. *Install Habitat Origin Keys* :: There are three possibilities here :
+
+    1. If you have never created any keys then do :
+
+    ```
+    sudo hab setup;
+    ```
+
+    1. If you have keys stored elsewhere and need to install them :
+
+    ```
+    cat ${somewhere}/yourse1f-yourorg-yyyymmddhhmmss.pub | sudo hab origin key import; echo ;
+    cat ${somewhere}/yourse1f-yourorg-yyyymmddhhmmss.sig.key | sudo hab origin key import; echo ;
+    ```
+
+    1. If you need to replace the keys you got with `sudo hab setup` :
+
+    ```
+    STMP=$(hab origin key generate yourse1f-yourorg | tail -n 1);
+    export STMP=${STMP%.};
+    export TRY="* Generated origin key pair yourse1f-yourorg-";
+    export KEY_STAMP=${STMP#${TRY}};
+    cat /home/you/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.pub | hab origin key import; echo ;
+    cat /home/you/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.sig.key | hab origin key import; echo ;
+    ```
+
+1. *Cleanly commit and push the project* :: The next step will balk at continuing if there are any "loose" files in your project directory.  You must have explicitly ignored &/or added, committed **and** pushed, each and every file.
 
 1. *Build Example Project* :: In the root of your app (as before), run `BuildAndUpload.sh`.  For example...
     ```

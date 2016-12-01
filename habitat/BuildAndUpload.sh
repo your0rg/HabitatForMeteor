@@ -128,19 +128,19 @@ function detectIncompletePlansh() {
   MSGE="'.\n";
 
   FLD="pkg_origin";
-  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+  planDoesHaveElement "${HABITAT_PLAN}" "${FLD}" || appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
 
   FLD="pkg_name";
-  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+  planDoesHaveElement "${HABITAT_PLAN}" "${FLD}" || appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
 
   FLD="pkg_version";
-  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+  planDoesHaveElement "${HABITAT_PLAN}" "${FLD}" || appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
 
   FLD="pkg_maintainer";
-  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+  planDoesHaveElement "${HABITAT_PLAN}" "${FLD}" || appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
 
   FLD="pkg_upstream_url";
-  planLacksElement "${HABITAT_PLAN}" "${FLD}" && appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
+  planDoesHaveElement "${HABITAT_PLAN}" "${FLD}" || appendToDefectReport "${MSGB}${HABITAT_PLAN}${MSGM}${FLD}${MSGE}";
 
 
 }
@@ -157,16 +157,17 @@ function detectIncompletePackageJSON() {
   JSN=$(cat ${jsonFILE});
 
   FLD=name;
-  jsonLacksElement "${JSN}" ${FLD} && appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
+
+  jsonDoesHaveElement "${JSN}" ${FLD} || appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
   FLD=version;
-  jsonLacksElement "${JSN}" ${FLD} && appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
+  jsonDoesHaveElement "${JSN}" ${FLD} || appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
   FLD=license;
-  jsonLacksElement "${JSN}" ${FLD} && appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
+  jsonDoesHaveElement "${JSN}" ${FLD} || appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
   FLD=repository;
-  jsonLacksElement "${JSN}" ${FLD} && appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
+  jsonDoesHaveElement "${JSN}" ${FLD} || appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
 }
 
@@ -228,10 +229,10 @@ function detectIncoherentVersionSemantics() {
   getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT} pkg_name;
   getTOMLValueFromName HABITAT_PKG_VERSION ${HABITAT} pkg_version;
 
-  LATEST_LOCAL_VERSION_TAG=$(git describe 2> /dev/null);
-  if [[ "X${LATEST_LOCAL_VERSION_TAG}X" = "XX" ]]; then
+  if [[ "X$(git describe 2> /dev/null)X" = "XX" ]]; then
     LATEST_LOCAL_VERSION_TAG="0.0.0";
   fi;
+
   git remote update >/dev/null;
   LATEST_REMOTE_VERSION_TAG=$(git ls-remote --refs --tags -t origin \
                             | awk '{print $2}' \
@@ -245,9 +246,9 @@ function detectIncoherentVersionSemantics() {
     LATEST_REMOTE_VERSION_TAG="0.0.0";
   fi;
 
-  # echo "           Project metadata revision unique id     : '${HABITAT_PKG_NAME}-${HABITAT_PKG_VERSION}'";
-  # echo "           Latest version tag locally              : '${LATEST_LOCAL_VERSION_TAG}'";
-  # echo "           Latest version tag on remote repository : '${LATEST_REMOTE_VERSION_TAG}'";
+  echo "           Project metadata revision unique id     : '${HABITAT_PKG_NAME}-${HABITAT_PKG_VERSION}'";
+  echo "           Latest version tag locally              : '${LATEST_LOCAL_VERSION_TAG}'";
+  echo "           Latest version tag on remote repository : '${LATEST_REMOTE_VERSION_TAG}'";
 
 
 
@@ -267,12 +268,14 @@ function detectIncoherentVersionSemantics() {
     Application revision tag '${HABITAT_PKG_VERSION}' ${iGT} specified tag '${RELEASE_TAG}'!
   ";
 
+  return 0;
 }
 
 
 function detectMissingHabitatOriginKey() {
 
   echo "${PRTY} Confirming availability of Habitat Origin key for '${HABITAT_PKG_ORIGIN}'.";
+  mkdir -p ${HOME}/.hab/cache/keys;
   if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
     appendToDefectReport "Could not get origin key. No Habitat Origin is defined.
     ";
@@ -299,7 +302,7 @@ cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | hab or
 
 ";
 #     TEMPORARY NOTE: An unresolved issue means that the key must be available in ~/.hab/cache/keys as well as in /hab/cache/keys
-  echo -e "\n";
+#  echo -e "\n";
 }
 
 # KEY_STAMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1  | cut -d'-' -f2 | cut -d'.' -f1);
@@ -453,12 +456,16 @@ function determineLatestPackagePublished() {
     local LATEST_VERSION="0.0.0-alpha0.0";
   else
     local LATEST_VERSION="${LATEST_PUBLISHED_PACKAGE_VERSION}";
+    #echo -e "INITIAL LATEST_VERSION: ${LATEST_VERSION} ";
     for PACKAGE in "${PACKAGES[@]}"
     do
-      VERSION=${PACKAGE#${PACKAGE_PATH}/};
-      UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
-      semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
-  #    echo -e "Package :  ${UNIQUE_VERSION} ${LATEST_VERSION} ";
+      if [[ "XX" != "X$(echo ${PACKAGE} | grep ${PACKAGE_PATH})X" ]]; then
+        VERSION=${PACKAGE#${PACKAGE_PATH}/};
+        UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
+#        echo -e "Package : ${PACKAGE} Path: ${PACKAGE_PATH} extracted version: ${VERSION} unique version: ${UNIQUE_VERSION}";
+#        echo -e " LATEST_VERSION: ${LATEST_VERSION} ";
+        semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
+      fi;
     done
 
   fi;
@@ -467,7 +474,6 @@ function determineLatestPackagePublished() {
 #  echo -e "Quitting with '${LATEST_VERSION}'... ";
 
 }
-
 
 
 function detectPackageAlreadyPublished() {
@@ -540,7 +546,7 @@ function lastMessage() {
             ( example file : ${SCRIPTPATH}/scripts/target/secrets.sh.example )
 
 
-  .  .  .  .  .  .  .  .  .  .  .  .
+  .  .  .  .  .  .  .  .  .  .  .  .  .
   ";
   popd >/dev/null;
 }
@@ -563,7 +569,7 @@ cd ${SCRIPTPATH};
 echo "Using Habitat plan = ${SCRIPTPATH}/${HABITAT_PLAN_SH}";
 
 
-set +e;
+set -e;
 
 getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT_PLAN_SH} pkg_origin;
 getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT_PLAN_SH} pkg_name;
@@ -571,7 +577,6 @@ echo -e "${PRTY} Beginning to build Habitat package '${HABITAT_PKG_ORIGIN}/${HAB
 
 echo -e "${PRTY} Some steps require 'sudo' ...";
 sudo ls -l >/dev/null;
-
 
 loadSemVerToolkit;
 
@@ -600,7 +605,6 @@ ensureUserAlsoHasGlobalOriginKey;
 buildMeteorProjectBundleIfNotExist;
 
 buildHabitatArchivePackageIfNotExist;
-
 
 
 echo -e "${PRTY} Ready to commit changes.
@@ -658,5 +662,3 @@ echo "Calling :: git push && git push origin ${RELEASE_TAG};";
 git push && git push origin ${RELEASE_TAG};
 
 lastMessage;
-
-
