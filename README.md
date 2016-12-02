@@ -68,11 +68,9 @@ Initial set up may be a bit of a pain, and can take some time, but the end resul
 1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.
 
 1. Decide whether you want to run with the latest version of the `todos` project, the latest release of Meteor, or Meteor version `1.4.2.3`, against which this project was tested. *Note that*, if you run ```meteor version``` while in the top-level directory of the `todos` project, then `meteor` will download the version specified in `.meteor/release`  and report **that** as the current installed version of Meteor.  On the other hand if you run ```meteor version``` from outside any Meteor project directory it will tell you the version of Meteor that you most recemtly used.  This generates the text that you would need to put into `.meteor/release` if you choose to use your installed Meteor version :
-
     ```
     MV=$(meteor --version);MV=${MV/#Meteor /METEOR@}; echo ${MV};
     ```
-
 Again . . . **don't** run that in a Meteor application directory.
 
 1. Make sure you get to the point of having an issues free build and execute, locally.  Recently, (Oct 2016), for Meteor 1.4.2, I had to do :
@@ -213,7 +211,19 @@ With your Meteor application bundled up as a Habitat package and available for d
 
 There are a number of considerations.
 
-The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons, basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC.  On the other hand, the `sudo` password for the habitat user account will be kept available for future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
+The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC.  On the other hand, the `sudo` password for the habitat user account will be kept available for future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
+
+Next, you'll need to have ready an SSL certificate file set.  Digital Ocean [explains how to do this](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-16-04) very well as usual.  If you need a "real" certificate from a certificate authority (CA), [StartSSL](https://www.startssl.com/), offers **free** 3 yr., Class 1 certificates that certify up to 10 domains.
+
+The server side steps to perform are :
+
+1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.
+
+    1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  Passwords are **not** used in the SSH and SCP connections, these are passwords used internally in the server.
+    2. Habitat user key path: The path on the developer's (your) machine to a copy of the `hab` user's public key. Obviously the key pair will have to be safely recorded for future use.
+    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming you have a site named `myapp.meteor.com`, the exported shell variable must be **exactly** `export  MYAPP.METEOR.COM_CERT_PATH="${your place for certs}/myapp.meteor.com"`.  Where, `your place for certs` could be, for example, `/home/you/.ssh/hab_vault`.  All three of the required certificate files must be in the specified subdirectory, `myapp.meteor.com`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
+
+        Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
 
 1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
     ```
@@ -239,6 +249,8 @@ The main contribution we look for at the moment is alpha testing.  Spin up a pai
 1. *Staging*: We need a way to structure pushing to different servers.  Right now it is development direct to production.
 
 1. *Continuous Integration*: In any project, with or without HabitatFor Meteor, each normal commit should fire off a rebuild in a CI server.  Commits which add a new release note should activate HabitatForMeteor to build and test in a staging server.
+
+1. *Clustering*: We really do want Nginx fronting two or more Meteor servers, if only for zero-downtime deployment.
 
 
 #### Typical development REPL loop ( my usage ) 
