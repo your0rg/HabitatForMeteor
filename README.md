@@ -219,26 +219,61 @@ The following steps assume you are simply working between two virtual machines w
 
 The server side steps to perform are :
 
-1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.
-
-    1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
-    2. Habitat user key path: The path, on the developer's (your) machine, to a copy of the `hab` user's public key. Obviously the key pair will have to be safely recorded for future use.
-    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming you have a site named `moon.planet.sun`, the exported shell variable must be **exactly** `export  MOON.PLANET.SUN_CERT_PATH="${your place for certs}/moon.planet.sun"`.  Where, `your place for certs` could be, for example, `/home/you/.ssh/hab_vault`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
-
-        Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
-
 1. *Specify the target host in your hosts file* :: Find the IP address of your server, for example `192.168.122.123` and add the following line to the file `/etc/hosts`:
     ```
     192.168.122.123 moon.planet.sun
     ```
 
+1. *Prepare SSH keys* :: Paste the following line at a command prompt.
 
+    ```
+    COMMENT="hab@moon.planet.sun";
+    PWORD="memorablegobbledygook";
+    HABITAT_USER_SSH_KEY_PATH="/home/you/.ssh/hab_vault/habitat_user_ssh"
+    #
+    mkdir -p ${HABITAT_USER_SSH_KEY_PATH};
+    rm -f ${HABITAT_USER_SSH_KEY_PATH}/id_rsa*;
+    ssh-keygen \
+      -t rsa \
+      -C "${COMMENT}" \
+      -f "${HABITAT_USER_SSH_KEY_PATH}/id_rsa" \
+      -P "${PWORD}" \
+      && cat ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
+    ```
 
-1. *Prepare SSL certificate* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
+1. *Prepare SSL certificate* :: Paste the following line at a command prompt.
+
+    ```
+    PWORD="memorablegibberish";
+    SRVR_NAME="moon.planet.sun";
+    SUBJ="/C=ZZ/ST=Planet/L=Moon/O=YouGuyz/CN=${SRVR_NAME}";
+    CERT_PATH="/home/you/.ssh/hab_vault/${SRVR_NAME}";
+    #
+    mkdir -p ${CERT_PATH};
+    rm -f ${CERT_PATH}/*;
+    echo ${PWORD} > ${CERT_PATH}/server.pp;
+    openssl req \
+    -new \
+    -newkey rsa:4096 \
+    -days 1825 \
+    -x509 \
+    -subj "${SUBJ}" \
+    -passout file:${CERT_PATH}/server.pp \
+    -keyout ${CERT_PATH}/server.key \
+    -out ${CERT_PATH}/server.crt
+    ```
+
+1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.
+
+    1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
+    2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
+    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming you have a site named `moon.planet.sun`, the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="${your place for certs}/moon.planet.sun"`.  Where, `your place for certs` could be, for example, `/home/you/.ssh/hab_vault/tls`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
+
+        Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
 
 1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
     ```
-    export TARGET_HOST="meteor_server";
+    export TARGET_HOST="moon.planet.sun";
     export TARGET_USER="yourself";
     export SOURCE_SECRETS_FILE="/home/you/projects/todos/.habitat/scripts/target/secrets.sh";
     ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_HOST} ${TARGET_USER} ${SOURCE_SECRETS_FILE};

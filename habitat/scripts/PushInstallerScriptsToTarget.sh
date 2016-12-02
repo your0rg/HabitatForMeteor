@@ -20,10 +20,10 @@ function usage() {
                   # \${RELEASE_TAG};
                   # \${TARGET_USER_PWD} \\
                   # \${HABITAT_USER_PWD} \\
-                  # \${HABITAT_USER_SSH_KEY_PATH} \\
+                  # \${HABITAT_USER_SSH_KEY_FILE} \\
         # TARGET_USER_PWD is required for 'sudo' operations by '\${TARGET_USER}' account.
         # HABITAT_USER_PWD points to a file containing the password for the (to be created) Habitat user
-        # HABITAT_USER_SSH_KEY_PATH  points to a file containing a SSH key to be used for future deployments.
+        # HABITAT_USER_SSH_KEY_FILE  points to a file containing a SSH key to be used for future deployments.
         # RELEASE_TAG is the release to be installed on \${TARGET_HOST}.
 
 function errorInvalidReleaseTag() {
@@ -115,7 +115,7 @@ SOURCE_SECRETS_FILE=${3};
 PASSWORD_MINIMUM_LENGTH=4;
 # TARGET_USER_PWD=${3};
 # HABITAT_USER_PWD=${4};
-# HABITAT_USER_SSH_KEY_PATH=${5};
+# HABITAT_USER_SSH_KEY_FILE=${5};
 # RELEASE_TAG=${6};
 
 echo -e "${PRTY} TARGET_HOST=${TARGET_HOST}";
@@ -164,7 +164,7 @@ source ${SOURCE_SECRETS_FILE};
 
 echo -e "${PRTY} TARGET_USER_PWD=${TARGET_USER_PWD}";
 echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
-echo -e "${PRTY} HABITAT_USER_SSH_KEY_PATH=${HABITAT_USER_SSH_KEY_PATH}";
+echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
 
 
 
@@ -196,8 +196,8 @@ if [[ "X${MONGODB_PWD}X" = "XX" ]]; then errorNoSuitablePasswordInFile "null"; f
 # ----------------
 HABITAT_USER_SSH_KEY_FILE_NAME="authorized_key";
 echo -e "${PRTY} Validating target host's user's SSH ${HABITAT_USER_SSH_KEY_FILE_NAME}... ";
-if [[ "X${HABITAT_USER_SSH_KEY_PATH}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
-ssh-keygen -lvf ${HABITAT_USER_SSH_KEY_PATH} > /tmp/kyfp.txt || errorBadPathToSSHKey ${HABITAT_USER_SSH_KEY_PATH};
+if [[ "X${HABITAT_USER_SSH_KEY_FILE}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
+ssh-keygen -lvf ${HABITAT_USER_SSH_KEY_FILE} > /tmp/kyfp.txt || errorBadPathToSSHKey ${HABITAT_USER_SSH_KEY_FILE};
 echo -e "${PRTY} Target's user's SSH key fingerprint...";
 cat /tmp/kyfp.txt;
 
@@ -212,7 +212,7 @@ echo -e "${PRTY} Ready to push HabitatForMeteor deployment scripts to the target
 echo -e "${PRTY} Inserting secrets and keys in, '${BUNDLE_NAME}'...";
 chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
 cp -p ${SOURCE_SECRETS_FILE} ${SCRIPTS_DIRECTORY};
-cp -p ${HABITAT_USER_SSH_KEY_PATH} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
+cp -p ${HABITAT_USER_SSH_KEY_FILE} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
 
 
 echo -e "${PRTY} Bundling up the scripts as, '${BUNDLE_NAME}'...";

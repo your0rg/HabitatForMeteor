@@ -93,7 +93,7 @@ source secrets.sh;
 # echo -e "${PRTY} MONGODB_PWD=${MONGODB_PWD}";
 # echo -e "${PRTY} TARGET_USER_PWD=${TARGET_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
-# echo -e "${PRTY} HABITAT_USER_SSH_KEY_PATH=${HABITAT_USER_SSH_KEY_PATH}";
+# echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
 
 
 # GOOD_PWD=$(echo -e "${HABITAT_USER_PWD}" | grep -cE "^.{8,}$"  2>/dev/null);

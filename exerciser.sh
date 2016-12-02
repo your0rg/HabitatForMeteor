@@ -66,7 +66,7 @@ set -e;
 TARGET_USER="you";
 TARGET_USER_PWD="okok";
 HABITAT_USER_PWD_FILE_PATH="${HOME}/.ssh/HabUserPwd";
-HABITAT_USER_SSH_KEY_PATH="${HOME}/.ssh/id_rsa.pub";
+HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa.pub";
 
 echo -e "${PRTY} Pushing deployment scripts to target,
          server '${TARGET_HOST}' ready for RPC to upgrade to
@@ -76,7 +76,7 @@ ${HABITAT_WORK}/scripts/PushInstallerScriptsToTarget.sh \
                    ${TARGET_USER} \
                    ${TARGET_USER_PWD} \
                    ${HABITAT_USER_PWD_FILE_PATH} \
-                   ${HABITAT_USER_SSH_KEY_PATH} \
+                   ${HABITAT_USER_SSH_KEY_FILE} \
                    ${RELEASE_TAG};
 
 # echo -e "${PRTY} Pushing deployment scripts to target,
