@@ -11,7 +11,7 @@ function usage() {
         TARGET_HOST is the host where the project will be installed.
         TARGET_USER is a previously prepared 'sudoer' account on '\${TARGET_HOST}'.
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_HOST}'.
-            ( example file : ${SCRIPTPATH}/target/secrest.sh.example )
+            ( example file : ${SCRIPTPATH}/target/secrets.sh.example )
 
   ";
   exit 1;
@@ -233,7 +233,7 @@ echo -e "${PRTY} Decompressing the bundle...";
 ssh ${TARGET_USER}@${TARGET_HOST} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Setting up SUDO_ASK_PASS on the target...";
-# SUDO_ASK_PASS_MAKER_SCRIPT="/tmp/PrepareSudoAskPass.sh";
+SUDO_ASK_PASS_MAKER_SCRIPT="/tmp/PrepareSudoAskPass.sh";
 
 makeMakerScriptMaker;
 ssh ${TARGET_USER}@${TARGET_HOST} "${MKR_SCRPT}" >/dev/null || errorUnexpectedRPCResult;

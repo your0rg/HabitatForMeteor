@@ -116,9 +116,15 @@ fi;
 
 export SUDO_ASKPASS=${HOME}/.ssh/.supwd.sh;
 
+echo -e "${PRTY} Testing SUDO_ASKPASS and sudo password for '$(whoami)'.  "  | tee -a ${LOG};
+if [[ $(sudo -A touch "/root/$(date)"  &>/dev/null; echo $?;) -gt 0 ]]; then
+  echo -e "ERROR : SUDO_ASKPASS doesn't work.  Is the password correct for : '$(whoami)'"  | tee -a ${LOG};
+fi;
+
 echo -e "${PRTY} Ensuring mongo-shell is installed.  "  | tee -a ${LOG};
 
-sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 &>/dev/null;
+sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927;
+# sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 &>/dev/null;
 echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
          | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get update >>  ${LOG};
@@ -149,7 +155,7 @@ sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
 
 
 
-echo -e "${PRTY} Setting up SUDO_ASK_PASS env var...";
+echo -e "${PRTY} Making SUDO_ASK_PASS env var permanent ...";
 KY_SUDO_ASK_PASS="SUDO_ASKPASS";
 VL_SUDO_ASK_PASS=".supwd.sh";
 EXPORT_SUDO_ASK_PASS="export ${KY_SUDO_ASK_PASS}=\"\${HOME}/.ssh/${VL_SUDO_ASK_PASS}\"";
