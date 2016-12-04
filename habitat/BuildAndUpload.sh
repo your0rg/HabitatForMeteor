@@ -231,6 +231,8 @@ function detectIncoherentVersionSemantics() {
 
   if [[ "X$(git describe 2> /dev/null)X" = "XX" ]]; then
     LATEST_LOCAL_VERSION_TAG="0.0.0";
+  else
+    LATEST_LOCAL_VERSION_TAG="$(git describe 2> /dev/null)";
   fi;
 
   git remote update >/dev/null;
@@ -355,8 +357,8 @@ function buildMeteorProjectBundleIfNotExist() {
 
 function buildHabitatArchivePackageIfNotExist() {
 
-  echo "${PRTY} Set Habitat plan '${HABITAT_PLAN}' version record 'pkg_version' to '${RELEASE_TAG}'...";
-  setTOMLNameValuePair ${HABITAT_PLAN} pkg_version ${RELEASE_TAG} >/dev/null;
+  # echo "${PRTY} Set Habitat plan '${HABITAT_PLAN}' version record 'pkg_version' to '${RELEASE_TAG}'...";
+  # setTOMLNameValuePair ${HABITAT_PLAN} pkg_version ${RELEASE_TAG} >/dev/null;
 
   HART_FILE_PREFIX="${HABITAT_PKG_ORIGIN}-${HABITAT_PKG_NAME}-${RELEASE_TAG}-";
   HART_FILE_SUFFIX="-${TARGET_ARCHITECTURE}-${TARGET_OPERATING_SYSTEM}.hart";
