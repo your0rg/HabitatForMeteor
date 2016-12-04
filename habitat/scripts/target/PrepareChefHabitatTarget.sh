@@ -91,7 +91,7 @@ HAB_SSH_KEY_NAME=authorized_key;
 
 source secrets.sh;
 # echo -e "${PRTY} MONGODB_PWD=${MONGODB_PWD}";
-# echo -e "${PRTY} TARGET_USER_PWD=${TARGET_USER_PWD}";
+# echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
 

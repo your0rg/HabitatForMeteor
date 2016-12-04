@@ -93,6 +93,7 @@ echo -e "\n${PRTY}Installing script dependencies";
 
 ##         'jq'         parses JSON data   "ORIGIN_KEY_ID"
 sudo apt -y install jq;
+sudo apt -y install expect;
 sudo apt -y install curl;
 
 ##     'semver_bash'    parses and compares version numbers

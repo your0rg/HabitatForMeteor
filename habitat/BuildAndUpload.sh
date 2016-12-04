@@ -539,12 +539,12 @@ function lastMessage() {
              placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
 
         cd $(pwd);
-        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \${TARGET_HOST} \${TARGET_USER} \${SOURCE_SECRETS_FILE};
+        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \${TARGET_SRVR} \${SETUP_USER} \${SOURCE_SECRETS_FILE};
 
       Where :
-        TARGET_HOST is the host where the project will be installed.
-        TARGET_USER is a previously prepared 'sudoer' account on '\${TARGET_HOST}'.
-        SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_HOST}'.
+        TARGET_SRVR is the host where the project will be installed.
+        SETUP_USER is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
+        SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/scripts/target/secrets.sh.example )
 
 

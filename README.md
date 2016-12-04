@@ -164,7 +164,7 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
     * added the varying files to your git repo
     * reminded that a Meteor installation is required ( if you haven't installed it )
     * installed Habitat
-    * installed dependencies like `jq`,  `expect` and `semver`.
+    * installed dependencies like `jq`,  `curl`,  `expect` and `semver`.
 
 
 1. *Tag Example Project Version* :: Ease of deployment is the point of Habitat, but deployment needs to be a controlled process.  There are several places where the current project version number is specified and **they must all agree**.  The next step will fail if their is disagreement or if somehow downstream ( git repo ) version numbers are greater than the current version.  Additional, intentionally redundant, meta information is also required.  The complete list is:
@@ -236,8 +236,8 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
     1. If you have keys stored elsewhere, ( eg; ${HOME}/.ssh ), and need to install them :
 
     ```
-    cat ${HOME}/.ssh/yourse1f-yourorg-*.pub | sudo hab origin key import; echo ;
-    cat ${HOME}/.ssh/yourse1f-yourorg-*.sig.key | sudo hab origin key import; echo ;
+    cat ${HOME}/.ssh/hab_vault/habitat_user/yourse1f-yourorg-*.pub | sudo hab origin key import; echo ;
+    cat ${HOME}/.ssh/hab_vault/habitat_user/yourse1f-yourorg-*.sig.key | sudo hab origin key import; echo ;
     ```
 
     1. If you need to replace the keys you got with `sudo hab setup` :
@@ -247,8 +247,8 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
     export STMP=${STMP%.};
     export TRY="* Generated origin key pair yourse1f-yourorg-";
     export KEY_STAMP=${STMP#${TRY}};
-    cat /home/you/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.pub | hab origin key import; echo ;
-    cat /home/you/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.sig.key | hab origin key import; echo ;
+    cat ${HOME}/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.pub | hab origin key import; echo ;
+    cat ${HOME}/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.sig.key | hab origin key import; echo ;
     ```
 
 1. *Use ssh-agent* :: You need to have SSH continually nagging for your SSH key passphrase.  Do ...
@@ -295,13 +295,13 @@ With your Meteor application bundled up as a Habitat package and available for d
 
 There are a number of considerations.
 
-The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC.  On the other hand, the `sudo` password for the habitat user account will be kept available for future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
+The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for future all deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
 
 Next, you'll need to have ready an SSL certificate file set.  Digital Ocean [explains how to do this](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-16-04) very well as usual.  If you need a "real" certificate from a certificate authority (CA), [StartSSL](https://www.startssl.com/), offers **free** 3 yr., Class 1 certificates that certify up to 10 domains.
 
 The following steps assume you are simply working between two virtual machines with a self-signed certificate for an imaginary domain.
 
-  **It is important to notice that server-side preparations are done from the developer client machine!**
+  **It is important to notice that these server-side preparations are done from the developer client machine, using SCP and RPC via SSH!  Unless, otherwise indicated, the provided command snippets are to be run in a terminal window on the client.**
 
 The **client side** steps to perform server side preparations are :
 
@@ -318,11 +318,9 @@ The **client side** steps to perform server side preparations are :
 1. *Prepare SSH keys* :: Paste the following lines at a command prompt.
 
     ```
-    USRNAME="hab";
-    SRVRNAME="hab4metsrv";
-    COMMENT="${USRNAME}@${SRVRNAME}";
-    PWORD="memorablegobbledygook";
-    HABITAT_USER_SSH_KEY_PATH="/home/you/.ssh/hab_vault/habitat_user_ssh"
+    COMMENT="DevopsTeamLeader";
+    SSHPPHRASE="memorablegobbledygook";
+    HABITAT_USER_SSH_KEY_PATH="${HOME}/.ssh/hab_vault/habitat_user"
     #
     mkdir -p ${HABITAT_USER_SSH_KEY_PATH};
     rm -f ${HABITAT_USER_SSH_KEY_PATH}/id_rsa*;
@@ -330,23 +328,23 @@ The **client side** steps to perform server side preparations are :
       -t rsa \
       -C "${COMMENT}" \
       -f "${HABITAT_USER_SSH_KEY_PATH}/id_rsa" \
-      -P "${PWORD}" \
+      -P "${SSHPPHRASE}" \
       && cat ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
 
     ```
-    Next, push the keys over to the server.
+    WRONG! *Next, push the public key into the server's `authorized_keys` file.*
     ```
-    cat ${HABITAT_USER_SSH_KEY_PATH}id_rsa.pub | ssh ${USRNAME}@${SRVRNAME} 'cat >> .ssh/authorized_keys'
+    # cat ${HABITAT_USER_SSH_KEY_PATH}id_rsa.pub | ssh ${HABITAT_USER}@${TARGET_SRVR} 'cat >> .ssh/authorized_keys'
     ```
-    You'll also need to distinguish the `hab` user's keys from you own by means of a SSH `config` file.  Paste the following lines at a command prompt.
+    You'll also need to distinguish the `hab` user's keys from you own, by means of a SSH `config` file.  Paste the following lines at a command prompt.
     ```
-    USRNAME="hab";
-    PWORD="memorablegobbledygook";
-    SRVRNAME="hab4metsrv";
-    HABITAT_USER_SSH_KEY_FILE="/home/you/.ssh/hab_vault/habitat_user_ssh/id_rsa";
-    ping -c 4 ${SRVRNAME};
+    CURRENT_USER=$(whoami);
+    TARGET_SRVR="hab4metsrv";
+    CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
     #
-    export PTRN="# ${USRNAME} account on ${SRVRNAME}";
+    ping -c 4 ${TARGET_SRVR};
+    #
+    export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
     export PTRNB="${PTRN} «begins»";
     export PTRNE="${PTRN} «ends»";
     #
@@ -358,39 +356,63 @@ The **client side** steps to perform server side preparations are :
     #
     echo -e "
     ${PTRNB}
-    Host ${SRVRNAME}
-        HostName ${SRVRNAME}
-        User ${USRNAME}
+    Host ${TARGET_SRVR}
+        HostName ${TARGET_SRVR}
+        User ${CURRENT_USER}
+        PreferredAuthentications publickey
+        IdentityFile ${CURRENT_USER_SSH_KEY_FILE}
+    ${PTRNE}
+    " >> ${HOME}/.ssh/config
+
+    HABITAT_USER="hab";
+    HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/hab_vault/habitat_user/id_rsa";
+    #
+    export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
+    export PTRNB="${PTRN} «begins»";
+    export PTRNE="${PTRN} «ends»";
+    #
+    sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
+    #
+    echo -e "
+    ${PTRNB}
+    Host ${TARGET_SRVR}
+        HostName ${TARGET_SRVR}
+        User ${HABITAT_USER}
         PreferredAuthentications publickey
         IdentityFile ${HABITAT_USER_SSH_KEY_FILE}
     ${PTRNE}
     " >> ${HOME}/.ssh/config
-    sed -i "/^$/N;/^\n$/D" ${HOME}/.ssh/config
     #
-    eval $(ssh-agent);
-    expect << EOF
-      spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
-      expect "Enter passphrase"
-      send "${PWORD}\r"
-      expect eof
-    EOF
-    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${USRNAME} ${SRVRNAME} whoami;
-
+    sed -i "/^$/N;/^\n$/D" ${HOME}/.ssh/config
     ```
 
+
+1. *Verify SSH to the server* :: Cut'n paste this snippet ...
+    ```
+    TARGET_SRVR="hab4metsrv";
+    CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
+    #
+    eval $(ssh-agent);
+    ssh-add ${CURRENT_USER_SSH_KEY_FILE}
+
+    ```
+    ... and then this one ...
+    ```
+    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l $(whoami) ${TARGET_SRVR} whoami;
+    ```
 
 
 1. *Prepare SSL certificate* :: Paste the following line at a command prompt.
 
     ```
-    PWORD="memorablegibberish";
+    SSLPPHRASE="memorablegibberish";
     VHOST_DOMAIN="moon.planet.sun";
     SUBJ="/C=ZZ/ST=Planet/L=Moon/O=YouGuyz/CN=${VHOST_DOMAIN}";
-    CERT_PATH="/home/you/.ssh/hab_vault/${VHOST_DOMAIN}";
+    CERT_PATH="${HOME}/.ssh/hab_vault/${VHOST_DOMAIN}";
     #
     mkdir -p ${CERT_PATH};
     rm -f ${CERT_PATH}/*;
-    echo ${PWORD} > ${CERT_PATH}/server.pp;
+    echo ${SSLPPHRASE} > ${CERT_PATH}/server.pp;
     openssl req \
     -new \
     -newkey rsa:4096 \
@@ -407,41 +429,59 @@ The **client side** steps to perform server side preparations are :
 
     1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
     2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
-    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming you have a site named `moon.planet.sun`, the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="${your place for certs}/moon.planet.sun"`.  Where, `your place for certs` could be, for example, `/home/you/.ssh/hab_vault/tls`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
+    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming a site name, `moon.planet.sun`, and a certificates storage location of, `/home/you/.ssh/hab_vault/` the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="/home/you/.ssh/hab_vault/moon.planet.sun"`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
 
         Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
 
 1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
     ```
-    export TARGET_HOST="hab4metsrv";
-    export TARGET_USER="yourself";
-    export SOURCE_SECRETS_FILE="/home/you/projects/todos/.habitat/scripts/target/secrets.sh";
-    ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_HOST} ${TARGET_USER} ${SOURCE_SECRETS_FILE};
+    export TARGET_SRVR="hab4metsrv";
+    export SETUP_USER="hab";
+    export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
+    ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${SOURCE_SECRETS_FILE};
     ```
 The required arguments are :
 
-    - TARGET_HOST is the host where the project will be installed.
-    - TARGET_USER is a previously prepared 'sudoer' account on '${TARGET_HOST}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
+    - TARGET_SRVR is the host where the project will be installed.
+    - SETUP_USER is a previously prepared 'sudoer' account on '${TARGET_SRVR}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
     - SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
+
+1. *Verify SSH to the 'hab' user now works* :: Cut'n paste the following :
+    ```
+    HABITAT_USER="hab";
+    TARGET_SRVR="hab4metsrv";
+    SSHPPHRASE="memorablegobbledygook";
+    #
+    eval $(ssh-agent);
+    expect << EOF
+      spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
+      expect "Enter passphrase"
+      send "${SSHPPHRASE}\r"
+      expect eof
+    EOF
+    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami;
+
+    ```
+
 
 1. *Install Your SSL certificates* :: Use the script, `PushSiteCertificateToTarget.sh` to upload the SSL certificate you created earlier. Eg;
     ```
-    export TARGET_HOST="hab4metsrv";
+    export TARGET_SRVR="hab4metsrv";
     export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
-    export SOURCE_SECRETS_FILE="/home/you/projects/todos/.habitat/scripts/target/secrets.sh";
+    export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
     ./.habitat/scripts/PushSiteCertificateToTarget.sh \
-                   ${TARGET_HOST} \
+                   ${TARGET_SRVR} \
                    ${SOURCE_SECRETS_FILE} \
                    ${VIRTUAL_HOST_DOMAIN_NAME}
     ```
 The required arguments are :
 
-    - TARGET_HOST is the host where you installed the project.
+    - TARGET_SRVR is the host where you installed the project.
     - SOURCE_SECRETS_FILE is the same one as described earlier.
     - VIRTUAL_HOST_DOMAIN_NAME is the fully qualified domain name you specified in the certificate.
 
-#### Deployment
 
+#### Deployment
 
 ### Contributing
 

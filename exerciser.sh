@@ -10,7 +10,7 @@ RELEASE_TAG="${2}";
 
 TARGET_PROJECT="../todos";
 RELEASE_TAG="0.0.8";
-TARGET_HOST="192.168.122.143";
+TARGET_SRVR="192.168.122.143";
 
 echo "Some tasks need to be run as root...";
 sudo ls -l &>/dev/null;
@@ -63,18 +63,18 @@ ${HABITAT_WORK}/scripts/PrepareForHabitatBuild.sh;
 # git tag -d ${RELEASE_TAG} &>/dev/null;
 
 set -e;
-TARGET_USER="you";
-TARGET_USER_PWD="okok";
+SETUP_USER="you";
+SETUP_USER_PWD="okok";
 HABITAT_USER_PWD_FILE_PATH="${HOME}/.ssh/HabUserPwd";
 HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa.pub";
 
 echo -e "${PRTY} Pushing deployment scripts to target,
-         server '${TARGET_HOST}' ready for RPC to upgrade to
+         server '${TARGET_SRVR}' ready for RPC to upgrade to
          project version ${RELEASE_TAG}...";
 ${HABITAT_WORK}/scripts/PushInstallerScriptsToTarget.sh \
-                   ${TARGET_HOST} \
-                   ${TARGET_USER} \
-                   ${TARGET_USER_PWD} \
+                   ${TARGET_SRVR} \
+                   ${SETUP_USER} \
+                   ${SETUP_USER_PWD} \
                    ${HABITAT_USER_PWD_FILE_PATH} \
                    ${HABITAT_USER_SSH_KEY_FILE} \
                    ${RELEASE_TAG};
