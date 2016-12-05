@@ -79,7 +79,7 @@ export LOG=/tmp/HabitatPreparation.log;
 echo -e "Habitat Preparation Log :: $(date)
 =======================================================" > ${LOG};
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}."  | tee -a ${LOG};
-cd ${SCRIPTPATH};
+pushd ${SCRIPTPATH};
 
 HAB_USER='hab';
 # HABITAT_USER_PWD=$(cat ./HabUserPwd.txt);
@@ -95,6 +95,9 @@ source secrets.sh;
 # echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
 
+
+BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
+BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
 
 # GOOD_PWD=$(echo -e "${HABITAT_USER_PWD}" | grep -cE "^.{8,}$"  2>/dev/null);
 # if [ "${GOOD_PWD}" -lt "1" ]; then
@@ -153,31 +156,34 @@ sudo -A cp ${HABITAT_USER_SSH_KEY_NAME} ${HAB_SSH_AXS};
 sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
 # cat ${HAB_SSH_AXS};
 
+echo -e "${PRTY} Making SUDO_ASK_PASS for '${HAB_USER}' user  ...";
+sudo -A -sHu ${HAB_USER} bash -c "source askPassMaker.sh; makeAskPassService ${HAB_USER} ${HABITAT_USER_PWD};";
 
+popd;
+echo -e "${PRTY} Moving bundle directory, '${BUNDLE_DIRECTORY_NAME}' to '/home/${HAB_USER}'";
+rm -fr ${BUNDLE_NAME};
+sudo -A mv ${BUNDLE_DIRECTORY_NAME} /home/${HAB_USER};
+sudo -A chown -R ${HAB_USER}:${HAB_USER} /home/${HAB_USER}/${BUNDLE_DIRECTORY_NAME};
 
-echo -e "${PRTY} Making SUDO_ASK_PASS env var permanent ...";
-KY_SUDO_ASK_PASS="SUDO_ASKPASS";
-VL_SUDO_ASK_PASS=".supwd.sh";
-EXPORT_SUDO_ASK_PASS="export ${KY_SUDO_ASK_PASS}=\"\${HOME}/.ssh/${VL_SUDO_ASK_PASS}\"";
-export BASH_LOGIN="${HOME}/.bash_login";
-touch ${BASH_LOGIN};
-cat ${BASH_LOGIN};
-set +e; CNTSAP=$(cat ${BASH_LOGIN} | grep ${KY_SUDO_ASK_PASS} | grep -c ${VL_SUDO_ASK_PASS}); set -e;
-if [[ "${CNTSAP}" -lt "1" ]]; then
-  echo ${EXPORT_SUDO_ASK_PASS} > ${BASH_LOGIN};
-# else
-#   echo -e "Already is : $(cat ${BASH_LOGIN})";
-fi;
+# KY_SUDO_ASK_PASS="SUDO_ASKPASS";
+# VL_SUDO_ASK_PASS=".supwd.sh";
+# EXPORT_SUDO_ASK_PASS="export ${KY_SUDO_ASK_PASS}=\"\${HOME}/.ssh/${VL_SUDO_ASK_PASS}\"";
+# export BASH_LOGIN="${HOME}/.bash_login";
+# touch ${BASH_LOGIN};
+# # cat ${BASH_LOGIN};
+# set +e; CNTSAP=$(cat ${BASH_LOGIN} | grep ${KY_SUDO_ASK_PASS} | grep -c ${VL_SUDO_ASK_PASS}); set -e;
+# if [[ "${CNTSAP}" -lt "1" ]]; then
+#   echo ${EXPORT_SUDO_ASK_PASS} > ${BASH_LOGIN};
+# # else
+# #   echo -e "Already is : $(cat ${BASH_LOGIN})";
+# fi;
 
-
-echo -e "${PRTY} Obtaining 'hab'.";
+echo -e "${PRTY} Obtaining 'Habitat'.";
 
 DEST_DIR="/usr/local/bin";
 downloadHabToPathDir linux ${DEST_DIR};
 echo -e "${PRTY} Installed 'hab' to '${DEST_DIR}'.\n\n";
 
-
 echo -e "
                     Quitting target RPC... :: $(date)";
 exit;
-

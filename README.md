@@ -315,6 +315,11 @@ The **client side** steps to perform server side preparations are :
     192.168.122.123 moon.planet.sun
     ```
 
+1. *Dependencies* :: Be sure you have `expect` installed.  Cut'n paste this line and supply your `sudoer` password as requested:
+    ```
+    sudo apt install -y expect;
+    ```
+
 1. *Prepare SSH keys* :: Paste the following lines at a command prompt.
 
     ```
@@ -330,11 +335,10 @@ The **client side** steps to perform server side preparations are :
       -f "${HABITAT_USER_SSH_KEY_PATH}/id_rsa" \
       -P "${SSHPPHRASE}" \
       && cat ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
+    chmod go-rwx ${HABITAT_USER_SSH_KEY_PATH}/id_rsa;
+    chmod go-wx ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
+    chmod go-w ${HABITAT_USER_SSH_KEY_PATH};
 
-    ```
-    WRONG! *Next, push the public key into the server's `authorized_keys` file.*
-    ```
-    # cat ${HABITAT_USER_SSH_KEY_PATH}id_rsa.pub | ssh ${HABITAT_USER}@${TARGET_SRVR} 'cat >> .ssh/authorized_keys'
     ```
     You'll also need to distinguish the `hab` user's keys from you own, by means of a SSH `config` file.  Paste the following lines at a command prompt.
     ```
@@ -435,10 +439,11 @@ The **client side** steps to perform server side preparations are :
 
 1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
     ```
+    export METEOR_PROJ_DIR="${HOME}/projects/todos";
     export TARGET_SRVR="hab4metsrv";
-    export SETUP_USER="hab";
+    export SETUP_USER="you";
     export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${SOURCE_SECRETS_FILE};
+    ${METEOR_PROJ_DIR}/.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${SOURCE_SECRETS_FILE};
     ```
 The required arguments are :
 
@@ -466,10 +471,11 @@ The required arguments are :
 
 1. *Install Your SSL certificates* :: Use the script, `PushSiteCertificateToTarget.sh` to upload the SSL certificate you created earlier. Eg;
     ```
+    export METEOR_PROJ_DIR="${HOME}/projects/todos";
     export TARGET_SRVR="hab4metsrv";
     export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
     export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ./.habitat/scripts/PushSiteCertificateToTarget.sh \
+    ${METEOR_PROJ_DIR}/.habitat/scripts/PushSiteCertificateToTarget.sh \
                    ${TARGET_SRVR} \
                    ${SOURCE_SECRETS_FILE} \
                    ${VIRTUAL_HOST_DOMAIN_NAME}

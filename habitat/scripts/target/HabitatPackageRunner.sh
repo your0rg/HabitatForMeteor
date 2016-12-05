@@ -91,6 +91,7 @@ declare CERT_PATH=$(echo ${!CP});
 # sudo -A mkdir -p ${CERT_PATH};
 # sudo -A chown -R hab:hab ${CERT_PATH};
 # ls -l "${CERT_PATH}";
+
 echo -e "${PRETTY} Moving '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate from '${CERT_PATH}'
                                     to ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
 sudo -A mkdir -p ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME};
@@ -127,22 +128,14 @@ sudo -A touch ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
 TMP=$(sudo -A cat ${CERT_PATH}/server.pp);
 CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c ${TMP});
 if [[ ${CNT} -lt 1 ]]; then
-  echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
+  echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} >/dev/null;
 fi;
-
-ls -l ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
-
 
 # echo -e "~~~~~~~~~~~~~~~~~~
 # Quitting  ...
 # ";
 # popd;
 # exit;
-
-
-
-
-
 
 PRETTY="\n  ==> Runner ::";
 LOG="/tmp/${SCRIPTNAME}.log";

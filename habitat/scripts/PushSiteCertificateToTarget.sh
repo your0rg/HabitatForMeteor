@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 #
-
 function usage() {
   echo -e "    Usage ::
      ${SCRIPTPATH}/PushSiteCertificateToTarget.sh \\
-                   \${TARGET_SRVR} \\
-                   \${SOURCE_SECRETS_FILE} \\
-                   \${VIRTUAL_HOST_DOMAIN_NAME}
+       \${TARGET_SRVR} \\
+       \${SOURCE_SECRETS_FILE} \\
+       \${SOURCE_CERTS_DIR} \\
+       \${VIRTUAL_HOST_DOMAIN_NAME}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
+        SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
         VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
             ( example source secrets file : ${SCRIPTPATH}/target/secrets.sh.example )
 
@@ -32,8 +33,26 @@ function errorNoSecretsFileSpecified() {
   usage;
 }
 
+function errorCannotCallRemoteProcedure() {
+  echo -e "\n\n    *** Cannot call remote procedure. Is '${1}' correct? ***";
+  usage;
+}
 
-set +e;
+
+function errorNoCertificatesFoundToCopy() {
+  echo -e "\n\n    *** A valid path to a directory of certificate folders needs to be specified, not '${1}'  ***";
+  usage;
+}
+
+function startSSHAgent() {
+  echo -e "${PRTY} Starting 'ssh-agent' ...";
+  if [ -z "${SSH_AUTH_SOCK}" ]; then
+    eval $(ssh-agent -s);
+    echo -e "${PRTY} Started 'ssh-agent' ...";
+  fi;
+};
+
+set -e;
 
 SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
@@ -45,7 +64,8 @@ PRTY="PSCtT  ==> ";
 
 export TARGET_SRVR=${1};
 export SOURCE_SECRETS_FILE=${2};
-export VIRTUAL_HOST_DOMAIN_NAME=${3};
+export SOURCE_CERTS_DIR=${3};
+export VIRTUAL_HOST_DOMAIN_NAME=${4};
 
 export HABITAT_USER=hab;
 export BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
@@ -55,6 +75,11 @@ echo -e "${PRTY} HABITAT_USER=${HABITAT_USER}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
 echo -e "${PRTY} VIRTUAL_HOST_DOMAIN_NAME=${VIRTUAL_HOST_DOMAIN_NAME}";
 
+# ----------------
+echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
+if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
+if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
+source ${SOURCE_SECRETS_FILE};
 
 # ----------------
 echo -e "${PRTY} Testing server presence using... [   ping -c 1 ${TARGET_SRVR};   ]";
@@ -64,12 +89,15 @@ ping -c 1 ${TARGET_SRVR} >/dev/null || errorCannotPingRemoteServer "${TARGET_SRV
 
 
 # ----------------
-declare CNT_AGENTS=$(ps au -u $(whoami) | grep -v grep | grep -c ssh-agent);
-if [[ ${CNT_AGENTS} -lt 1  ]]; then
-  echo -e "${PRTY} Start up SSH agent... [   exec ssh-agent bash; ssh-add;  ]";
-  eval $(ssh-agent) > /dev/null;
-  ssh-add > /dev/null;
-fi;
+echo -e "${PRTY} Activating ssh-agent for hab user's ssh key passphrase";
+startSSHAgent;
+expect << EOF
+  spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE%.pub}
+  expect "Enter passphrase"
+  send "${HABITAT_USER_SSH_PASS}\r"
+  expect eof
+EOF
+
 
 
 # ----------------
@@ -80,6 +108,12 @@ REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) 
 
 
 # ----------------
+echo -e "${PRTY} Verifying certificates directory.";
+if [ ! -d "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}" ]; then 
+  errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}";
+fi;
+
+# ----------------
 echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
 if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
 if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
@@ -88,27 +122,20 @@ source ${SOURCE_SECRETS_FILE};
 declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
 # echo ${CP}
 declare CERT_PATH=$(echo ${!CP});
-# echo ${CERT_PATH};
+# echo "~~~~~~~~~~~~~~~~~~~~~~ ${CERT_PATH} ~~~~~~~~~~~~";
 
-declare TARGET_CERT_PATH="/home/hab/.ssh/habitat/${VIRTUAL_HOST_DOMAIN_NAME}";
+# declare TARGET_CERT_PATH="/home/hab/.ssh/hab_vault/${VIRTUAL_HOST_DOMAIN_NAME}";
 echo -e "${PRTY} Copying '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate 
-               from ${CERT_PATH}
+               from ${SOURCE_CERTS_DIR}
                  to ${TARGET_SRVR}:${TARGET_CERT_PATH}";
-ssh hab@${TARGET_SRVR} mkdir -p ${TARGET_CERT_PATH};
-# scp ${HOME}/.ssh/habitat/${VIRTUAL_HOST_DOMAIN_NAME}/* ${HABITAT_USER}@${TARGET_SRVR}:${CERT_PATH} >/dev/null;
-scp ${CERT_PATH}/* ${HABITAT_USER}@${TARGET_SRVR}:${TARGET_CERT_PATH} >/dev/null;
-
-
-# SCRIPTPATH=$(dirname "$SCRIPT");
-
-# ssh hab@${TARGET_SRVR} mkdir -p ${CERT_PATH};
-
+ssh ${HABITAT_USER}@${TARGET_SRVR} mkdir -p ${CERT_PATH};
+scp ${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}/* ${HABITAT_USER}@${TARGET_SRVR}:${CERT_PATH} >/dev/null;
 
 echo -e "\n${PRTY} If you already executed './PushInstallerScriptsToTarget.sh' then server '${TARGET_SRVR}' is ready for HabitatForMeteor.
             Next step : From any machine with passwordless SSH access to the
                         the server '${TARGET_SRVR}' you can now run...
 
-      ssh ${HABITAT_USER}@${TARGET_SRVR} "~${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}";
+      ssh ${HABITAT_USER}@${TARGET_SRVR} \"~/${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}\";
       # The first three arguments are obligatory. The last two permit specifying older releases.
 
 Quitting...

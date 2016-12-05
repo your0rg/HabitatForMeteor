@@ -70,21 +70,30 @@ function errorNoSuitablePasswordInFile() {
   usage;
 }
 
+function startSSHAgent() {
+  echo -e "${PRTY} Starting 'ssh-agent' ...";
+  if [ -z "${SSH_AUTH_SOCK}" ]; then
+    eval $(ssh-agent -s);
+    echo -e "${PRTY} Started 'ssh-agent' ...";
+  fi;
+};
+
+
+
 declare MKR_SCRPT="";
 function makeMakerScriptMaker() {
-read -r -d '' MKR_SCRPT <<SAPMF
+  cat <<SAPMF
 #!/usr/bin/env bash
 #
 export SUPWD="\${HOME}/.ssh/.supwd.sh";
 echo -e '#!/usr/bin/env bash' > \${SUPWD};
-echo -e "echo '${1}'" >> \${SUPWD};
+echo -e "echo '${1}';" >> \${SUPWD};
 chmod a+x,go-rwx \${SUPWD};
 echo "Created ${SUPWD}";
 SAPMF
-
 }
 
-set +e;
+set -e;
 
 SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
@@ -102,6 +111,8 @@ TARGET_SRVR=${1};
 SETUP_USER=${2};
 SOURCE_SECRETS_FILE=${3};
 
+HABITAT_USER='hab';
+
 
 PASSWORD_MINIMUM_LENGTH=4;
 
@@ -113,7 +124,7 @@ SCRIPTS_DIRECTORY="target";
 BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
 BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
 
-set +e;
+set -e;
 
 
 
@@ -124,13 +135,25 @@ ping -c 1 ${TARGET_SRVR} >/dev/null || errorCannotPingRemoteServer "${TARGET_SRV
 
 
 # ----------------
-declare CNT_AGENTS=$(ps au -u $(whoami) | grep -v grep | grep -c ssh-agent);
-if [[ ${CNT_AGENTS} -lt 1  ]]; then
-  echo -e "${PRTY} Start up SSH agent... [   exec ssh-agent bash; ssh-add;  ]";
-  eval $(ssh-agent) > /dev/null;
-  ssh-add > /dev/null;
-fi;
+# declare CNT_AGENTS=$(ps au -u $(whoami) | grep -v grep | grep -c ssh-agent);
+# if [[ ${CNT_AGENTS} -lt 1  ]]; then
+#   echo -e "${PRTY} Start up SSH agent... [   exec ssh-agent bash; ssh-add;  ]";
+#   eval $(ssh-agent) > /dev/null;
+# fi;
 
+startSSHAgent;
+echo -e "${PRTY} Adding keys to ssh-agent";
+export KEYPAIR="${HOME}/.ssh/id_rsa";
+ssh-add -l | grep -c ${KEYPAIR} >/dev/null || ssh-add ${KEYPAIR};
+
+# # echo ${HABITAT_USER_SSH_PASS} ${HABITAT_USER_SSH_KEY_FILE};
+# expect << EOF
+#   spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
+#   expect "Enter passphrase"
+#   send "${HABITAT_USER_SSH_PASS}\r"
+#   expect eof
+# EOF
+echo -e "${PRTY} Added keys to ssh-agent";
 
 
 # ----------------
@@ -198,26 +221,34 @@ echo -e "${PRTY} Decompressing the bundle...";
 ssh ${SETUP_USER}@${TARGET_SRVR} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Setting up SUDO_ASK_PASS on the target...";
-SUDO_ASK_PASS_MAKER_SCRIPT="/tmp/PrepareSudoAskPass.sh";
-
-makeMakerScriptMaker ${SETUP_USER_PWD};
-ssh ${SETUP_USER}@${TARGET_SRVR} "${MKR_SCRPT}" >/dev/null || errorUnexpectedRPCResult;
+scp ./target/askPassMaker.sh ${SETUP_USER}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;
+ssh ${SETUP_USER}@${TARGET_SRVR} "source askPassMaker.sh; makeAskPassService ${SETUP_USER} ${SETUP_USER_PWD};" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Installing Habitat on the target...";
 ssh ${SETUP_USER}@${TARGET_SRVR} "./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
 
 # ----------------
-echo -e "${PRTY} Testing SSH connection using... [   ssh ${TARGET_USER}@${TARGET_SRVR} 'whoami';  ]";
-if [[ "X${TARGET_USER}X" = "XX" ]]; then errorNoUserAccountSpecified "null"; fi;
-REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${TARGET_USER} ${TARGET_SRVR} whoami) || errorCannotCallRemoteProcedure "${TARGET_USER}@${TARGET_SRVR}";
-[[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${TARGET_USER}") ]] ||  errorUnexpectedRPCResult;
+echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";
+startSSHAgent;
+expect << EOF
+  spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE%.pub}
+  expect "Enter passphrase"
+  send "${HABITAT_USER_SSH_PASS}\r"
+  expect eof
+EOF
+
+# ----------------
+echo -e "${PRTY} Testing SSH connection using... [   ssh ${HABITAT_USER}@${TARGET_SRVR} 'whoami';  ]";
+if [[ "X${HABITAT_USER}X" = "XX" ]]; then errorNoUserAccountSpecified "null"; fi;
+REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) || errorCannotCallRemoteProcedure "${HABITAT_USER}@${TARGET_SRVR}";
+[[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${HABITAT_USER}") ]] ||  errorUnexpectedRPCResult;
 
 pushd ${SCRIPTPATH}/../.. >/dev/null;
 echo -e "\n${PRTY} Your server is ready for HabitatForMeteor.
             Next step : From any machine with passwordless SSH access to the
                         the server '${TARGET_SRVR}' you can now run...
 
-      ssh ${TARGET_USER}@${TARGET_SRVR} "~/${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}";
+      ssh ${HABITAT_USER}@${TARGET_SRVR} \"~/${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}\";
       # The first three arguments are obligatory. The last two permit specifying older releases.
 
 Quitting...
