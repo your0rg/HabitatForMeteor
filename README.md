@@ -429,7 +429,7 @@ The **client side** steps to perform server side preparations are :
 
     ```
 
-1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.
+1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.  The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.
 
     1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
     2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
@@ -439,11 +439,11 @@ The **client side** steps to perform server side preparations are :
 
 1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
     ```
-    export METEOR_PROJ_DIR="${HOME}/projects/todos";
+    export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
     export TARGET_SRVR="hab4metsrv";
     export SETUP_USER="you";
     export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ${METEOR_PROJ_DIR}/.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${SOURCE_SECRETS_FILE};
+    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${SOURCE_SECRETS_FILE};
     ```
 The required arguments are :
 
@@ -471,21 +471,23 @@ The required arguments are :
 
 1. *Install Your SSL certificates* :: Use the script, `PushSiteCertificateToTarget.sh` to upload the SSL certificate you created earlier. Eg;
     ```
-    export METEOR_PROJ_DIR="${HOME}/projects/todos";
+    export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
     export TARGET_SRVR="hab4metsrv";
     export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
     export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ${METEOR_PROJ_DIR}/.habitat/scripts/PushSiteCertificateToTarget.sh \
+    export SOURCE_CERTS_DIR="${HOME}/.ssh/hab_vault";
+    ${HABITAT_PROJ_DIR}/habitat/scripts/PushSiteCertificateToTarget.sh \
                    ${TARGET_SRVR} \
                    ${SOURCE_SECRETS_FILE} \
+                   ${SOURCE_CERTS_DIR} \
                    ${VIRTUAL_HOST_DOMAIN_NAME}
     ```
 The required arguments are :
 
     - TARGET_SRVR is the host where you installed the project.
     - SOURCE_SECRETS_FILE is the same one as described earlier.
+    - SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
     - VIRTUAL_HOST_DOMAIN_NAME is the fully qualified domain name you specified in the certificate.
-
 
 #### Deployment
 

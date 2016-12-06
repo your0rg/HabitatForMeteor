@@ -244,13 +244,19 @@ REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) 
 [[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${HABITAT_USER}") ]] ||  errorUnexpectedRPCResult;
 
 pushd ${SCRIPTPATH}/../.. >/dev/null;
-echo -e "\n${PRTY} Your server is ready for HabitatForMeteor.
-            Next step : From any machine with passwordless SSH access to the
-                        the server '${TARGET_SRVR}' you can now run...
+echo -e "\n${PRTY} Now you can upload your site certificates to a secure location in the 'hab' user's account.
 
-      ssh ${HABITAT_USER}@${TARGET_SRVR} \"~/${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}\";
-      # The first three arguments are obligatory. The last two permit specifying older releases.
-
+     $(pwd)/habitat/scripts/PushSiteCertificateToTarget.sh \\
+       \${TARGET_SRVR} \\
+       \${SOURCE_SECRETS_FILE} \\
+       \${SOURCE_CERTS_DIR} \\
+       \${VIRTUAL_HOST_DOMAIN_NAME}
+      Where :
+        TARGET_SRVR is the host where the project will be installed.
+        SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
+        SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '${VIRTUAL_HOST_DOMAIN_NAME}'.
+        VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
+            ( example source secrets file : /home/you/tools/HabitatForMeteor/habitat/scripts/target/secrets.sh.example )
 Quitting...
 $(date);
 Done.

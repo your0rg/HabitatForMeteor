@@ -109,7 +109,7 @@ REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) 
 
 # ----------------
 echo -e "${PRTY} Verifying certificates directory.";
-if [ ! -d "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}" ]; then 
+if [ ! -d "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}" ]; then
   errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}";
 fi;
 
