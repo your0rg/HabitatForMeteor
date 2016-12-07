@@ -59,9 +59,9 @@ Initial set up may be a bit of a pain, and can take some time, but the end resul
     1. [GitHub](https://github.com/) : You need user id and password, obviously.  You'll also need a personal token; see below.
     2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you already logged in to GitHub.
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines with at least 12G disk space and give them distinct names that suggest developer machine and target server (eg; `dev` & `srv`).  Set up their `hosts` files so the developer (`dev`) machine can address the server (`srv`) machine by name. After gaining confidence in HabitatForMeteor, you should be able to use the Xubuntu desktop on the developer VM only, going to the server machine via SSH, such that the target VM can be a server install with no GUI needed.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv`.  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
 
-1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `dev` machine to `srv` machine without password.
+1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user on each machine to be called ´you´.
 
 1. *Install Meteor* :: Find the latest correct installation command in the Meteor documentation page [Install](https://www.meteor.com/install), although realistically it's unlikely to change.  At last look it was :
     ```
@@ -87,7 +87,7 @@ Initial set up may be a bit of a pain, and can take some time, but the end resul
     ```
 Again . . . **don't** run that in a Meteor application directory.
 
-1. Make sure you get to the point of having an issues free build and execute, locally.  Recently, (Oct 2016), for Meteor 1.4.2, I had to do :
+1. Make sure you get to the point of having an issues free build and execute, locally.  Recently, (Dec 2016), for Meteor 1.4.2.3, I had to do :
     ```
     cd ${HOME}/projects/todos;
 
@@ -295,7 +295,7 @@ With your Meteor application bundled up as a Habitat package and available for d
 
 There are a number of considerations.
 
-The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for future all deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
+The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for all future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
 
 Next, you'll need to have ready an SSL certificate file set.  Digital Ocean [explains how to do this](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-16-04) very well as usual.  If you need a "real" certificate from a certificate authority (CA), [StartSSL](https://www.startssl.com/), offers **free** 3 yr., Class 1 certificates that certify up to 10 domains.
 
@@ -429,7 +429,7 @@ The **client side** steps to perform server side preparations are :
 
     ```
 
-1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.  The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.
+1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.  The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.  If you have been using the snippets unaltered, ´SETUP_USER_PWD´, is the only setting you'll need to change.  Give it the password of ´you´.
 
     1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
     2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
@@ -489,7 +489,64 @@ The required arguments are :
     - SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
     - VIRTUAL_HOST_DOMAIN_NAME is the fully qualified domain name you specified in the certificate.
 
+
 #### Deployment
+
+With a server prepared as above, any machine possessing private keys to the ´hab´ account can deploy Nginx, MongoDB and your Meteor app, with this single command:
+
+    ´´´
+    export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
+    export YOUR_ORG='yourse1f-yourorg';
+    export YOUR_PKG='todos';
+    export semver='';    # An optional version number, eg; 0.1.8
+    export timestamp=''; # An optional timestamp, eg; 20161231235959
+    #
+    ssh hab@hab4metsrv "~/HabitatPkgInstallerScripts/HabitatPackageRunner.sh ${VIRTUAL_HOST_DOMAIN_NAME} ${YOUR_ORG} ${YOUR_PKG} ${semver} ${timestamp}";
+
+    ´´´
+
+Use a browser to visit [https://moon.planet.sun/](https://moon.planet.sun/).  It will throw a hissy-fit about your "insecure" self-signed certifiacte. Take the necessary override steps and the Meteor `todos` application will load.
+
+Reboot to verify that it relaunches without any hiccups.
+
+To see how it's behaving you can log into the server with ...
+```
+ssh you@hab4metsrv
+```
+... and then use any of the following to control it:
+
+Watch the Habitat logs with :
+```
+sudo journalctl -fb -u yourse1f-yourorg_todos.service
+```
+
+Examine the Habitat logs back to the last boot with :
+```
+sudo journalctl -fb --no-tail -u yourse1f-yourorg_todos.service
+```
+
+Disable and stop MongoDb, Meteor and Nginx as a unit with :
+```
+sudo systemctl disable yourse1f-yourorg_todos.service
+sudo systemctl    stop yourse1f-yourorg_todos.service
+```
+
+Enable and start MongoDb, Meteor and Nginx as a unit with :
+```
+sudo systemctl enable yourse1f-yourorg_todos.service
+sudo systemctl  start yourse1f-yourorg_todos.service
+```
+
+Watch the Nginx logs with ...
+```
+sudo tail -fn 50 /var/log/nginx/moon.planet.sun/access.log 
+```
+... and with ....
+```
+sudo tail -fn 50 /var/log/nginx/moon.planet.sun/error.log 
+```
+
+
 
 ### Contributing
 
