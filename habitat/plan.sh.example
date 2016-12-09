@@ -98,7 +98,7 @@ do_build() {
   else
     build_line "Build. Error:";
     build_line "A previously built Meteor bundle is required in the directory './.habitat/results/.";
-    build_line "You need to execute the following command (or sumilar) before using 'hab'";
+    build_line "You need to execute the following command (or similar) before using 'hab'";
     build_line "  meteor build ./.habitat/results --directory; # --server-only;";
     exit_with "Follow the instructions above and repeat." 55;
   fi;

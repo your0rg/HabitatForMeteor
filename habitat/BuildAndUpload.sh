@@ -533,17 +533,26 @@ function verifyHabitatArchiveFileIsInDepot() {
 function lastMessage() {
   pushd ${SCRIPTPATH}/.. >/dev/null;
   echo -e "
-              Your package is published on the Habitat depot.
+          Your package is published on the Habitat depot. You can see it at:
+
+            https://app.habitat.sh/#/pkgs/${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}
+
+                                        - o 0 o -
 
         * Next Step * : Prepare your target host for deploying the package by
              placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
 
         cd $(pwd);
-        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \${TARGET_SRVR} \${SETUP_USER} \${SOURCE_SECRETS_FILE};
+        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \\
+              \${TARGET_SRVR} \\
+              \${SETUP_USER} \\
+              \${METEOR_SETTINGS_FILE} \\
+              \${SOURCE_SECRETS_FILE};
 
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
+        METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/scripts/target/secrets.sh.example )
 

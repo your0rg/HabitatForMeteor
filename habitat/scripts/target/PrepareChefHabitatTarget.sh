@@ -131,7 +131,8 @@ sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927;
 echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
          | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get update >>  ${LOG};
-sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
+# sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell >>  ${LOG};
 
 echo -e "${PRTY} Purging any existing user '${HAB_USER}' . . .  " | tee -a ${LOG};
 set +e; sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG}; set -e;

@@ -251,10 +251,14 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
     cat ${HOME}/.hab/cache/keys/yourse1f-yourorg-${KEY_STAMP}.sig.key | hab origin key import; echo ;
     ```
 
-1. *Use ssh-agent* :: You need to have SSH continually nagging for your SSH key passphrase.  Do ...
+1. *Use ssh-agent* :: You **don't** need to have SSH continually nagging for your SSH key passphrase.  Do ...
     ```
+    echo "$SSH_AUTH_SOCK";
+    # if that returns nothing, then you'll need to start ssh-agent with ...
     eval $(ssh-agent);
-    ssh-add;
+    # either way, do ...
+    ssh-add <path to yout private key>;
+    # yeah, it's gonna want the password!
     ```
 
 1. *Cleanly commit and push the project* :: The next step will balk at continuing if there are any "loose" files in your project directory.  You must have explicitly ignored &/or added, committed **and** pushed, each and every file.
@@ -263,7 +267,21 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
     ```
     ./.habitat/BuildAndUpload.sh 0.1.4
     ```
-This step first attempts to catch any lapses in the discipline described in the preceding step, collecting all the discrepancies it can find, listing them on screen with individual explanations and then quitting. Only if everything seems correct will it display a message prompt like this :
+This step first attempts to catch any lapses in the discipline described in the preceding step, collecting all the discrepancies it can find, listing them on screen with individual explanations and then quitting.
+
+    If there's nothing you need to fix it will go ahead and start building.
+
+    **Be warned** -- there are two disconcertingly long pauses...
+
+        "Stripping unneeded symbols from binaries and libraries"
+
+    ... and ...
+
+        "Generating blake2b hashes of all files in the package"
+
+    Both are valid and necessary tasks, so be patient and let it run.
+
+    Only if everything seems correct will it display a message prompt like this :
 
     ```
             *** Please confirm the following ***
@@ -285,9 +303,35 @@ This step first attempts to catch any lapses in the discipline described in the 
       Proceed? [y/N]
     ```
 
-1. *Upload Example Project* :: If you type `y<enter>` at this point HabitatForMeteor will proceed with the indicated actions.  When it completes, you will find : 
-    - a new release created on GitHub : ( eg; Similar to [the releases page of Habitat](https://github.com/habitat-sh/habitat/releases) )
-    - a new package published on the Habitat Depot : ( eg; Similar to [this package page of MongoDB](https://app.habitat.sh/#/pkgs/core/mongodb) )
+1. *Upload Example Project* :: If you type `y<enter>` at this point HabitatForMeteor will proceed with the indicated actions.  When it has done everything, it ends with :
+    ```
+        Your package is published on the Habitat depot.   You can see it at:
+
+            https://app.habitat.sh/#/pkgs/yourse1f-yourorg/todos
+
+                                        - o 0 o -
+
+
+
+            - Next Step * : Prepare your target host for deploying the package by
+                 placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
+
+            cd /home/you/projects/mmks;
+            ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+
+          Where :
+            TARGET_SRVR is the host where the project will be installed.
+            SETUP_USER is a previously prepared 'sudoer' account on '${TARGET_SRVR}'.
+            METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
+            SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
+                ( example file : /home/you/projects/mmks/.habitat/scripts/target/secrets.sh.example )
+
+
+      .  .  .  .  .  .  .  .  .  .  .  .  .
+    ```
+    You will find :
+    - a new release created on GitHub : ( eg; Similar to [our todos repo](https://github.com/yourse1f-yourorg/todos) )
+    - a new package published on the Habitat Depot : ( eg; Similar to [our, embarrassingly numerous, publications](https://app.habitat.sh/#/pkgs/yourse1f-yourorg/todos) )
 
 #### Server side operations
 
@@ -295,13 +339,13 @@ With your Meteor application bundled up as a Habitat package and available for d
 
 There are a number of considerations.
 
-The first is that the initialization script will create a new user named `hab` that has ´sudoer´ privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for all future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
+The first is that the initialization script will create a new user named `hab` that has "sudoer" privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for all future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
 
 Next, you'll need to have ready an SSL certificate file set.  Digital Ocean [explains how to do this](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-16-04) very well as usual.  If you need a "real" certificate from a certificate authority (CA), [StartSSL](https://www.startssl.com/), offers **free** 3 yr., Class 1 certificates that certify up to 10 domains.
 
 The following steps assume you are simply working between two virtual machines with a self-signed certificate for an imaginary domain.
 
-  **It is important to notice that these server-side preparations are done from the developer client machine, using SCP and RPC via SSH!  Unless, otherwise indicated, the provided command snippets are to be run in a terminal window on the client.**
+  **It is important to notice that these server-side preparations are done from the developer client machine, using SCP and RPC via SSH!  Unless, otherwise indicated, the provided command snippets are to be run in a terminal window on the client.** (Logging into individual machines just isn't *the DevOps way*.)
 
 The **client side** steps to perform server side preparations are :
 
@@ -442,26 +486,31 @@ The **client side** steps to perform server side preparations are :
     export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
     export TARGET_SRVR="hab4metsrv";
     export SETUP_USER="you";
+    export METEOR_SETTINGS_FILE="${HOME}/.ssh/hab_vault/settings.json";
     export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${SOURCE_SECRETS_FILE};
+    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
     ```
 The required arguments are :
 
     - TARGET_SRVR is the host where the project will be installed.
     - SETUP_USER is a previously prepared 'sudoer' account on '${TARGET_SRVR}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
+    - METEOR_SETTINGS_FILE specifies the location of your [Meteor settings.json](http://galaxy-guide.meteor.com/environment-variables.html) file. It **must** exist, even if you leave it empty.
     - SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
+
+    **early release note** While all these scripts and snippets are designed to be idempotent, (meaning that you can run them repeatedly without negative consequences), the current version of this script (PushInstallerScriptsToTarget.sh) tries to wipe out and recreate the 'hab' user each time.  It fails if the 'hab' user has files open or tasks running.
 
 1. *Verify SSH to the 'hab' user now works* :: Cut'n paste the following :
     ```
     HABITAT_USER="hab";
     TARGET_SRVR="hab4metsrv";
-    SSHPPHRASE="memorablegobbledygook";
+    HABITAT_USER_SSH_KEY_FILE="/home/you/.ssh/hab_vault/habitat_user/id_rsa";
+    HABITAT_USER_SSH_PASS="memorablegobbledygook";
     #
     eval $(ssh-agent);
     expect << EOF
       spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
       expect "Enter passphrase"
-      send "${SSHPPHRASE}\r"
+      send "${HABITAT_USER_SSH_PASS}\r"
       expect eof
     EOF
     ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami;
@@ -508,6 +557,12 @@ With a server prepared as above, any machine possessing private keys to the ´ha
 Use a browser to visit [https://moon.planet.sun/](https://moon.planet.sun/).  It will throw a hissy-fit about your "insecure" self-signed certifiacte. Take the necessary override steps and the Meteor `todos` application will load.
 
 Reboot to verify that it relaunches without any hiccups.
+
+#### No secrets
+
+It's useful to understand at this point, that no secrets are transferred or exposed in the deployment step.  That task is handled by the script, PushInstallerScriptsToTarget.sh, documented above.
+
+#### Management
 
 To see how it's behaving you can log into the server with ...
 ```
