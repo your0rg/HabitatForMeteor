@@ -53,15 +53,111 @@ Initial set up may be a bit of a pain, and can take some time, but the end resul
 
 ### Getting started
 
-#### Client side preparations
+#### Introduction
+
+The steps below are designed to prepare everything in freshly installed Xubuntu virtual machines.
+
+You will work exclusively in the client.  
+
+You can cut'n paste the snippets unaltered and see the process unfold with no need to edit anything.  Those snippets can then form the basis of you own automation.  The steps depend on a set of shell variables, that you'll initialize immediately below. You will need to **be sure to re-source them** before trying any of the snippets below.
+
+
+
+#### General preparations
 
 1. *Accounts* :: You need accounts on several remote services :
     1. [GitHub](https://github.com/) : You need user id and password, obviously.  You'll also need a personal token; see below.
-    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you already logged in to GitHub.
+    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you are already logged into GitHub.
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv`.  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.
+
+    To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv`.  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
+
+    For your own convenience, after logging into the Xubuntu desktop in `hab4metdev`, you should start the browser and open it to this page.
 
 1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user on each machine to be called ´you´.
+
+
+#### Client side preparations
+
+1. *Initialize and source your shell variables* :: This step creates a hidden file in the home directory, ´"${HOME}/.testVars.sh"´, that you can edit and re-source at any time, before reusing any of the snippets below on later occasions.
+
+```
+## Preparing file of test variables for getting started with Habitat For Meteor
+
+TEST_VARS_FILE="${HOME}/.testVars.sh";
+cat << EOSVARS > ${TEST_VARS_FILE}
+# Test variables for getting started with Habitat For Meteor
+
+# Location of your developer tools
+export HABITA4METEOR_PARENT_DIR="${HOME}/tools";
+
+# Name of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
+
+# Organization of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_ORG="HabitatForMeteor";
+
+# Location of your projects
+export TARGET_PROJECT_PARENT_DIR="${HOME}/projects";
+
+# Location of your target project
+export TARGET_PROJECT_NAME="todos";
+
+# Your full name
+export YOUR_NAME="You Yourself";
+
+# Your email address
+export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
+
+# Your github organization or user name
+export YOUR_ORG="yourse1f-yourorg";
+
+# The release tag you want to attach to the above project. It must be the
+# newest release anywhere locally or on GitHub or on apps.habitat.sh
+export RELEASE_TAG="0.0.14";
+
+# Domain name of the server where the project will be deployed
+export TARGET_SRVR="hab4metsrv";
+
+EOSVARS
+
+## Sourcing test variables file ....
+source ${TEST_VARS_FILE};
+
+echo -e "
+
+Test variables are ready for use:
+  * edit with 'nano ${TEST_VARS_FILE};'
+  * then re-source with 'source ${TEST_VARS_FILE};'
+";
+
+```
+
+1. *Prepare Dependencies* :: A fresh Xubuntu dekstop won't have 'git' or other required tools installed, so ...
+    ```
+    #
+    # Get dependencies
+    sudo apt -y install expect
+    sudo apt -y install curl
+    sudo apt -y install git
+    #
+    # Prepare 'git'
+    git config --global user.email "${YOUR_EMAIL}";
+    git config --global user.name "${YOUR_NAME}";
+    git config --global push.default simple;
+    #
+
+    ```
+
+1. *Get Habitat For Meteor* :: Fork the [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor) repo as, for example...
+    ```
+    mkdir -p ${HABITA4METEOR_PARENT_DIR};
+    pushd ${HABITA4METEOR_PARENT_DIR};
+    git clone https://github.com/${HABITA4METEOR_FORK_ORG}/${HABITA4METEOR_FORK_NAME};
+    popd;
+
+    ```
 
 1. *Install Meteor* :: Find the latest correct installation command in the Meteor documentation page [Install](https://www.meteor.com/install), although realistically it's unlikely to change.  At last look it was :
     ```
@@ -71,26 +167,21 @@ Initial set up may be a bit of a pain, and can take some time, but the end resul
 
 1. *Get Example Project* :: Fork the Meteor sample project, [todos](https://github.com/meteor/todos), and clone it into your machine as, for example, `${HOME}/projects/todos`.
     ```
-    mkdir -p ${HOME}/projects;
-    cd ${HOME}/projects;
-    sudo apt -y install git
-    git config --global user.email "yourse1f-yourorg@gmail.com";
-    git config --global user.name "You Yourself";
-    git config --global push.default simple;
-    git clone git@github.com:yourse1f-yourorg/todos.git
+    
+    # Prepare directory
+    mkdir -p ${TARGET_PROJECT_PARENT_DIR};
+    pushd ${TARGET_PROJECT_PARENT_DIR};
+    #
+    # Install example project
+    rm -fr ${TARGET_PROJECT_NAME};
+    git clone git@github.com:${YOUR_ORG}/${TARGET_PROJECT_NAME}.git;
+    popd;
 
     ```
-
-1. Decide whether you want to run with the latest version of the `todos` project, the latest release of Meteor, or Meteor version `1.4.2.3`, against which this project was tested. *Note that*, if you run ```meteor version``` while in the top-level directory of the `todos` project, then `meteor` will download the version specified in `.meteor/release`  and report **that** as the current installed version of Meteor.  On the other hand if you run ```meteor version``` from outside any Meteor project directory it will tell you the version of Meteor that you most recemtly used.  This generates the text that you would need to put into `.meteor/release` if you choose to use your installed Meteor version :
-    ```
-    MV=$(meteor --version);MV=${MV/#Meteor /METEOR@}; echo ${MV};
-    ```
-Again . . . **don't** run that in a Meteor application directory.
 
 1. Make sure you get to the point of having an issues free build and execute, locally.  Recently, (Dec 2016), for Meteor 1.4.2.3, I had to do :
     ```
-    cd ${HOME}/projects/todos;
-
+    pushd ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
     # Install all NodeJS packages dependencies
     meteor npm install
     #
@@ -99,6 +190,7 @@ Again . . . **don't** run that in a Meteor application directory.
     #
     # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
     meteor;
+    popd;
 
     ```
     Also, you'll see a recommendation to improve performance, with the following line ...
@@ -109,27 +201,24 @@ Again . . . **don't** run that in a Meteor application directory.
     ```
 
 
-1. *Get Habitat For Meteor* :: Fork the [HabitatForMeteor](https://github.com/your0rg/HabitatForMeteor) repo as, for example...
-    ```
-    mkdir -p ${HOME}/tools;
-    cd ${HOME}/tools;
-    sudo apt -y install git;
-    git clone https://github.com/your0rg/HabitatForMeteor;
-
-    ```
-
 1. *Prepare Example Project* :: Run `Update_or_Install_H4M_into_Meteor_App.sh`, for first time use, or if there are updates.
 Eg;
     ```
-    cd ${HOME}/tools/HabitatForMeteor;
-    ./Update_or_Install_H4M_into_Meteor_App.sh ../../projects/todos;
+
+    pushd ${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME};
+    ./Update_or_Install_H4M_into_Meteor_App.sh ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
+    popd;
+
+
     ```
-It will insert HabitatForMeteor into a hidden directory `.habitat` in your project, with suitable `.gitignore` files.  It will `git add` a few files to your version control, but not commit them.
+It will insert HabitatForMeteor into a hidden directory, `.habitat`, in your project, with suitable `.gitignore` files.  It will `git add` a few files to your version control, but not commit them.
 
 1. *Prepare Habitat package build configuration in the file `./.habitat/plan.sh`* :: Switch to the root of your app ( same level as the `.meteor` dir ), then save the file `./.habitat/plan.sh.example` as `./.habitat/plan.sh`.
     ```
-    cd ${HOME}/projects/todos/.habitat;
+    pushd ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME}/.habitat;
     cp plan.sh.example plan.sh;
+    sed -i '/pkg_origin/c\pkg_origin=yourse1f-yourorg' plan.sh;
+    popd;
 
     ```
 
@@ -153,8 +242,9 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
 
 1. *Initialize Example Project* :: This is a one time install, with occasional repetitions in the future for the purpose of keeping up to  date.  Run the script `./.habitat/scripts/Update_or_Install_Dependencies.sh;`
     ```
-    cd ${HOME}/projects/todos;
+    pushd ${HOME}/projects/todos;
     ./.habitat/scripts/Update_or_Install_Dependencies.sh;
+    popd;
 
     ```
     The script prompts for several constants that need to be set in order that you get the correct version of Habitat, including the *GitHub Personal Token*, mentioned above. It records these values in `${HOME}/.userVars.sh`.
@@ -192,10 +282,12 @@ It will insert HabitatForMeteor into a hidden directory `.habitat` in your proje
 
     - `./habitat/release_notes/`**0.1.4**`_note.txt` - is identified by file name only, you can put what you want in it. (_GitHub flavored markup makes it look like there is a space in that file path.  There should not be._) So do :
         ```
-        cd ${HOME}/projects/todos;
+        pushd ${HOME}/projects/todos;
         cp .habitat/release_notes/0.0.0_note.txt.example .habitat/release_notes/0.1.4_note.txt;
         sed -i "s|0.0.0|0.1.4|g" .habitat/release_notes/0.1.4_note.txt
         git add .habitat/release_notes/0.1.4_note.txt;
+        popd;
+
         ```
 
     - `the argument to the script in the next step` - The same version number as in the previous 3 places must also be supplied as an argument to the script, `./.habitat/BuildAndUpload.sh`  **0.1.4**

@@ -1,16 +1,396 @@
 #!/usr/bin/env bash
-#
+###################
 
-. ./habitat/scripts/utils.sh;
+export step0_BEGIN=0;
+export step1_ONCE_ONLY_INITIALIZATIONS=$((${step0_BEGIN}+1));
+export step2_PROJECT_INITIALIZATIONS=$((${step1_ONCE_ONLY_INITIALIZATIONS}+1));
+export step3_BUILD_AND_UPLOAD=$((${step2_PROJECT_INITIALIZATIONS}+1));
+export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
+
+# export EXECUTION_STAGE="step0_BEGIN";
+export EXECUTION_STAGE="step4_PREPARE_FOR_SSH_RPC";
+
+## Preparing file of test variables for getting started with Habitat For Meteor
+
+TEST_VARS_FILE="${HOME}/.testVars.sh";
+cat << EOSVARS > ${TEST_VARS_FILE}
+# Test variables for getting started with Habitat For Meteor
+
+# Location of your developer tools
+export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
+
+# Name of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
+
+# Organization of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_ORG="HabitatForMeteor";
+
+# Location of your projects
+export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
+
+# Location of your target project
+export TARGET_PROJECT_NAME="todos";
+
+# Your full name
+export YOUR_NAME="You Yourself";
+
+# Your github organization or user name
+export YOUR_ORG="yourse1f-yourorg";
+
+# Your email address
+export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
+
+# The release tag you want to attach to the above project. It must be the
+# newest release anywhere locally or on GitHub or on apps.habitat.sh
+export RELEASE_TAG="0.0.14";
+
+# Domain name of the server where the project will be deployed
+export TARGET_SRVR="hab4metsrv";
+
+# Domain name of the server where the project will be deployed
+export VHOST_DOMAIN="moon.planet.sun";
+
+# Domain name of the server where the project will be deployed
+export NON_STOP="YES";
+
+# The SSH secret key of the current user, for ssh-add
+export CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
+
+# Habitat for Meteor secrets directory
+export HABITAT_FOR_METEOR_SECRETS_DIR="\${HOME}/.ssh/hab_vault";
+
+# Habitat for Meteor user secrets directory
+export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
+
+EOSVARS
+
+## Sourcing test variables file ....
+source ${TEST_VARS_FILE};
+export THE_PROJECT_ROOT=${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
+export PROJECT_UUID=${YOUR_ORG}/${TARGET_PROJECT_NAME};
+export PROJECT_HABITAT_DIR=${THE_PROJECT_ROOT}/.habitat;
+export PROJECT_RELEASE_NOTES_DIR=${PROJECT_HABITAT_DIR}/release_notes;
+echo -e "
+
+Test variables are ready for use:
+  * edit with 'nano ${TEST_VARS_FILE};'
+  * then re-source with 'source ${TEST_VARS_FILE};'
+";
+
+function startSSHAgent() {
+
+  echo -e "${PRTY} Starting 'ssh-agent' ...";
+  if [ -z "${SSH_AUTH_SOCK}" ]; then
+    eval $(ssh-agent -s);
+    echo -e "${PRTY} Started 'ssh-agent' ...";
+  fi;
+
+};
+
+function PrepareDependencies() {
+
+    #
+    # Get dependencies
+    sudo apt -y install expect
+    sudo apt -y install curl
+    sudo apt -y install git
+    #
+    # Prepare 'git'
+    git config --global user.email "${YOUR_EMAIL}";
+    git config --global user.name "${YOUR_NAME}";
+    git config --global push.default simple;
+    #
+
+};
+
+function RefreshHabitatOriginKeys() {
+
+  if [ ! -d ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} ]; then
+    echo -e "Cannot find Habitat Origin Keys in '${HABITAT_FOR_METEOR_USER_SECRETS_DIR}'!";
+    mkdir -p ${HABITAT_FOR_METEOR_USER_SECRETS_DIR};
+    exit 1;
+  fi;
+
+  pushd ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} >/dev/null;
+
+    if [ ! -f ${YOUR_ORG}-*.sig.key ]; then
+      echo -e "Cannot find Habitat Origin Keys!";
+      exit 1;
+    fi;
+
+    cat ${YOUR_ORG}-*.pub | sudo hab origin key import; echo ;
+    cat ${YOUR_ORG}-*.sig.key | sudo hab origin key import; echo ;
+
+  popd >/dev/null;
+
+};
+
+function GetHabitatForMeteor() {
+
+    mkdir -p ${HABITA4METEOR_PARENT_DIR};
+    pushd ${HABITA4METEOR_PARENT_DIR} >/dev/null;
+    git clone https://github.com/${HABITA4METEOR_FORK_ORG}/${HABITA4METEOR_FORK_NAME};
+    popd >/dev/null;
+
+};
+
+
+function GetMeteor() {
+
+    curl https://install.meteor.com/ | sh;
+
+};
+
+
+
+function GetMeteorProject() {
+
+    # Prepare directory
+    mkdir -p ${TARGET_PROJECT_PARENT_DIR};
+    pushd ${TARGET_PROJECT_PARENT_DIR} >/dev/null;
+    #
+    # Install example project
+    rm -fr ${TARGET_PROJECT_NAME};
+    git clone git@github.com:${PROJECT_UUID}.git;
+    popd >/dev/null;
+
+};
+
+
+function FixGitPrivileges() {
+
+  pushd .git >/dev/null;
+
+  local OLD_URL_PATTERN="url = git";
+  local NEW_URL_LINE="  url = git@${YOUR_ORG}.github.com:${YOUR_ORG}/${TARGET_PROJECT_NAME}.git";
+  sed -i "s|.*url = git.*|${NEW_URL_LINE}|" ./config;
+
+  popd >/dev/null;
+
+
+};
+
+
+function TrialBuildMeteorProject() {
+
+    pushd ${THE_PROJECT_ROOT} >/dev/null;
+    # Install all NodeJS packages dependencies
+    meteor npm install
+    #
+    # Also install the one that change since the last release of 'meteor/todos'
+    meteor npm install --save bcrypt;
+    #
+    # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
+    meteor;
+    popd >/dev/null;
+
+};
+
+
+function PerformanceFix() {
+
+    # Optimize file change responsivity
+    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+
+};
+
+
+function PrepareMeteorProject() {
+    
+    pushd ${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME} >/dev/null;
+    ./Update_or_Install_H4M_into_Meteor_App.sh ${THE_PROJECT_ROOT};
+    popd >/dev/null;
+
+};
+
+
+function PreparePlanFile() {
+    
+    pushd ${THE_PROJECT_ROOT}/.habitat >/dev/null;
+    cp plan.sh.example plan.sh;
+    sed -i "/^pkg_origin/c\pkg_origin=${YOUR_ORG}" plan.sh;
+    sed -i "/^pkg_name/c\pkg_name=${TARGET_PROJECT_NAME}" plan.sh;
+    sed -i "/^pkg_version/c\pkg_version=${RELEASE_TAG}" plan.sh;
+    sed -i "/^pkg_maintainer/c\pkg_maintainer=\"${YOUR_NAME} <${YOUR_EMAIL}>\"" plan.sh;
+    sed -i "/^pkg_upstream_url/c\pkg_upstream_url=https://github.com/${PROJECT_UUID};" plan.sh;
+    popd >/dev/null;
+    
+
+};
+
+
+function InitializeMeteorProject() {
+
+    pushd ${THE_PROJECT_ROOT} >/dev/null;
+    ./.habitat/scripts/Update_or_Install_Dependencies.sh;
+    popd >/dev/null;
+
+};
+
+
+function PatchPkgJson() {
+
+  local REPLACEMENT="";
+  REPLACEMENT+="  \"name\": \"${TARGET_PROJECT_NAME}\",";
+  REPLACEMENT+="\n  \"version\": \"0.1.4\",";
+  REPLACEMENT+="\n  \"license\": \"MIT\",";
+  REPLACEMENT+="\n  \"repository\": \"https://github.com/${PROJECT_UUID}\",";
+  REPLACEMENT+="\n  \"scripts\": {";
+
+  sed -i "s|.*scripts.*|${REPLACEMENT}|" ./package.json;
+
+
+};
+
+
+function FixPkgJson() {
+
+  # Be sure we even have package.json
+  if [[ ! -f package.json ]]; then
+    echo "Project has no file : 'package.json'";
+    exit 1;
+  fi;
+
+  # Adding required fields if missing
+  grep -c repository ./package.json >/dev/null || PatchPkgJson;
+
+  local REPLACEMENT="  \"version\": \"${RELEASE_TAG}\",";
+  sed -i "s|.*\"version\":.*|${REPLACEMENT}|" ./package.json;
+
+
+};
+
+
+function FixPlanSh() {
+
+  local PLAN="./.habitat/plan.sh";
+  # Be sure we even have plan.sh
+  if [[ ! -f package.json ]]; then
+    echo "Project has no file : 'package.json'";
+    exit 1;
+  fi;
+
+  local REPLACEMENT="pkg_version=${RELEASE_TAG}";
+  sed -i "s|^version.*|${REPLACEMENT}|" ${PLAN};
+
+};
+
+
+function FixReleaseNote() {
+
+  pushd ${PROJECT_RELEASE_NOTES_DIR} >/dev/null;
+  if [ ! -f ./${RELEASE_TAG}_note.txt ]; then
+    cp ./0.0.0_note.txt.example ./${RELEASE_TAG}_note.txt;
+    sed -i "s|0.0.0|${RELEASE_TAG}|g" ./${RELEASE_TAG}_note.txt;
+  fi;
+  popd >/dev/null;
+  git add ${PROJECT_RELEASE_NOTES_DIR}/${RELEASE_TAG}_note.txt;
+
+};
+
+
+function CommitAndPush() {
+
+  echo -e "    - Commit ";
+  git status | \
+    grep -c "nothing to commit" >/dev/null || \
+    git commit -a -m "Release version v${RELEASE_TAG}";
+
+  echo -e "    - Push ";
+  git push;
+
+  echo -e "   Clean";
+
+};
+
+
+function BuildAndUploadMeteorProject() {
+
+  pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+    echo "${PRTY} Fixing package.json version ";
+    FixPkgJson;
+
+    echo "${PRTY} Fixing plan.sh version ";
+    FixPlanSh;
+
+    echo "${PRTY} Fixing release notes ";
+    FixReleaseNote;
+
+    echo "${PRTY} Fixing git privileges ";
+    FixGitPrivileges;
+
+    echo "${PRTY} Refreshing Habitat Origin keys ";
+    RefreshHabitatOriginKeys;
+
+    echo "${PRTY} Committing and pushing project ";
+    CommitAndPush;
+
+    echo "${PRTY} Building and uploading ";
+    ./.habitat/BuildAndUpload.sh ${RELEASE_TAG};
+
+  popd >/dev/null;
+
+};
+
+
+function VerifyHostsFile() {
+  local HSTS="/etc/hosts";
+  echo -e "Check '${HSTS}' file mappings ";
+  FAIL=0;
+  cat ${HSTS} | grep -c "${TARGET_SRVR}" >/dev/null || FAIL=1;
+  cat ${HSTS} | grep -c "${VHOST_DOMAIN}" >/dev/null || FAIL=1;
+
+  ping -c 1 "${TARGET_SRVR}" >/dev/null || FAIL=1;
+  ping -c 1 "${VHOST_DOMAIN}" >/dev/null  || FAIL=1;
+  if [[ "${FAIL}" = "1" ]]; then
+    echo "You need to correct your file: ${HSTS}.  Quitting ....";
+    exit 1;
+  fi;
+};
+
+
+function VerifyHostsAccess() {
+
+  #  Starting SSH Agent if not already started
+  startSSHAgent;
+
+  # Add user key to agent;
+  ssh-add ${CURRENT_USER_SSH_KEY_FILE};
+
+  #
+  echo -e "Attempting connection to server.";
+  local RES=$(ssh -tq -oStrictHostKeyChecking=no -oBatchMode=yes -l $(whoami) ${TARGET_SRVR} whoami);
+  echo -e "Server user is :
+  ${RES}";
+
+};
+
+
+function GenerateHabUserSSHKeysIfNotExist() {
+  echo -e "Generating SSH key pair for 'hab' user.";
+};
+
+
+function ConfigureSSHConfigIfNotDone() {
+  echo -e "";
+};
+
+
+function GenerateSiteCertificateIfNotExist() {
+  echo -e "";
+};
+
+
+function PrepareSecretsFile() {
+  echo -e "";
+};
+
+# function V() {
+#   echo -e ""
+# };
 
 set -e;
-
-TARGET_PROJECT="${1}";
-RELEASE_TAG="${2}";
-
-TARGET_PROJECT="../todos";
-RELEASE_TAG="0.0.8";
-TARGET_SRVR="192.168.122.143";
 
 echo "Some tasks need to be run as root...";
 sudo ls -l &>/dev/null;
@@ -18,6 +398,89 @@ sudo ls -l &>/dev/null;
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 PRTY="XRSZ :: ";
+
+echo "${PRTY} Processing execution stage '${EXECUTION_STAGE}' ...";
+if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
+
+
+  echo "${PRTY} Installing Git";
+  PrepareDependencies;
+
+  
+  echo "${PRTY} Installing Meteor";
+  GetMeteor;
+
+  
+  echo "${PRTY} Installing sample project";
+  GetMeteorProject;
+
+
+  echo "${PRTY} Building sample project";
+  TrialBuildMeteorProject;
+
+
+  echo "${PRTY} Fixing performance";
+  PerformanceFix;
+
+  echo "${PRTY} Preparing Habitat Origin Keys";
+  RefreshHabitatOriginKeys;
+
+
+fi;
+
+
+if [[ "step2_PROJECT_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
+
+  echo "${PRTY} Pushing Habitat script subset to the target project directory ...";
+  PrepareMeteorProject;
+
+  echo "${PRTY} Putting shell variables into Habitat plan file ...";
+  PreparePlanFile;
+
+  echo "${PRTY} Initialize example project ...";
+  InitializeMeteorProject;
+
+fi;
+
+
+if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
+
+  echo "${PRTY} Build project and upload ...";
+  BuildAndUploadMeteorProject;
+
+fi;
+
+
+if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
+
+  echo "${PRTY} Prepare for SCP & SSH RPC calls ...";
+  VerifyHostsFile;
+  VerifyHostsAccess;
+  GenerateHabUserSSHKeysIfNotExist;
+  ConfigureSSHConfigIfNotDone;
+  GenerateSiteCertificateIfNotExist;
+  PrepareSecretsFile;
+
+fi;
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################  ?????????????????   source ./habitat/scripts/utils.sh;
+echo -e "
+
+
+Rinse and repeat...."
+exit;
 
 echo "${PRTY} Matching plan.sh settings to release level...";
 HABITAT_PLAN_FILE="habitat/plan.sh";

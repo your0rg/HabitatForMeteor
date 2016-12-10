@@ -157,7 +157,6 @@ function detectIncompletePackageJSON() {
   JSN=$(cat ${jsonFILE});
 
   FLD=name;
-
   jsonDoesHaveElement "${JSN}" ${FLD} || appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
   FLD=version;
@@ -637,16 +636,21 @@ echo -e "${PRTY} Ready to commit changes.
 
             ";
 
-read -r -p "Proceed? [y/N] " response;
-case ${response} in
-    [yY][eE][sS]|[yY])
-        echo "${PRTY} Continuing...";
-        ;;
-    *)
-        echo -e "${PRTY} Quitting now.\nDone.";
-        exit 1;
-        ;;
-esac
+if [[ ! "${NON_STOP}" = "YES" ]]; then
+
+  read -r -p "Proceed? [y/N] " response;
+  case ${response} in
+      [yY][eE][sS]|[yY])
+          echo "${PRTY} Continuing...";
+          ;;
+      *)
+          echo -e "${PRTY} Quitting now.\nDone.";
+          exit 1;
+          ;;
+  esac
+
+fi;
+
 
 uploadHabitatArchiveFileToDepot;
 

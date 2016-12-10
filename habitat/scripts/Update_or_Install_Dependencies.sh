@@ -72,7 +72,6 @@ function isMeteorInstalled() {
 
 }
 
-
 cd ${SCRIPTPATH}/../..;
 echo -e "${PRTY}Working in ${SCRIPTPATH}/../..";
 
@@ -83,11 +82,27 @@ cd ${SCRIPTPATH};
 echo -e "${PRTY}Working in ${SCRIPTPATH}";
 
 echo -e "${PRTY}Configure environment variables...";
-. ./ManageShellVars.sh "";
-loadShellVars;
+declare USER_VARS="${HOME}/.userVars.sh";
+declare SVs="false";
+[ "${NON_STOP}" = "YES" ] || SVs="true";
+[ -f ${USER_VARS} ] || SVs="true";
 
-PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
-[ "${ENVVARSDIRTY}" = "true" ] && askUserForParameters PARM_NAMES[@];
+[ $(cat ~/.userVars.sh | \
+grep GITHUB_PERSONAL_TOKEN | \
+cut -d "'" -f 2 | \
+grep -ocwE '^[[:alnum:]]{40}') -gt 0 ] || \
+SVs="true";
+
+if [[ "${SVs}" = "true" ]]; then
+  echo -e "User vars need to be set...";
+  . ./ManageShellVars.sh "";
+  loadShellVars;
+  PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
+  [ "${ENVVARSDIRTY}" = "true" ] && askUserForParameters PARM_NAMES[@];
+
+else
+  echo -e "${PRTY}User vars seem ready.";
+fi;
 
 echo -e "\n${PRTY}Installing script dependencies";
 
