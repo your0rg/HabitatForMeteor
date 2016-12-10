@@ -48,19 +48,33 @@ export RELEASE_TAG="0.0.14";
 export TARGET_SRVR="hab4metsrv";
 
 # Domain name of the server where the project will be deployed
-export VHOST_DOMAIN="moon.planet.sun";
-
-# Domain name of the server where the project will be deployed
 export NON_STOP="YES";
 
 # The SSH secret key of the current user, for ssh-add
-export CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
+export SSH_KEY_PATH="\${HOME}/.ssh";
+export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
+
+export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
+export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
 # Habitat for Meteor secrets directory
-export HABITAT_FOR_METEOR_SECRETS_DIR="\${HOME}/.ssh/hab_vault";
+export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
 
 # Habitat for Meteor user secrets directory
 export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
+
+# Parameters for creating a SSH key pair for the 'hab' user.
+export HABITAT_USER_SSH_KEY_COMMENT="DevopsTeamLeader";
+export HABITAT_USER_SSH_PASS_PHRASE="memorablegobbledygook";
+export HABITAT_USER_SSH_KEY_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user";
+export HABITAT_USER_SSH_KEY_PRIV="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa";
+export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
+
+# SSL certificate parameters of the server where the project will be deployed
+export VHOST_DOMAIN="moon.planet.sun";
+export VHOST_CERT_PATH="${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN}";
+export VHOST_CERT_PASSPHRASE="memorablegibberish";
+
 
 EOSVARS
 
@@ -356,7 +370,7 @@ function VerifyHostsAccess() {
   startSSHAgent;
 
   # Add user key to agent;
-  ssh-add ${CURRENT_USER_SSH_KEY_FILE};
+  ssh-add ${CURRENT_USER_SSH_KEY_PRIV};
 
   #
   echo -e "Attempting connection to server.";
@@ -368,17 +382,103 @@ function VerifyHostsAccess() {
 
 
 function GenerateHabUserSSHKeysIfNotExist() {
-  echo -e "Generating SSH key pair for 'hab' user.";
+
+    mkdir -p ${HABITAT_USER_SSH_KEY_PATH};
+    if [[ ! -f ${HABITAT_USER_SSH_KEY_PRIV} ]]; then
+    #  rm -f ${HABITAT_USER_SSH_KEY_PATH}/id_rsa*;
+      echo -e "Generating SSH key pair for 'hab' user.";
+      ssh-keygen \
+        -t rsa \
+        -C "${HABITAT_USER_SSH_KEY_COMMENT}" \
+        -f "${HABITAT_USER_SSH_KEY_PRIV}" \
+        -P "${HABITAT_USER_SSH_PASS_PHRASE}" \
+        && cat ${HABITAT_USER_SSH_KEY_PUBL};
+    else
+      echo -e "SSH key pair for 'hab' user seems to exist already.";
+    fi;
+    chmod go-rwx ${HABITAT_USER_SSH_KEY_PRIV};
+    chmod go-wx ${HABITAT_USER_SSH_KEY_PUBL};
+    chmod go-w ${HABITAT_USER_SSH_KEY_PATH};
+
 };
 
 
 function ConfigureSSHConfigIfNotDone() {
-  echo -e "";
+
+    echo -e "Preparing SSH config file.";
+
+    CURRENT_USER=$(whoami);
+    #
+    export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
+    export PTRNB="${PTRN} «begins»";
+    export PTRNE="${PTRN} «ends»";
+    #
+
+    mkdir -p ${SSH_KEY_PATH};
+    touch ${SSH_CONFIG_FILE};
+    if [[ ! -f ${SSH_CONFIG_FILE}_BK ]]; then
+      cp ${SSH_CONFIG_FILE} ${SSH_CONFIG_FILE}_BK;
+      chmod ugo-w ${SSH_CONFIG_FILE}_BK;
+    fi;
+    sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
+    #
+    echo -e "
+    ${PTRNB}
+    Host ${TARGET_SRVR}
+        HostName ${TARGET_SRVR}
+        User ${CURRENT_USER}
+        PreferredAuthentications publickey
+        IdentityFile ${CURRENT_USER_SSH_KEY_PRIV}
+    ${PTRNE}
+    " >> ${SSH_CONFIG_FILE}
+
+    HABITAT_USER="hab";
+    HABITAT_USER_SSH_KEY_FILE="${SSH_KEY_PATH}/hab_vault/habitat_user/id_rsa";
+    #
+    export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
+    export PTRNB="${PTRN} «begins»";
+    export PTRNE="${PTRN} «ends»";
+    #
+    sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
+    #
+    echo -e "
+    ${PTRNB}
+    Host ${TARGET_SRVR}
+        HostName ${TARGET_SRVR}
+        User ${HABITAT_USER}
+        PreferredAuthentications publickey
+        IdentityFile ${HABITAT_USER_SSH_KEY_PRIV}
+    ${PTRNE}
+    " >> ${SSH_CONFIG_FILE}
+    #
+    sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}
+    echo -e "Done preparing SSH config file.";
+
 };
 
 
 function GenerateSiteCertificateIfNotExist() {
-  echo -e "";
+
+    echo -e "Generating site certificates if none exist already.";
+
+    SUBJ="/C=ZZ/ST=Planet/L=Moon/O=YouGuyz/CN=${VHOST_DOMAIN}";
+    #
+    mkdir -p ${VHOST_CERT_PATH};
+    echo rm -f ${VHOST_CERT_PATH}/*;
+    exit;
+    echo ${VHOST_CERT_PASSPHRASE} > ${VHOST_CERT_PATH}/server.pp;
+    openssl req \
+    -new \
+    -newkey rsa:4096 \
+    -days 1825 \
+    -x509 \
+    -subj "${SUBJ}" \
+    -passout file:${VHOST_CERT_PATH}/server.pp \
+    -keyout ${VHOST_CERT_PATH}/server.key \
+    -out ${VHOST_CERT_PATH}/server.crt
+
+    echo -e "Done generating site certificates if none exist already.";
+
 };
 
 
@@ -474,7 +574,6 @@ fi;
 
 
 
-
 ##############################  ?????????????????   source ./habitat/scripts/utils.sh;
 echo -e "
 
@@ -482,81 +581,81 @@ echo -e "
 Rinse and repeat...."
 exit;
 
-echo "${PRTY} Matching plan.sh settings to release level...";
-HABITAT_PLAN_FILE="habitat/plan.sh";
-HABITAT_FIELD="pkg_version";
-sed -i "0,/${HABITAT_FIELD}/ s|.*${HABITAT_FIELD}.*|${HABITAT_FIELD}=${RELEASE_TAG}|" ${HABITAT_PLAN_FILE};
-echo -e "\nPlan Metadata\n";
-head -n 5 ${HABITAT_PLAN_FILE};
-echo -e "\n";
+# echo "${PRTY} Matching plan.sh settings to release level...";
+# HABITAT_PLAN_FILE="habitat/plan.sh";
+# HABITAT_FIELD="pkg_version";
+# sed -i "0,/${HABITAT_FIELD}/ s|.*${HABITAT_FIELD}.*|${HABITAT_FIELD}=${RELEASE_TAG}|" ${HABITAT_PLAN_FILE};
+# echo -e "\nPlan Metadata\n";
+# head -n 5 ${HABITAT_PLAN_FILE};
+# echo -e "\n";
 
 
-echo "${PRTY} Stepping into target directory...";
-cd ${TARGET_PROJECT};
-declare TARGET_PROJECT_PATH=$(pwd);
-declare HABITAT_WORK=${TARGET_PROJECT_PATH}/.habitat;
-mkdir -p ${HABITAT_WORK};
+# echo "${PRTY} Stepping into target directory...";
+# cd ${TARGET_PROJECT};
+# declare TARGET_PROJECT_PATH=$(pwd);
+# declare HABITAT_WORK=${TARGET_PROJECT_PATH}/.habitat;
+# mkdir -p ${HABITAT_WORK};
 
 
-if [ ! -d ${TARGET_PROJECT_PATH}/.meteor ]; then
-  echo "Quitting!  Found no directory ${TARGET_PROJECT_PATH}/.meteor.";
-  exit;
-fi;
+# if [ ! -d ${TARGET_PROJECT_PATH}/.meteor ]; then
+#   echo "Quitting!  Found no directory ${TARGET_PROJECT_PATH}/.meteor.";
+#   exit;
+# fi;
 
-if [ -d ${TARGET_PROJECT_PATH}/.habitat ]; then
+# if [ -d ${TARGET_PROJECT_PATH}/.habitat ]; then
 
-    echo "${PRTY} Purging previous HabitatForMeteor files from target...";
-    sudo rm -fr ${HABITAT_WORK}/scripts;
-    sudo rm -fr ${HABITAT_WORK}/BuildAndUpload.sh;
-    sudo rm -fr ${HABITAT_WORK}/plan.sh;
+#     echo "${PRTY} Purging previous HabitatForMeteor files from target...";
+#     sudo rm -fr ${HABITAT_WORK}/scripts;
+#     sudo rm -fr ${HABITAT_WORK}/BuildAndUpload.sh;
+#     sudo rm -fr ${HABITAT_WORK}/plan.sh;
 
-fi;
+# fi;
 
-echo "${PRTY} Copying HabitatForMeteor files to target...";
-cp -r ${SCRIPTPATH}/habitat/* ${HABITAT_WORK};
+# echo "${PRTY} Copying HabitatForMeteor files to target...";
+# cp -r ${SCRIPTPATH}/habitat/* ${HABITAT_WORK};
 
 
-echo -e "${PRTY} Preparing for using Habitat...\n\n";
-${HABITAT_WORK}/scripts/PrepareForHabitatBuild.sh;
+# echo -e "${PRTY} Preparing for using Habitat...\n\n";
+# ${HABITAT_WORK}/scripts/PrepareForHabitatBuild.sh;
 
-# set +e;
-# git checkout -- package.json &>/dev/null;
-# git checkout -- .habitat/plan.sh &>/dev/null;
-# git status;
-# git tag -d ${RELEASE_TAG} &>/dev/null;
+# # set +e;
+# # git checkout -- package.json &>/dev/null;
+# # git checkout -- .habitat/plan.sh &>/dev/null;
+# # git status;
+# # git tag -d ${RELEASE_TAG} &>/dev/null;
 
-set -e;
-SETUP_USER="you";
-SETUP_USER_PWD="okok";
-HABITAT_USER_PWD_FILE_PATH="${HOME}/.ssh/HabUserPwd";
-HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa.pub";
-
-echo -e "${PRTY} Pushing deployment scripts to target,
-         server '${TARGET_SRVR}' ready for RPC to upgrade to
-         project version ${RELEASE_TAG}...";
-${HABITAT_WORK}/scripts/PushInstallerScriptsToTarget.sh \
-                   ${TARGET_SRVR} \
-                   ${SETUP_USER} \
-                   ${SETUP_USER_PWD} \
-                   ${HABITAT_USER_PWD_FILE_PATH} \
-                   ${HABITAT_USER_SSH_KEY_FILE} \
-                   ${RELEASE_TAG};
+# set -e;
+# SETUP_USER="you";
+# SETUP_USER_PWD="okok";
+# HABITAT_USER_PWD_FILE_PATH="${HOME}/.ssh/HabUserPwd";
+# HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa.pub";
 
 # echo -e "${PRTY} Pushing deployment scripts to target,
-#          server '' ready for RPC to upgrade to
+#          server '${TARGET_SRVR}' ready for RPC to upgrade to
 #          project version ${RELEASE_TAG}...";
-# ${HABITAT_WORK}/scripts/PushInstallerScriptsToTarget.sh ${RELEASE_TAG};
+# ${HABITAT_WORK}/scripts/PushInstallerScriptsToTarget.sh \
+#                    ${TARGET_SRVR} \
+#                    ${SETUP_USER} \
+#                    ${SETUP_USER_PWD} \
+#                    ${HABITAT_USER_PWD_FILE_PATH} \
+#                    ${HABITAT_USER_SSH_KEY_FILE} \
+#                    ${RELEASE_TAG};
 
-echo -e "${PRTY} Building application with Meteor,
-         packaging with Habitat and
-         uploading to Habitat depot...";
-${HABITAT_WORK}/BuildAndUpload.sh ${RELEASE_TAG};
+# # echo -e "${PRTY} Pushing deployment scripts to target,
+# #          server '' ready for RPC to upgrade to
+# #          project version ${RELEASE_TAG}...";
+# # ${HABITAT_WORK}/scripts/PushInstallerScriptsToTarget.sh ${RELEASE_TAG};
 
-# --------------------------------------------------------------------------
-hidden() {
-  "name": "todos",
-  "version": "0.0.1",
-  "license": "MIT",
-  "repository": "https://github.com/FleetingClouds/todos",
+# echo -e "${PRTY} Building application with Meteor,
+#          packaging with Habitat and
+#          uploading to Habitat depot...";
+# ${HABITAT_WORK}/BuildAndUpload.sh ${RELEASE_TAG};
 
-}
+# # --------------------------------------------------------------------------
+# hidden() {
+#   "name": "todos",
+#   "version": "0.0.1",
+#   "license": "MIT",
+#   "repository": "https://github.com/FleetingClouds/todos",
+
+# }
