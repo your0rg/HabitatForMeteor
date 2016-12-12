@@ -7,17 +7,25 @@ export step2_PROJECT_INITIALIZATIONS=$((${step1_ONCE_ONLY_INITIALIZATIONS}+1));
 export step3_BUILD_AND_UPLOAD=$((${step2_PROJECT_INITIALIZATIONS}+1));
 export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
 export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
+export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
 
 # export EXECUTION_STAGE="step0_BEGIN";
-export EXECUTION_STAGE="step0_BEGIN";
+export EXECUTION_STAGE="step3_BUILD_AND_UPLOAD";
+
+
+
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
 
 TEST_VARS_FILE="${HOME}/.testVars.sh";
 if [ ! -f ${TEST_VARS_FILE} ]; then
   cat << EOSVARS > ${TEST_VARS_FILE}
+  #
   # Test variables for getting started with Habitat For Meteor
+
+  # Location of your developer tools
+  export HABITAT_USER="hab";
 
   # Location of your developer tools
   export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
@@ -26,7 +34,7 @@ if [ ! -f ${TEST_VARS_FILE} ]; then
   export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
 
   # Organization of your HabitatForMeteorFork
-  export HABITA4METEOR_FORK_ORG="HabitatForMeteor";
+  export HABITA4METEOR_FORK_ORG="yourOrg";
 
   # Location of your projects
   export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
@@ -85,7 +93,9 @@ fi;
 
 
 ## Sourcing test variables file ....
+
 source ${TEST_VARS_FILE};
+source habitat/scripts/semver.sh;
 source habitat/scripts/target/secrets.sh.example;
 
 # echo "SETUP_USER_PWD = ${SETUP_USER_PWD}";
@@ -94,6 +104,7 @@ export THE_PROJECT_ROOT=${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
 export PROJECT_UUID=${YOUR_ORG}/${TARGET_PROJECT_NAME};
 export PROJECT_HABITAT_DIR=${THE_PROJECT_ROOT}/.habitat;
 export PROJECT_RELEASE_NOTES_DIR=${PROJECT_HABITAT_DIR}/release_notes;
+export HABITA4METEOR_SOURCE_DIR=${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME}/habitat;
 echo -e "
 
 Test variables are ready for use:
@@ -194,6 +205,36 @@ function FixGitPrivileges() {
 
 };
 
+# P1 : the url to verify
+# P2 : additional commands to meteor. Eg; test-packages
+function launchMeteorProcess()
+{
+  METEOR_URL=$1;
+  STARTED=false;
+
+  until wget -q --spider ${METEOR_URL};
+  do
+    echo "Waiting for ${METEOR_URL}";
+    if ! ${STARTED}; then
+      meteor $2 &
+      STARTED=true;
+    fi;
+    sleep 5;
+  done
+
+  echo "Meteor is running on ${METEOR_URL}";
+}
+
+
+function killMeteorProcess()
+{
+  EXISTING_METEOR_PIDS=$(ps aux | grep meteor  | grep -v grep | grep ~/.meteor/packages | awk '{print $2}');
+#  echo ">${IFS}<  ${EXISTING_METEOR_PIDS} ";
+  for pid in ${EXISTING_METEOR_PIDS}; do
+    echo "Kill Meteor process : >> ${pid} <<";
+    kill -9 ${pid};
+  done;
+}
 
 function TrialBuildMeteorProject() {
 
@@ -205,7 +246,9 @@ function TrialBuildMeteorProject() {
     meteor npm install --save bcrypt;
     #
     # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
-    meteor;
+    launchMeteorProcess "http://localhost:3000/";
+    killMeteorProcess;
+
     popd >/dev/null;
 
 };
@@ -231,7 +274,7 @@ function PrepareMeteorProject() {
 function PreparePlanFile() {
     
     pushd ${THE_PROJECT_ROOT}/.habitat >/dev/null;
-    cp plan.sh.example plan.sh;
+    cp ${HABITA4METEOR_SOURCE_DIR}/plan.sh.example plan.sh;
     sed -i "/^pkg_origin/c\pkg_origin=${YOUR_ORG}" plan.sh;
     sed -i "/^pkg_name/c\pkg_name=${TARGET_PROJECT_NAME}" plan.sh;
     sed -i "/^pkg_version/c\pkg_version=${RELEASE_TAG}" plan.sh;
@@ -269,17 +312,20 @@ function PatchPkgJson() {
 
 function FixPkgJson() {
 
+  local PKGJSN="./package.json";
+
   # Be sure we even have package.json
-  if [[ ! -f package.json ]]; then
-    echo "Project has no file : 'package.json'";
+  if [[ ! -f ${PKGJSN} ]]; then
+    echo "Project has no file : '${PKGJSN}'";
     exit 1;
   fi;
 
   # Adding required fields if missing
-  grep -c repository ./package.json >/dev/null || PatchPkgJson;
+  grep -c repository ${PKGJSN} >/dev/null || PatchPkgJson;
 
+#  echo "Fixing '${PLAN}' version to: '${RELEASE_TAG}' ";
   local REPLACEMENT="  \"version\": \"${RELEASE_TAG}\",";
-  sed -i "s|.*\"version\":.*|${REPLACEMENT}|" ./package.json;
+  sed -i "s|.*\"version\":.*|${REPLACEMENT}|" ${PKGJSN};
 
 
 };
@@ -287,15 +333,18 @@ function FixPkgJson() {
 
 function FixPlanSh() {
 
-  local PLAN="./.habitat/plan.sh";
+  local PLAN="${THE_PROJECT_ROOT}/.habitat/plan.sh";
   # Be sure we even have plan.sh
-  if [[ ! -f package.json ]]; then
-    echo "Project has no file : 'package.json'";
+  if [[ ! -f ${PLAN} ]]; then
+    echo "Project has no file : '${PLAN}'";
     exit 1;
   fi;
 
+#  echo "Fixing '${PLAN}' version to: '${RELEASE_TAG}' ";
   local REPLACEMENT="pkg_version=${RELEASE_TAG}";
-  sed -i "s|^version.*|${REPLACEMENT}|" ${PLAN};
+  sed -i "s|^pkg_version.*|${REPLACEMENT}|" ${PLAN};
+
+  grep "pkg_version=" ${THE_PROJECT_ROOT}/.habitat/plan.sh;
 
 };
 
@@ -303,8 +352,9 @@ function FixPlanSh() {
 function FixReleaseNote() {
 
   pushd ${PROJECT_RELEASE_NOTES_DIR} >/dev/null;
-  if [ ! -f ./${RELEASE_TAG}_note.txt ]; then
-    cp ./0.0.0_note.txt.example ./${RELEASE_TAG}_note.txt;
+
+   if [ ! -f ./${RELEASE_TAG}_note.txt ]; then
+    cp ${HABITA4METEOR_SOURCE_DIR}/release_notes/0.0.0_note.txt.example ./${RELEASE_TAG}_note.txt;
     sed -i "s|0.0.0|${RELEASE_TAG}|g" ./${RELEASE_TAG}_note.txt;
   fi;
   popd >/dev/null;
@@ -328,9 +378,76 @@ function CommitAndPush() {
 };
 
 
-function BuildAndUploadMeteorProject() {
+function determineLatestPackagePublished() {
+
+  if [[ "XX" == "X${YOUR_ORG}X" ]]; then 
+    echo -e "Could not determine latest package published. No Habitat Origin is defined.
+        ";
+    return;
+  fi;
+  local PACKAGE_PATH=${YOUR_ORG}/${TARGET_PROJECT_NAME};
+#  echo -e "Finding ::  ${PACKAGE_PATH} ";
+#  echo -e "Found ::  $(sudo hab pkg search ${YOUR_ORG}) ";
+
+  local PACKAGES=($(sudo hab pkg search ${YOUR_ORG} ));
+  export PKG_CHK=$(echo ${PACKAGES[@]} | grep -c "No packages found");
+  if (( ${PKG_CHK} > 0 )); then
+    local LATEST_VERSION="0.0.0-alpha0.0";
+  else
+    local LATEST_VERSION="${LATEST_PUBLISHED_PACKAGE_VERSION}";
+    # echo -e "INITIAL LATEST_VERSION: ${LATEST_VERSION} ";
+    # echo -e "PACKAGES: ${PACKAGES} ";
+    for PACKAGE in "${PACKAGES[@]}"
+    do
+      if [[ "XX" != "X$(echo ${PACKAGE} | grep ${PACKAGE_PATH})X" ]]; then
+        VERSION=${PACKAGE#${PACKAGE_PATH}/};
+        UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
+        # echo -e "Package : ${PACKAGE} Path: ${PACKAGE_PATH} extracted version: ${VERSION} unique version: ${UNIQUE_VERSION}";
+        # echo -e " LATEST_VERSION: ${LATEST_VERSION} ";
+        semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
+      fi;
+    done
+
+  fi;
+
+  LATEST_PUBLISHED_PACKAGE_VERSION=${LATEST_VERSION};
+#  echo -e "Quitting with '${LATEST_VERSION}'... ";
+
+}
+
+
+function IncrementReleaseTag() {
+
+  echo -e "Increment release number...";
+
+#  THE_TAG=$( grep RELEASE_TAG ${TEST_VARS_FILE}  | cut -d '"' -f 2 );
+  THE_TAG=${RELEASE_TAG};
+  A=(${THE_TAG//./ })
+  (( A[2]++ ));
+  NEW_TAG="${A[0]}.${A[1]}.${A[2]}";
+  echo ${NEW_TAG};
+
+  sed -i "s|.*RELEASE_TAG.*|  export RELEASE_TAG=\"${A[0]}.${A[1]}.${A[2]}\";|"  ${TEST_VARS_FILE};
+
+};
+
+function SetReleaseTag() {
 
   pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+    echo "${PRTY} Getting old release tag.. ";
+    local LATEST_PUBLISHED_PACKAGE_VERSION="0.0.0a";
+    determineLatestPackagePublished;
+
+    echo "LATEST_PUBLISHED_PACKAGE_VERSION -- ${LATEST_PUBLISHED_PACKAGE_VERSION}";
+    if [[ "${LATEST_PUBLISHED_PACKAGE_VERSION}" > "${RELEASE_TAG}" ]]; then
+      RELEASE_TAG=${LATEST_PUBLISHED_PACKAGE_VERSION};
+    fi;
+
+    IncrementReleaseTag;
+    source  ${TEST_VARS_FILE};
+
+    echo "RELEASE_TAG -- ${RELEASE_TAG}";
 
     echo "${PRTY} Fixing package.json version ";
     FixPkgJson;
@@ -341,12 +458,33 @@ function BuildAndUploadMeteorProject() {
     echo "${PRTY} Fixing release notes ";
     FixReleaseNote;
 
+
+  popd >/dev/null;
+
+};
+
+
+function PreparingKeysAndPrivileges() {
+
+  pushd ${THE_PROJECT_ROOT} >/dev/null;
+
     echo "${PRTY} Fixing git privileges ";
     FixGitPrivileges;
 
     echo "${PRTY} Refreshing Habitat Origin keys ";
     RefreshHabitatOriginKeys;
 
+};
+
+
+function BuildAndUploadMeteorProject() {
+
+  pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+
+    echo "${PRTY} Prepare Meteor settings file ";
+    PrepareMeteorSettingsFile;
+    
     echo "${PRTY} Committing and pushing project ";
     CommitAndPush;
 
@@ -382,9 +520,15 @@ function VerifyHostsAccess() {
   # Add user key to agent;
   ssh-add ${CURRENT_USER_SSH_KEY_PRIV};
 
+  ssh-keygen -f "${SSH_KEY_PATH}/known_hosts" -R ${TARGET_SRVR};
   #
-  echo -e "Attempting connection to server.";
+  echo -e "Attempting naive connection to server.";
   local RES=$(ssh -tq -oStrictHostKeyChecking=no -oBatchMode=yes -l $(whoami) ${TARGET_SRVR} whoami);
+  echo -e "Server user is :
+  ${RES}";
+
+  echo -e "Attempting safe connection to server.";
+  RES=$(ssh $(whoami)@${TARGET_SRVR} whoami);
   echo -e "Server user is :
   ${RES}";
 
@@ -442,7 +586,6 @@ function ConfigureSSHConfigIfNotDone() {
     ${PTRNE}
     " >> ${SSH_CONFIG_FILE}
 
-    HABITAT_USER="hab";
     HABITAT_USER_SSH_KEY_PRIV="${SSH_KEY_PATH}/hab_vault/habitat_user/id_rsa";
     #
     export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
@@ -554,6 +697,7 @@ function VerifySSHasHabUser() {
       send "${HABITAT_USER_SSH_PASS_PHRASE}\r"
       expect eof
 EOF
+echo -e "ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami";
     ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami;
 
 };
@@ -565,20 +709,7 @@ function PrepareMeteorSettingsFile() {
   fi;
 
   cp ${THE_PROJECT_ROOT}/settings.json ${HABITAT_FOR_METEOR_SECRETS_DIR};
-};
-
-function IncrementReleaseTag() {
-
-  echo -e "Increment release number...";
-
-  # THE_TAG=$(grep ${RELEASE_TAG} ${TEST_VARS_FILE}| cut -d '.' -f 3);
-  THE_TAG=$( grep RELEASE_TAG ${TEST_VARS_FILE}  | cut -d '"' -f 2 );
-  A=(${THE_TAG//./ })
-  (( A[2]++ ));
-  NEW_TAG="${A[0]}.${A[1]}.${A[2]}";
-  echo ${NEW_TAG};
-
-  sed -i "s|.*RELEASE_TAG.*|export RELEASE_TAG=\"${A[0]}.${A[1]}.${A[2]}\";|"  ${TEST_VARS_FILE};
+  git add ${THE_PROJECT_ROOT}/settings.json;
 
 };
 
@@ -604,27 +735,25 @@ PrepareSecretsFile;
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
 
 
-  echo "${PRTY} Installing Git";
-  PrepareDependencies;
+  # echo "${PRTY} Installing Git";
+  # PrepareDependencies;
 
   
-  echo "${PRTY} Installing Meteor";
-  GetMeteor;
+  # echo "${PRTY} Installing Meteor";
+  # GetMeteor;
 
   
-  echo "${PRTY} Installing sample project";
-  GetMeteorProject;
-
-
-  echo "${PRTY} Building sample project";
-  TrialBuildMeteorProject;
-
+  # echo "${PRTY} Installing sample project";
+  # GetMeteorProject;
 
   echo "${PRTY} Fixing performance";
   PerformanceFix;
 
   echo "${PRTY} Preparing Habitat Origin Keys";
   RefreshHabitatOriginKeys;
+
+  echo "${PRTY} Building sample project";
+  TrialBuildMeteorProject;
 
 
 fi;
@@ -646,7 +775,17 @@ fi;
 
 if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
 
-  echo "${PRTY} Build project and upload ...";
+  echo "${PRTY} Ensuring Git and Habitat keys work ...";
+  PreparingKeysAndPrivileges;
+
+  echo "${PRTY} Update release tag to next consecutive and set ...";
+  SetReleaseTag;
+
+
+  echo "
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ${PRTY} Build project and upload ...";
   BuildAndUploadMeteorProject;
 
 fi;
@@ -654,33 +793,51 @@ fi;
 
 if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
 
-  echo "${PRTY} Prepare for SCP & SSH RPC calls ...";
+  echo "
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ${PRTY} Prepare for SCP & SSH RPC calls ...";
   VerifyHostsFile;
   VerifyHostsAccess;
   GenerateHabUserSSHKeysIfNotExist;
   ConfigureSSHConfigIfNotDone;
   GenerateSiteCertificateIfNotExist;
   PrepareSecretsFile;
-  PrepareMeteorSettingsFile;
 
 fi;
 
 if [[ "step5_INSTALL_SERVER_SCRIPTS" -ge "${EXECUTION_STAGE}" ]]; then
 
-  IncrementReleaseTag;
-  echo "${PRTY} Pushing Installer Scripts To Target ...";
-  ./habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+  echo "
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ${PRTY} Pushing Installer Scripts To Target ...";
+
+  pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
   VerifySSHasHabUser;
-  ./habitat/scripts/PushSiteCertificateToTarget.sh \
+  ./.habitat/scripts/PushSiteCertificateToTarget.sh \
                ${TARGET_SRVR} \
                ${SOURCE_SECRETS_FILE} \
                ${HABITAT_FOR_METEOR_SECRETS_DIR} \
                ${VHOST_DOMAIN};
-
+  popd;
+  
 fi;
 
 
+if [[ "step6_INITIATE_DEPLOY" -ge "${EXECUTION_STAGE}" ]]; then
 
+  echo "
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ${PRTY} Initiating deployment on target ...";
+
+  VerifySSHasHabUser;
+  ssh ${HABITAT_USER}@${TARGET_SRVR} "~/HabitatPkgInstallerScripts/HabitatPackageRunner.sh ${VHOST_DOMAIN} ${YOUR_ORG} ${TARGET_PROJECT_NAME}";
+
+fi;
 
 
 

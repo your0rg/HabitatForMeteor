@@ -14,6 +14,7 @@ function makeAskPassService() {
   export PTRNE="${PTRN} «ends»";
   #
   BL_PATH="/home/${1}/.bash_login";
+  touch ${BL_PATH};
   sed -i "/${PTRNB}/,/${PTRNE}/d" ${BL_PATH};
   #
   echo -e "${PTRNB}
