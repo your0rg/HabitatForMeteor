@@ -6,80 +6,90 @@ export step1_ONCE_ONLY_INITIALIZATIONS=$((${step0_BEGIN}+1));
 export step2_PROJECT_INITIALIZATIONS=$((${step1_ONCE_ONLY_INITIALIZATIONS}+1));
 export step3_BUILD_AND_UPLOAD=$((${step2_PROJECT_INITIALIZATIONS}+1));
 export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
+export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
+
 
 # export EXECUTION_STAGE="step0_BEGIN";
-export EXECUTION_STAGE="step4_PREPARE_FOR_SSH_RPC";
+export EXECUTION_STAGE="step0_BEGIN";
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
 
 TEST_VARS_FILE="${HOME}/.testVars.sh";
-cat << EOSVARS > ${TEST_VARS_FILE}
-# Test variables for getting started with Habitat For Meteor
+if [ ! -f ${TEST_VARS_FILE} ]; then
+  cat << EOSVARS > ${TEST_VARS_FILE}
+  # Test variables for getting started with Habitat For Meteor
 
-# Location of your developer tools
-export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
+  # Location of your developer tools
+  export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
 
-# Name of your HabitatForMeteorFork
-export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
+  # Name of your HabitatForMeteorFork
+  export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
 
-# Organization of your HabitatForMeteorFork
-export HABITA4METEOR_FORK_ORG="HabitatForMeteor";
+  # Organization of your HabitatForMeteorFork
+  export HABITA4METEOR_FORK_ORG="HabitatForMeteor";
 
-# Location of your projects
-export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
+  # Location of your projects
+  export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
 
-# Location of your target project
-export TARGET_PROJECT_NAME="todos";
+  # Location of your target project
+  export TARGET_PROJECT_NAME="todos";
 
-# Your full name
-export YOUR_NAME="You Yourself";
+  # Your full name
+  export YOUR_NAME="You Yourself";
 
-# Your github organization or user name
-export YOUR_ORG="yourse1f-yourorg";
+  # Your github organization or user name
+  export YOUR_ORG="yourse1f-yourorg";
 
-# Your email address
-export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
+  # Your email address
+  export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
 
-# The release tag you want to attach to the above project. It must be the
-# newest release anywhere locally or on GitHub or on apps.habitat.sh
-export RELEASE_TAG="0.0.14";
+  # The release tag you want to attach to the above project. It must be the
+  # newest release anywhere locally or on GitHub or on apps.habitat.sh
+  export RELEASE_TAG="0.0.14";
 
-# Domain name of the server where the project will be deployed
-export TARGET_SRVR="hab4metsrv";
+  # Domain name of the server where the project will be deployed
+  export TARGET_SRVR="hab4metsrv";
 
-# Domain name of the server where the project will be deployed
-export NON_STOP="YES";
+  # Domain name of the server where the project will be deployed
+  export NON_STOP="YES";
 
-# The SSH secret key of the current user, for ssh-add
-export SSH_KEY_PATH="\${HOME}/.ssh";
-export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
+  # The SSH secret key of the current user, for ssh-add
+  export SSH_KEY_PATH="\${HOME}/.ssh";
+  export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
-export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
-export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
+  export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
+  export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
-# Habitat for Meteor secrets directory
-export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
+  # Habitat for Meteor secrets directory
+  export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
+  export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh";
+  export METEOR_SETTINGS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/settings.json";
 
-# Habitat for Meteor user secrets directory
-export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
+  # Habitat for Meteor user secrets directory
+  export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
 
-# Parameters for creating a SSH key pair for the 'hab' user.
-export HABITAT_USER_SSH_KEY_COMMENT="DevopsTeamLeader";
-export HABITAT_USER_SSH_PASS_PHRASE="memorablegobbledygook";
-export HABITAT_USER_SSH_KEY_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user";
-export HABITAT_USER_SSH_KEY_PRIV="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa";
-export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
+  # Parameters for creating a SSH key pair for the 'hab' user.
+  export HABITAT_USER_SSH_KEY_COMMENT="DevopsTeamLeader";
+  export HABITAT_USER_SSH_PASS_PHRASE="memorablegobbledygook";
+  export HABITAT_USER_SSH_KEY_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user";
+  export HABITAT_USER_SSH_KEY_PRIV="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa";
+  export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
 
-# SSL certificate parameters of the server where the project will be deployed
-export VHOST_DOMAIN="moon.planet.sun";
-export VHOST_CERT_PATH="${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN}";
-export VHOST_CERT_PASSPHRASE="memorablegibberish";
-
+  # SSL certificate parameters of the server where the project will be deployed
+  export VHOST_DOMAIN="moon.planet.sun";
+  export VHOST_CERT_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}";
+  export VHOST_CERT_PASSPHRASE="memorablegibberish";
 
 EOSVARS
+fi;
+
 
 ## Sourcing test variables file ....
 source ${TEST_VARS_FILE};
+source habitat/scripts/target/secrets.sh.example;
+
+# echo "SETUP_USER_PWD = ${SETUP_USER_PWD}";
+#
 export THE_PROJECT_ROOT=${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
 export PROJECT_UUID=${YOUR_ORG}/${TARGET_PROJECT_NAME};
 export PROJECT_HABITAT_DIR=${THE_PROJECT_ROOT}/.habitat;
@@ -433,7 +443,7 @@ function ConfigureSSHConfigIfNotDone() {
     " >> ${SSH_CONFIG_FILE}
 
     HABITAT_USER="hab";
-    HABITAT_USER_SSH_KEY_FILE="${SSH_KEY_PATH}/hab_vault/habitat_user/id_rsa";
+    HABITAT_USER_SSH_KEY_PRIV="${SSH_KEY_PATH}/hab_vault/habitat_user/id_rsa";
     #
     export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
     export PTRNB="${PTRN} «begins»";
@@ -464,26 +474,112 @@ function GenerateSiteCertificateIfNotExist() {
     SUBJ="/C=ZZ/ST=Planet/L=Moon/O=YouGuyz/CN=${VHOST_DOMAIN}";
     #
     mkdir -p ${VHOST_CERT_PATH};
-    echo rm -f ${VHOST_CERT_PATH}/*;
-    exit;
-    echo ${VHOST_CERT_PASSPHRASE} > ${VHOST_CERT_PATH}/server.pp;
-    openssl req \
-    -new \
-    -newkey rsa:4096 \
-    -days 1825 \
-    -x509 \
-    -subj "${SUBJ}" \
-    -passout file:${VHOST_CERT_PATH}/server.pp \
-    -keyout ${VHOST_CERT_PATH}/server.key \
-    -out ${VHOST_CERT_PATH}/server.crt
-
-    echo -e "Done generating site certificates if none exist already.";
+    if [[ ! -f ${VHOST_CERT_PATH}/server.pp ]]; then
+      # rm -f ${VHOST_CERT_PATH}/server.*;
+      echo ${VHOST_CERT_PASSPHRASE} > ${VHOST_CERT_PATH}/server.pp;
+      openssl req \
+      -new \
+      -newkey rsa:4096 \
+      -days 1825 \
+      -x509 \
+      -subj "${SUBJ}" \
+      -passout file:${VHOST_CERT_PATH}/server.pp \
+      -keyout ${VHOST_CERT_PATH}/server.key \
+      -out ${VHOST_CERT_PATH}/server.crt
+      echo -e "Done generating site certificates.";
+    else
+      echo -e "Found existing site certificates.";
+    fi;
 
 };
 
 
 function PrepareSecretsFile() {
-  echo -e "";
+
+  echo -e "Preparing secrets file, '${SOURCE_SECRETS_FILE}', if not done.";
+  if [ -f ${SOURCE_SECRETS_FILE} ]; then
+    echo -e "Secrets file found.";
+    source ${SOURCE_SECRETS_FILE};
+    if [[ "${NON_STOP}" = "YES" ]]; then return 0; fi;
+  fi;
+
+  echo -e "Verifying secrets file.";
+  cp habitat/scripts/target/secrets.sh.example ${SOURCE_SECRETS_FILE};
+
+  local CHOICE="n";
+  local SETUP_USER_UID="";
+  local SETUP_USER_PWD="";
+  while [[ ! "X${CHOICE}X" == "XyX" ]]
+  do
+    SETUP_USER_UID=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_UID | cut -d '"' -f 2);
+    SETUP_USER_PWD=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_PWD | cut -d '"' -f 2);
+
+    echo -e "   -----------------------------------------
+
+    According to the file '${SOURCE_SECRETS_FILE}'
+    your user ID and password on the remote server are : '${SETUP_USER_UID}' and '${SETUP_USER_PWD}'.
+    ".
+
+    read -ep "Is this correct? (y/n/q) ::  " -n 1 -r USER_ANSWER
+    CHOICE=$(echo ${USER_ANSWER:0:1} | tr '[:upper:]' '[:lower:]')
+    if [[ "X${CHOICE}X" == "XqX" ]]; then
+      echo "Skipping this operation."; exit 1;
+    elif [[ ! "X${CHOICE}X" == "XyX" ]]; then
+
+      read -p "Your server side user ID : " -r SETUP_USER_UID
+      if [ ! "X${SETUP_USER_UID}X" == "XX" ]; then
+        sed -i "s|.*SETUP_USER_UID.*|export SETUP_USER_UID=\"${SETUP_USER_UID}\";|" ${SOURCE_SECRETS_FILE}
+      fi;
+
+      read -p "Your server side password : " -r SETUP_USER_PWD
+      if [ ! "X${SETUP_USER_PWD}X" == "XX" ]; then
+        sed -i "s|.*SETUP_USER_PWD.*|export SETUP_USER_PWD=\"${SETUP_USER_PWD}\";|" ${SOURCE_SECRETS_FILE}
+      fi;
+
+    fi;
+  done;
+  source ${SOURCE_SECRETS_FILE};
+  echo -e "The most changeable secrets have been verified. Review the file directly for others.";
+
+};
+
+
+function VerifySSHasHabUser() {
+    echo "VerifySSHasHabUser";
+
+    startSSHAgent;
+    expect << EOF
+      spawn ssh-add ${HABITAT_USER_SSH_KEY_PRIV}
+      expect "Enter passphrase"
+      send "${HABITAT_USER_SSH_PASS_PHRASE}\r"
+      expect eof
+EOF
+    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami;
+
+};
+
+function PrepareMeteorSettingsFile() {
+  echo -e "PrepareMeteorSettingsFile";
+  if [ ! -f ${THE_PROJECT_ROOT}/settings.json ]; then
+    echo '{ "public": { "DUMMY": "dummy" } }' > ${THE_PROJECT_ROOT}/settings.json;
+  fi;
+
+  cp ${THE_PROJECT_ROOT}/settings.json ${HABITAT_FOR_METEOR_SECRETS_DIR};
+};
+
+function IncrementReleaseTag() {
+
+  echo -e "Increment release number...";
+
+  # THE_TAG=$(grep ${RELEASE_TAG} ${TEST_VARS_FILE}| cut -d '.' -f 3);
+  THE_TAG=$( grep RELEASE_TAG ${TEST_VARS_FILE}  | cut -d '"' -f 2 );
+  A=(${THE_TAG//./ })
+  (( A[2]++ ));
+  NEW_TAG="${A[0]}.${A[1]}.${A[2]}";
+  echo ${NEW_TAG};
+
+  sed -i "s|.*RELEASE_TAG.*|export RELEASE_TAG=\"${A[0]}.${A[1]}.${A[2]}\";|"  ${TEST_VARS_FILE};
+
 };
 
 # function V() {
@@ -499,7 +595,12 @@ SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 PRTY="XRSZ :: ";
 
-echo "${PRTY} Processing execution stage '${EXECUTION_STAGE}' ...";
+echo -e "${PRTY} Processing from execution stage '${EXECUTION_STAGE}' ...
+
+";
+
+PrepareSecretsFile;
+
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
 
 
@@ -560,12 +661,23 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
   ConfigureSSHConfigIfNotDone;
   GenerateSiteCertificateIfNotExist;
   PrepareSecretsFile;
+  PrepareMeteorSettingsFile;
 
 fi;
 
+if [[ "step5_INSTALL_SERVER_SCRIPTS" -ge "${EXECUTION_STAGE}" ]]; then
 
+  IncrementReleaseTag;
+  echo "${PRTY} Pushing Installer Scripts To Target ...";
+  ./habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+  VerifySSHasHabUser;
+  ./habitat/scripts/PushSiteCertificateToTarget.sh \
+               ${TARGET_SRVR} \
+               ${SOURCE_SECRETS_FILE} \
+               ${HABITAT_FOR_METEOR_SECRETS_DIR} \
+               ${VHOST_DOMAIN};
 
-
+fi;
 
 
 

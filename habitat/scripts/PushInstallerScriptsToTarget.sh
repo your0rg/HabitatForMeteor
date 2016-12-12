@@ -178,7 +178,7 @@ source ${SOURCE_SECRETS_FILE};
 
 echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
 echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
-echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
+echo -e "${PRTY} HABITAT_USER_SSH_KEY_PUBL=${HABITAT_USER_SSH_KEY_PUBL}";
 
 # ----------------
 echo -e "${PRTY} Validating target host's user's sudo password... ";
@@ -202,8 +202,8 @@ if [[ "X${MONGODB_PWD}X" = "XX" ]]; then errorNoSuitablePasswordInFile "null"; f
 # ----------------
 HABITAT_USER_SSH_KEY_FILE_NAME="authorized_key";
 echo -e "${PRTY} Validating target host's user's SSH ${HABITAT_USER_SSH_KEY_FILE_NAME}... ";
-if [[ "X${HABITAT_USER_SSH_KEY_FILE}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
-ssh-keygen -lvf ${HABITAT_USER_SSH_KEY_FILE} > /tmp/kyfp.txt || errorBadPathToSSHKey ${HABITAT_USER_SSH_KEY_FILE};
+if [[ "X${HABITAT_USER_SSH_KEY_PUBL}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
+ssh-keygen -lvf ${HABITAT_USER_SSH_KEY_PUBL} > /tmp/kyfp.txt || errorBadPathToSSHKey ${HABITAT_USER_SSH_KEY_PUBL};
 echo -e "${PRTY} Target's user's SSH key fingerprint...";
 cat /tmp/kyfp.txt;
 
@@ -216,7 +216,7 @@ chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
 cp -p ${METEOR_SETTINGS_FILE} ${SCRIPTS_DIRECTORY};
 chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
 cp -p ${SOURCE_SECRETS_FILE} ${SCRIPTS_DIRECTORY};
-cp -p ${HABITAT_USER_SSH_KEY_FILE} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
+cp -p ${HABITAT_USER_SSH_KEY_PUBL} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
 
 echo -e "${PRTY} Bundling up the scripts as, '${BUNDLE_NAME}'...";
 tar zcf ${BUNDLE_NAME}  --exclude='*.example' ${SCRIPTS_DIRECTORY};
@@ -249,7 +249,7 @@ ssh ${SETUP_USER}@${TARGET_SRVR} "./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatT
 echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";
 startSSHAgent;
 expect << EOF
-  spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE%.pub}
+  spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
   expect "Enter passphrase"
   send "${HABITAT_USER_SSH_PASS}\r"
   expect eof
@@ -260,6 +260,8 @@ echo -e "${PRTY} Testing SSH connection using... [   ssh ${HABITAT_USER}@${TARGE
 if [[ "X${HABITAT_USER}X" = "XX" ]]; then errorNoUserAccountSpecified "null"; fi;
 REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) || errorCannotCallRemoteProcedure "${HABITAT_USER}@${TARGET_SRVR}";
 [[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${HABITAT_USER}") ]] ||  errorUnexpectedRPCResult;
+
+if [[ "${NON_STOP}" = "YES" ]]; then exit 0; fi;
 
 pushd ${SCRIPTPATH}/../.. >/dev/null;
 echo -e "\n${PRTY} Now you can upload your site certificates to a secure location in the 'hab' user's account.

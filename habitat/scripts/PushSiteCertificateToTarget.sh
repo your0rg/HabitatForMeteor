@@ -92,7 +92,7 @@ ping -c 1 ${TARGET_SRVR} >/dev/null || errorCannotPingRemoteServer "${TARGET_SRV
 echo -e "${PRTY} Activating ssh-agent for hab user's ssh key passphrase";
 startSSHAgent;
 expect << EOF
-  spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE%.pub}
+  spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
   expect "Enter passphrase"
   send "${HABITAT_USER_SSH_PASS}\r"
   expect eof
@@ -130,6 +130,8 @@ echo -e "${PRTY} Copying '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate
                  to ${TARGET_SRVR}:${TARGET_CERT_PATH}";
 ssh ${HABITAT_USER}@${TARGET_SRVR} mkdir -p ${CERT_PATH};
 scp ${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}/* ${HABITAT_USER}@${TARGET_SRVR}:${CERT_PATH} >/dev/null;
+
+if [[ "${NON_STOP}" = "YES" ]]; then exit 0; fi;
 
 echo -e "\n${PRTY} If you already executed './PushInstallerScriptsToTarget.sh' then server '${TARGET_SRVR}' is ready for HabitatForMeteor.
             Next step : From any machine with passwordless SSH access to the

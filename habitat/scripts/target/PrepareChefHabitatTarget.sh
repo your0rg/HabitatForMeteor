@@ -134,21 +134,32 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get update >>  ${LOG};
 # sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell >>  ${LOG};
 
-echo -e "${PRTY} Purging any existing user '${HAB_USER}' . . .  " | tee -a ${LOG};
-set +e; sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG}; set -e;
-sudo -A rm -fr "/etc/sudoers.d/${HAB_USER}" >>  ${LOG};
+# echo -e "${PRTY} Purging any existing user: '${HAB_USER}' . . .  " | tee -a ${LOG};
+# if sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG}; then
 
-echo -e "${PRTY} Creating user '${HAB_USER}' . . .  " | tee -a ${LOG};
-sudo -A adduser --disabled-password --gecos "" ${HAB_USER} >>  ${LOG};
+#   echo "Removing '${HAB_USER}' from sudoers ";
+#   sudo -A rm -fr "/etc/sudoers.d/${HAB_USER}" >>  ${LOG};
+#   echo "Purged user, '${HAB_USER}'.  Reinstantiating...";
+
+# fi;
+
+if ! id -u ${HAB_USER} &>/dev/null; then
+
+  echo -e "${PRTY} Creating user '${HAB_USER}' . . .  " | tee -a ${LOG};
+  sudo -A adduser --disabled-password --gecos "" ${HAB_USER} >>  ${LOG};
+
+  echo -e "${PRTY} Adding user '${HAB_USER}' to sudoers . . .  " | tee -a ${LOG};
+  sudo -A usermod -aG sudo ${HAB_USER};
+
+  echo -e "${PRTY} Setting password for user '${HAB_USER}' . . .  " | tee -a ${LOG};
+  sudo -A usermod --password $( mkpasswd ${HABITAT_USER_PWD} ) ${HAB_USER};
+
+fi;
+
+sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_DIR};
 
 echo -e "${PRTY} Ensuring command 'mkpassword' exists . . .  " | tee -a ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y whois  >>  ${LOG};
-
-echo -e "${PRTY} Setting password for user '${HAB_USER}' . . .  " | tee -a ${LOG};
-sudo -A usermod --password $( mkpasswd ${HABITAT_USER_PWD} ) ${HAB_USER};
-
-echo -e "${PRTY} Adding user '${HAB_USER}' to sudoers . . .  " | tee -a ${LOG};
-sudo -A usermod -aG sudo ${HAB_USER};
 
 echo -e "${PRTY} Adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  " | tee -a ${LOG};
 sudo -A mkdir -p ${HAB_SSH_DIR};
@@ -162,9 +173,10 @@ sudo -A -sHu ${HAB_USER} bash -c "source askPassMaker.sh; makeAskPassService ${H
 
 popd;
 echo -e "${PRTY} Moving bundle directory, '${BUNDLE_DIRECTORY_NAME}' to '/home/${HAB_USER}'";
-rm -fr ${BUNDLE_NAME};
-sudo -A mv ${BUNDLE_DIRECTORY_NAME} /home/${HAB_USER};
-sudo -A chown -R ${HAB_USER}:${HAB_USER} /home/${HAB_USER}/${BUNDLE_DIRECTORY_NAME};
+sudo -A rm -fr ${BUNDLE_NAME};
+sudo -A rm -fr ${HAB_DIR}/${BUNDLE_DIRECTORY_NAME};
+sudo -A mv ${BUNDLE_DIRECTORY_NAME} ${HAB_DIR};
+sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_DIR}/${BUNDLE_DIRECTORY_NAME};
 
 # KY_SUDO_ASK_PASS="SUDO_ASKPASS";
 # VL_SUDO_ASK_PASS=".supwd.sh";
