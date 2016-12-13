@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 ###################
 
-export step0_BEGIN=0;
-export step1_ONCE_ONLY_INITIALIZATIONS=$((${step0_BEGIN}+1));
+set -e;
+
+export step0_BEGIN_BY_CLEANING=0;
+export step1_ONCE_ONLY_INITIALIZATIONS=$((${step0_BEGIN_BY_CLEANING}+1));
 export step2_PROJECT_INITIALIZATIONS=$((${step1_ONCE_ONLY_INITIALIZATIONS}+1));
 export step3_BUILD_AND_UPLOAD=$((${step2_PROJECT_INITIALIZATIONS}+1));
 export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
@@ -10,9 +12,8 @@ export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
 
-# export EXECUTION_STAGE="step0_BEGIN";
-export EXECUTION_STAGE="step3_BUILD_AND_UPLOAD";
-
+# export EXECUTION_STAGE="step0_BEGIN_BY_CLEANING";
+export EXECUTION_STAGE="step2_PROJECT_INITIALIZATIONS";
 
 
 
@@ -23,6 +24,10 @@ if [ ! -f ${TEST_VARS_FILE} ]; then
   cat << EOSVARS > ${TEST_VARS_FILE}
   #
   # Test variables for getting started with Habitat For Meteor
+
+  # The SSH secrets directory 
+  export SSH_KEY_PATH="\${HOME}/.ssh";
+  export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
   # Location of your developer tools
   export HABITAT_USER="hab";
@@ -48,6 +53,9 @@ if [ ! -f ${TEST_VARS_FILE} ]; then
   # Your github organization or user name
   export YOUR_ORG="yourse1f-yourorg";
 
+  # The SSH keys of the current user, for ssh-add
+  export YOUR_ORG_IDENTITY_FILE="\${SSH_KEY_PATH}/\${YOUR_ORG}_rsa";
+
   # Your email address
   export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
 
@@ -61,10 +69,8 @@ if [ ! -f ${TEST_VARS_FILE} ]; then
   # Domain name of the server where the project will be deployed
   export NON_STOP="YES";
 
-  # The SSH secret key of the current user, for ssh-add
-  export SSH_KEY_PATH="\${HOME}/.ssh";
-  export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
+  # The SSH keys of the current user, for ssh-add
   export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
   export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
@@ -95,22 +101,128 @@ fi;
 ## Sourcing test variables file ....
 
 source ${TEST_VARS_FILE};
-source habitat/scripts/semver.sh;
 source habitat/scripts/target/secrets.sh.example;
 
-# echo "SETUP_USER_PWD = ${SETUP_USER_PWD}";
+
+echo "YOUR_ORG_IDENTITY_FILE = ${YOUR_ORG_IDENTITY_FILE}";
 #
 export THE_PROJECT_ROOT=${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
 export PROJECT_UUID=${YOUR_ORG}/${TARGET_PROJECT_NAME};
 export PROJECT_HABITAT_DIR=${THE_PROJECT_ROOT}/.habitat;
 export PROJECT_RELEASE_NOTES_DIR=${PROJECT_HABITAT_DIR}/release_notes;
 export HABITA4METEOR_SOURCE_DIR=${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME}/habitat;
+export HABITA4METEOR_SCRIPTS_DIR=${HABITA4METEOR_SOURCE_DIR}/scripts;
 echo -e "
 
 Test variables are ready for use:
   * edit with 'nano ${TEST_VARS_FILE};'
   * then re-source with 'source ${TEST_VARS_FILE};'
 ";
+
+
+function ConfigureSSHConfigForUser() {
+
+    local THE_USER="${1}";
+    local THE_HOST="${2}";
+    local THE_KEYS="${3}";
+
+    echo -e "Preparing SSH config file for:
+        * user - '${THE_USER}'
+        * host - '${THE_HOST}'
+        * keys - '${THE_KEYS}'
+    ";
+
+    if [ ! -f ${THE_KEYS} ]; then
+      echo -e "Unable to find SSH key at: '${THE_KEYS}' ...  ";
+      exit 1;
+    fi;
+
+    export PTRN="# ${THE_USER} account on ${THE_HOST}";
+    export PTRNB="${PTRN} «begins»";
+    export PTRNE="${PTRN} «ends»";
+    #
+
+    mkdir -p ${SSH_KEY_PATH};
+    touch ${SSH_CONFIG_FILE};
+    if [[ ! -f ${SSH_CONFIG_FILE}_BK ]]; then
+      cp ${SSH_CONFIG_FILE} ${SSH_CONFIG_FILE}_BK;
+      chmod ugo-w ${SSH_CONFIG_FILE}_BK;
+    fi;
+    sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
+    #
+    #
+    echo -e "
+    ${PTRNB}
+    Host ${THE_USER}.${THE_HOST}
+        HostName ${THE_HOST}
+        User ${THE_USER}
+        PreferredAuthentications publickey
+        IdentityFile ${THE_KEYS}
+    ${PTRNE}
+    " >> ${SSH_CONFIG_FILE}
+
+    sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}
+
+};
+
+
+
+ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
+
+# function ConfigureSSHConfigForHabitatUserIfNotDone() {
+
+#     echo -e "Preparing SSH config file.";
+
+#     CURRENT_USER=$(whoami);
+#     #
+#     export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
+#     export PTRNB="${PTRN} «begins»";
+#     export PTRNE="${PTRN} «ends»";
+#     #
+
+#     mkdir -p ${SSH_KEY_PATH};
+#     touch ${SSH_CONFIG_FILE};
+#     if [[ ! -f ${SSH_CONFIG_FILE}_BK ]]; then
+#       cp ${SSH_CONFIG_FILE} ${SSH_CONFIG_FILE}_BK;
+#       chmod ugo-w ${SSH_CONFIG_FILE}_BK;
+#     fi;
+#     sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
+#     #
+#     echo -e "
+#     ${PTRNB}
+#     Host ${TARGET_SRVR}
+#         HostName ${TARGET_SRVR}
+#         User ${CURRENT_USER}
+#         PreferredAuthentications publickey
+#         IdentityFile ${CURRENT_USER_SSH_KEY_PRIV}
+#     ${PTRNE}
+#     " >> ${SSH_CONFIG_FILE}
+
+#     HABITAT_USER_SSH_KEY_PRIV="${SSH_KEY_PATH}/hab_vault/habitat_user/id_rsa";
+#     #
+#     export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
+#     export PTRNB="${PTRN} «begins»";
+#     export PTRNE="${PTRN} «ends»";
+#     #
+#     sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
+#     #
+#     echo -e "
+#     ${PTRNB}
+#     Host ${TARGET_SRVR}
+#         HostName ${TARGET_SRVR}
+#         User ${HABITAT_USER}
+#         PreferredAuthentications publickey
+#         IdentityFile ${HABITAT_USER_SSH_KEY_PRIV}
+#     ${PTRNE}
+#     " >> ${SSH_CONFIG_FILE}
+#     #
+#     sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}
+#     echo -e "Done preparing SSH config file.";
+
+# };
+
+
+
 
 function startSSHAgent() {
 
@@ -126,9 +238,10 @@ function PrepareDependencies() {
 
     #
     # Get dependencies
-    sudo apt -y install expect
-    sudo apt -y install curl
-    sudo apt -y install git
+    sudo apt -y install expect;
+    sudo apt -y install curl;
+    sudo apt -y install git;
+    sudo apt -y install build-essential;
     #
     # Prepare 'git'
     git config --global user.email "${YOUR_EMAIL}";
@@ -137,6 +250,32 @@ function PrepareDependencies() {
     #
 
 };
+
+
+function PrepareSemVer() {
+
+  SEMVER_SH="semver.sh";
+  if [ ! -f ${HABITA4METEOR_SCRIPTS_DIR}/${SEMVER_SH} ]; then
+
+    pushd ${HABITA4METEOR_SCRIPTS_DIR} >/dev/null;
+
+      ##     'semver_bash'    parses and compares version numbers
+      SEMVER_UTIL="semver_bash";
+      SU_VERSION="0.1.0-beta.03";
+      SEMVER_TAR="${SEMVER_UTIL}-${SU_VERSION}";
+      #                                https://github.com/warehouseman/semver_bash/archive/v0.1.0-beta.03.tar.gz
+      wget -nc -O ${SEMVER_TAR}.tar.gz https://github.com/warehouseman/${SEMVER_UTIL}/archive/v${SU_VERSION}.tar.gz;
+      tar zxvf ${SEMVER_TAR}.tar.gz ${SEMVER_TAR}/semver.sh;
+      mv ${SEMVER_TAR}/semver.sh .;
+      rm -fr ${SEMVER_TAR}*;
+
+    popd >/dev/null;
+  fi;
+
+  source ${HABITA4METEOR_SCRIPTS_DIR}/${SEMVER_SH};
+
+};
+
 
 function RefreshHabitatOriginKeys() {
 
@@ -172,7 +311,9 @@ function GetHabitatForMeteor() {
 
 function GetMeteor() {
 
-    curl https://install.meteor.com/ | sh;
+    if [ ! -d ${HOME}/.meteor ]; then
+      curl https://install.meteor.com/ | sh;
+    fi;
 
 };
 
@@ -180,16 +321,22 @@ function GetMeteor() {
 
 function GetMeteorProject() {
 
-    # Prepare directory
-    mkdir -p ${TARGET_PROJECT_PARENT_DIR};
+  # Prepare directory
+  mkdir -p ${TARGET_PROJECT_PARENT_DIR};
+  if [ ! -s ${TARGET_PROJECT_NAME} ]; then
     pushd ${TARGET_PROJECT_PARENT_DIR} >/dev/null;
-    #
-    # Install example project
-    rm -fr ${TARGET_PROJECT_NAME};
-    git clone git@github.com:${PROJECT_UUID}.git;
+
+      #
+      # Install example project
+      rm -fr ${TARGET_PROJECT_NAME};
+      echo "Git cloning : 'git@github.com:${PROJECT_UUID}.git'.";
+      git clone git@github.com:${PROJECT_UUID}.git;
+
     popd >/dev/null;
+  fi;
 
 };
+
 
 
 function FixGitPrivileges() {
@@ -197,7 +344,7 @@ function FixGitPrivileges() {
   pushd .git >/dev/null;
 
   local OLD_URL_PATTERN="url = git";
-  local NEW_URL_LINE="  url = git@${YOUR_ORG}.github.com:${YOUR_ORG}/${TARGET_PROJECT_NAME}.git";
+  local NEW_URL_LINE="    url = git@${YOUR_ORG}.github.com:${YOUR_ORG}/${TARGET_PROJECT_NAME}.git";
   sed -i "s|.*url = git.*|${NEW_URL_LINE}|" ./config;
 
   popd >/dev/null;
@@ -260,6 +407,7 @@ function PerformanceFix() {
     echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
 
 };
+
 
 
 function PrepareMeteorProject() {
@@ -557,59 +705,6 @@ function GenerateHabUserSSHKeysIfNotExist() {
 };
 
 
-function ConfigureSSHConfigIfNotDone() {
-
-    echo -e "Preparing SSH config file.";
-
-    CURRENT_USER=$(whoami);
-    #
-    export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
-    export PTRNB="${PTRN} «begins»";
-    export PTRNE="${PTRN} «ends»";
-    #
-
-    mkdir -p ${SSH_KEY_PATH};
-    touch ${SSH_CONFIG_FILE};
-    if [[ ! -f ${SSH_CONFIG_FILE}_BK ]]; then
-      cp ${SSH_CONFIG_FILE} ${SSH_CONFIG_FILE}_BK;
-      chmod ugo-w ${SSH_CONFIG_FILE}_BK;
-    fi;
-    sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
-    #
-    echo -e "
-    ${PTRNB}
-    Host ${TARGET_SRVR}
-        HostName ${TARGET_SRVR}
-        User ${CURRENT_USER}
-        PreferredAuthentications publickey
-        IdentityFile ${CURRENT_USER_SSH_KEY_PRIV}
-    ${PTRNE}
-    " >> ${SSH_CONFIG_FILE}
-
-    HABITAT_USER_SSH_KEY_PRIV="${SSH_KEY_PATH}/hab_vault/habitat_user/id_rsa";
-    #
-    export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
-    export PTRNB="${PTRN} «begins»";
-    export PTRNE="${PTRN} «ends»";
-    #
-    sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
-    #
-    echo -e "
-    ${PTRNB}
-    Host ${TARGET_SRVR}
-        HostName ${TARGET_SRVR}
-        User ${HABITAT_USER}
-        PreferredAuthentications publickey
-        IdentityFile ${HABITAT_USER_SSH_KEY_PRIV}
-    ${PTRNE}
-    " >> ${SSH_CONFIG_FILE}
-    #
-    sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}
-    echo -e "Done preparing SSH config file.";
-
-};
-
-
 function GenerateSiteCertificateIfNotExist() {
 
     echo -e "Generating site certificates if none exist already.";
@@ -637,6 +732,7 @@ function GenerateSiteCertificateIfNotExist() {
 };
 
 
+
 function PrepareSecretsFile() {
 
   echo -e "Preparing secrets file, '${SOURCE_SECRETS_FILE}', if not done.";
@@ -647,6 +743,7 @@ function PrepareSecretsFile() {
   fi;
 
   echo -e "Verifying secrets file.";
+  mkdir -p ${HABITAT_FOR_METEOR_SECRETS_DIR};
   cp habitat/scripts/target/secrets.sh.example ${SOURCE_SECRETS_FILE};
 
   local CHOICE="n";
@@ -730,31 +827,46 @@ echo -e "${PRTY} Processing from execution stage '${EXECUTION_STAGE}' ...
 
 ";
 
+
+PrepareSemVer;
 PrepareSecretsFile;
+
+if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
+
+  sudo rm -fr /hab;
+  rm -fr ${HOME}/.meteor;
+  rm -fr ${HOME}/.ssh/hab_vault;
+  rm -fr ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
+  rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR};
+
+fi;
+
 
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
 
 
-  # echo "${PRTY} Installing Git";
-  # PrepareDependencies;
-
+  echo "${PRTY} Installing Git";
+  PrepareDependencies;
   
-  # echo "${PRTY} Installing Meteor";
-  # GetMeteor;
-
+  echo "${PRTY} Installing Meteor";
+  GetMeteor;
   
-  # echo "${PRTY} Installing sample project";
-  # GetMeteorProject;
+  echo "${PRTY} Installing sample project";
+  GetMeteorProject;
 
   echo "${PRTY} Fixing performance";
   PerformanceFix;
 
-  echo "${PRTY} Preparing Habitat Origin Keys";
-  RefreshHabitatOriginKeys;
-
   echo "${PRTY} Building sample project";
   TrialBuildMeteorProject;
 
+  echo "${PRTY} Preparing SSH config file for you on server '${TARGET_SRVR}'.";
+  ConfigureSSHConfigForUser $(whoami) ${TARGET_SRVR} ${CURRENT_USER_SSH_KEY_PRIV};
+
+  echo "${PRTY} Preparing SSH config file for user '${HABITAT_USER}' on server '${TARGET_SRVR}'.";
+  ConfigureSSHConfigForUser ${HABITAT_USER} ${TARGET_SRVR} ${HABITAT_USER_SSH_KEY_PRIV};
+
+#  ConfigureSSHConfigForHabitatUserIfNotDone;
 
 fi;
 
@@ -774,6 +886,10 @@ fi;
 
 
 if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
+
+
+  echo "${PRTY} Preparing Habitat Origin Keys";
+  RefreshHabitatOriginKeys;
 
   echo "${PRTY} Ensuring Git and Habitat keys work ...";
   PreparingKeysAndPrivileges;
@@ -800,7 +916,6 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
   VerifyHostsFile;
   VerifyHostsAccess;
   GenerateHabUserSSHKeysIfNotExist;
-  ConfigureSSHConfigIfNotDone;
   GenerateSiteCertificateIfNotExist;
   PrepareSecretsFile;
 
