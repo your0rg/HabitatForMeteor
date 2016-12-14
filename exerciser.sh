@@ -12,8 +12,11 @@ export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
 
+
 # export EXECUTION_STAGE="step0_BEGIN_BY_CLEANING";
 export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
+
+
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
@@ -60,7 +63,7 @@ export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
 
 # The release tag you want to attach to the above project. It must be the
 # newest release anywhere locally or on GitHub or on apps.habitat.sh
-export RELEASE_TAG="0.0.14";
+export RELEASE_TAG="0.0.47";
 
 # Domain name of the server where the project will be deployed
 export TARGET_SRVR="hab4metsrv";
@@ -124,6 +127,7 @@ Test variables are ready for use:
   * edit with 'nano ${TEST_VARS_FILE};'
   * then re-source with 'source ${TEST_VARS_FILE};'
 ";
+
 
 
 function ConfigureSSHConfigForUser() {
@@ -229,7 +233,6 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 
 
 
-
 function startSSHAgent() {
 
   echo -e "${PRTY} Starting 'ssh-agent' ...";
@@ -255,6 +258,26 @@ function PrepareDependencies() {
     git config --global user.name "${YOUR_NAME}";
     git config --global push.default simple;
     #
+
+};
+
+
+function CheckForHabitatOriginKeys() {
+
+  if [ ! -d ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} ]; then
+    echo -e "Cannot find Habitat Origin Keys in '${HABITAT_FOR_METEOR_USER_SECRETS_DIR}'!";
+    mkdir -p ${HABITAT_FOR_METEOR_USER_SECRETS_DIR};
+    exit 1;
+  fi;
+
+  pushd ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} >/dev/null;
+
+    if [ ! -f ${YOUR_ORG}-*.sig.key ]; then
+      echo -e "Cannot find Habitat Origin Keys!";
+      exit 1;
+    fi;
+
+  popd >/dev/null;
 
 };
 
@@ -521,26 +544,17 @@ function FixReleaseNote() {
 function CommitAndPush() {
 
   echo -e "    - Commit ";
-
-  # git diff --quiet --exit-code --cached ||
-  # git status;
-
-  # echo "grep;"
-  # git status | \
-  #   grep -c "nothing to commit";
-
-  echo - "Committing now ...";
-  # git status | \
-  #   grep -c "nothing to commit" >/dev/null || \
-
-  git diff --quiet --exit-code --cached || git commit -a -m "Release version v${RELEASE_TAG}";
-
-  echo "Result -- $?";
+  if [[ "X$(git status -s)X" = "XX" ]]; then 
+    echo - "Nothing left to commit ...";
+  else
+    echo - "Committing now ...";
+    git commit -a -m "Release version v${RELEASE_TAG}";
+  fi;
 
   echo -e "    - Push ";
   git push;
 
-  echo -e "   Clean";
+  echo -e "   Repo is clean";
 
 };
 
@@ -681,11 +695,6 @@ function VerifyHostsFile() {
 
 function VerifyHostsAccess() {
 
-  #  Starting SSH Agent if not already started
-  startSSHAgent;
-
-  # Add user key to agent;
-  ssh-add ${CURRENT_USER_SSH_KEY_PRIV};
 
   ssh-keygen -f "${SSH_KEY_PATH}/known_hosts" -R ${TARGET_SRVR};
   #
@@ -846,27 +855,50 @@ echo -e "${PRTY} Processing from execution stage '${EXECUTION_STAGE}' ...
 
 ";
 
-
-PrepareSemVer;
-PrepareSecretsFile;
-
 if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
 
   rm -fr ${HOME}/.meteor;
-  rm -fr ${HOME}/.ssh/hab_vault;
+  if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR} ]; then
+    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh;
+    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/settings.json;
+    if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN} ]; then
+      rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN};
+    fi;
+    if [ -d ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} ]; then
+      rm -fr ${HABITAT_FOR_METEOR_USER_SECRETS_DIR}/id_rsa*;
+    fi;
+  fi;
+
   if [ -d ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME} ]; then
     rm -fr ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
-  fi;
-  if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR} ]; then
-    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR};
   fi;
 
   rm -fr ${HOME}/.testVars.sh;
 
-  echo "${PRTY} Prepare environment variables used by exerciser ";
-  PrepareNecessaryShellVarsForExerciser;
+  echo -e "${PRTY} 
+
+        Cleanup is complete!
+        Rerun exerciser with '\${EXECUTION_STAGE}' set to 'step1_ONCE_ONLY_INITIALIZATIONS'.
+
+        ";
+  exit 0;
 
 fi;
+
+
+# Ensure semver.sh has been sourced
+PrepareSemVer;
+
+# Ensure server-side secrets are accessible
+PrepareSecretsFile;
+
+# Ensure Habitat Origin keys are accessible
+CheckForHabitatOriginKeys;
+
+#  Starting SSH Agent if not already started
+startSSHAgent;
+# Add user key to agent;
+ssh-add ${CURRENT_USER_SSH_KEY_PRIV};
 
 
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
@@ -890,8 +922,8 @@ if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
   echo "${PRTY} Preparing SSH config file for you on server '${TARGET_SRVR}'.";
   ConfigureSSHConfigForUser $(whoami) ${TARGET_SRVR} ${CURRENT_USER_SSH_KEY_PRIV};
 
-fi;
 
+fi;
 
 
 if [[ "step2_PROJECT_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
@@ -954,7 +986,7 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
   echo "${PRTY} Generating site certificates for site : '${VHOST_DOMAIN}'."; 
   GenerateSiteCertificateIfNotExist;
   
-  echo "${PRTY} Prepare secrest file for uploading to server."; 
+  echo "${PRTY} Prepare secrets file for uploading to server."; 
   PrepareSecretsFile;
 
 #  ConfigureSSHConfigForHabitatUserIfNotDone;

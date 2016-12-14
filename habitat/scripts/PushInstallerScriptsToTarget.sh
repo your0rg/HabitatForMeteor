@@ -176,6 +176,7 @@ if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "nu
 if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
 source ${SOURCE_SECRETS_FILE};
 
+
 echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
 echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
 echo -e "${PRTY} HABITAT_USER_SSH_KEY_PUBL=${HABITAT_USER_SSH_KEY_PUBL}";

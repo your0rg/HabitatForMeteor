@@ -635,9 +635,9 @@ echo -e "${PRTY} Ready to commit changes.
      5) Tag the commit and push all to the remote repository
 
             ";
-
-if [[ ! "${NON_STOP}" = "YES" ]]; then
-
+if [[ "${NON_STOP}" = "YES" ]]; then
+  echo "${PRTY} Committing changes automatically ...";
+else
   read -r -p "Proceed? [y/N] " response;
   case ${response} in
       [yY][eE][sS]|[yY])
@@ -651,10 +651,9 @@ if [[ ! "${NON_STOP}" = "YES" ]]; then
 
 fi;
 
+# uploadHabitatArchiveFileToDepot;
 
-uploadHabitatArchiveFileToDepot;
-
-verifyHabitatArchiveFileIsInDepot;
+# verifyHabitatArchiveFileIsInDepot;
 
 git remote update;
 GIT_DIFF_COUNT=$(git diff origin/master --name-only  | wc -l)

@@ -106,6 +106,7 @@ BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
 #   exit 1;
 # fi;
 # ----------------
+
 echo -e "${PRTY} Validating user's sudo password... ";
 [[ 0 -lt $(echo ${HABITAT_USER_PWD} | grep -cE "^.{${PASSWORD_MINIMUM_LENGTH},}$") ]] ||  errorUnsuitablePassword ${HABITAT_USER_PWD};
 
@@ -142,6 +143,10 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell >>  
 #   echo "Purged user, '${HAB_USER}'.  Reinstantiating...";
 
 # fi;
+
+echo -e "${PRTY} Ensuring mkpasswd is installed.  "  | tee -a ${LOG};
+sudo -A apt install -y whois;
+
 
 if ! id -u ${HAB_USER} &>/dev/null; then
 
