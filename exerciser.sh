@@ -13,9 +13,7 @@ export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
 
 # export EXECUTION_STAGE="step0_BEGIN_BY_CLEANING";
-export EXECUTION_STAGE="step5_INSTALL_SERVER_SCRIPTS";
-
-
+export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
