@@ -272,6 +272,9 @@ function CheckForHabitatOriginKeys() {
 
   pushd ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} >/dev/null;
 
+    pwd;
+    ls -l;
+
     if [ ! -f ${YOUR_ORG}-*.sig.key ]; then
       echo -e "Cannot find Habitat Origin Keys!";
       exit 1;
@@ -544,6 +547,7 @@ function FixReleaseNote() {
 function CommitAndPush() {
 
   echo -e "    - Commit ";
+  git add -A;
   if [[ "X$(git status -s)X" = "XX" ]]; then 
     echo - "Nothing left to commit ...";
   else

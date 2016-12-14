@@ -337,7 +337,7 @@ function buildMeteorProjectBundleIfNotExist() {
     pushd .. &>/dev/null;
 
       echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
-      meteor npm install;
+      meteor npm install  --production;
 
       echo "${PRTY} Building Meteor and putting bundle in results directory...";
       echo "         ** The 'source tree' WARNING can safely be ignored ** ";
