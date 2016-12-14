@@ -651,9 +651,9 @@ else
 
 fi;
 
-# uploadHabitatArchiveFileToDepot;
+uploadHabitatArchiveFileToDepot;
 
-# verifyHabitatArchiveFileIsInDepot;
+verifyHabitatArchiveFileIsInDepot;
 
 git remote update;
 GIT_DIFF_COUNT=$(git diff origin/master --name-only  | wc -l)

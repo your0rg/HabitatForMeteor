@@ -63,7 +63,7 @@ export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
 
 # The release tag you want to attach to the above project. It must be the
 # newest release anywhere locally or on GitHub or on apps.habitat.sh
-export RELEASE_TAG="0.0.47";
+export RELEASE_TAG="0.0.48";
 
 # Domain name of the server where the project will be deployed
 export TARGET_SRVR="hab4metsrv";
