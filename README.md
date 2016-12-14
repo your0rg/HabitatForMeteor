@@ -77,6 +77,13 @@ You can cut'n paste the snippets unaltered and see the process unfold with no ne
 
 1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user on each machine to be called ´you´.
 
+1.  Install keys for todos project user on GitHub
+
+1.  Install Habitat Origin keys in '~/.ssh/hab_vault/habitat_user/'
+
+1.  Define the virtual host domain in '/etd/hosts'.
+
+
 
 #### Client side preparations
 
