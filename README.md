@@ -103,7 +103,7 @@ export HABITA4METEOR_PARENT_DIR="${HOME}/tools";
 export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
 
 # Organization of your HabitatForMeteorFork
-export HABITA4METEOR_FORK_ORG="HabitatForMeteor";
+export HABITA4METEOR_FORK_ORG="your0rg";
 
 # Location of your projects
 export TARGET_PROJECT_PARENT_DIR="${HOME}/projects";
@@ -161,7 +161,7 @@ Test variables are ready for use:
     ```
     mkdir -p ${HABITA4METEOR_PARENT_DIR};
     pushd ${HABITA4METEOR_PARENT_DIR};
-    git clone https://github.com/${HABITA4METEOR_FORK_ORG}/${HABITA4METEOR_FORK_NAME};
+    git clone git@github.com:${HABITA4METEOR_FORK_ORG}/${HABITA4METEOR_FORK_NAME}.git;
     popd;
 
     ```
