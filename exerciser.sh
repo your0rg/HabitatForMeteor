@@ -274,6 +274,26 @@ function PrepareDependencies() {
 };
 
 
+
+function CheckHostsFile() {
+
+  echo -e "Verifying hosts file settings";
+  HSTS="/etc/hosts";
+  READY=0;
+  if ! (( $( grep -c "${TARGET_SRVR}" ${HSTS} ) )); then echo "No mapping for '${TARGET_SRVR}'."; READY=1; fi;
+  if ! (( $( grep -c "${VHOST_DOMAIN}" ${HSTS} ) )); then echo "No mapping for '${VHOST_DOMAIN}'."; READY=1; fi;
+  ((READY)) && exit 1;
+
+  if ! ping -c1 ${TARGET_SRVR} &>/dev/null; then echo "Can't reach '${TARGET_SRVR}'."; export READY=1; fi;
+  if ! ping -c1 ${VHOST_DOMAIN} &>/dev/null; then echo "Can't reach '${VHOST_DOMAIN}'."; export READY=1; fi;
+  ((READY)) && exit 1;
+  return 0;
+  #
+
+};
+
+
+
 function CheckForHabitatOriginKeys() {
 
   if [ ! -d ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} ]; then
@@ -911,6 +931,9 @@ if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
 
 fi;
 
+
+# Ensure Hosts can be reached
+CheckHostsFile;
 
 # Ensure semver.sh has been sourced
 PrepareSemVer;
