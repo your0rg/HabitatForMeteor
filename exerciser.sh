@@ -12,10 +12,8 @@ export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
 
-
 # export EXECUTION_STAGE="step0_BEGIN_BY_CLEANING";
 export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
-
 
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
@@ -147,6 +145,8 @@ function ConfigureSSHConfigForUser() {
       exit 1;
     fi;
 
+    chmod go-rwx ${THE_KEYS};
+
     export PTRN="# ${THE_USER} account on ${THE_HOST}";
     export PTRNB="${PTRN} «begins»";
     export PTRNE="${PTRN} «ends»";
@@ -235,13 +235,25 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 
 function startSSHAgent() {
 
-  echo -e "${PRTY} Starting 'ssh-agent' ...";
-  if [ -z "${SSH_AUTH_SOCK}" ]; then
+  if [ ! -S "${SSH_AUTH_SOCK}" ]; then
+    echo -e "${PRTY} Starting 'ssh-agent' because SSH_AUTH_SOCK='${SSH_AUTH_SOCK}'...";
     eval $(ssh-agent -s);
     echo -e "${PRTY} Started 'ssh-agent' ...";
   fi;
 
 };
+
+
+function AddSSHkeyToAgent() {
+
+  local KEY_PRESENT=$(ssh-add -l | grep -c ${1});
+  if [[ "${KEY_PRESENT}" -lt "1" ]]; then
+    echo -e "${PRTY} Remembering SSH key: '${1}'...";
+    ssh-add ${1};
+  fi;
+
+};
+
 
 function PrepareDependencies() {
 
@@ -271,9 +283,6 @@ function CheckForHabitatOriginKeys() {
   fi;
 
   pushd ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} >/dev/null;
-
-    pwd;
-    ls -l;
 
     if [ ! -f ${YOUR_ORG}-*.sig.key ]; then
       echo -e "Cannot find Habitat Origin Keys!";
@@ -377,10 +386,16 @@ function FixGitPrivileges() {
   pushd .git >/dev/null;
 
   local OLD_URL_PATTERN="url = git";
-  local NEW_URL_LINE="    url = git@${YOUR_ORG}.github.com:${YOUR_ORG}/${TARGET_PROJECT_NAME}.git";
+  local NEW_URL_LINE="    url = git@${YOUR_ORG}.github.com:${PROJECT_UUID}.git";
+  echo "Setting repo ownership: 'git@github.com:${PROJECT_UUID}.git'.";
   sed -i "s|.*url = git.*|${NEW_URL_LINE}|" ./config;
-
-  popd >/dev/null;
+  echo "Identifying repo owner: 'git@github.com:${PROJECT_UUID}.git'.";
+  if [[ -z $(grep "email" config) ]]; then
+    echo -e "[user]
+    name = ${YOUR_NAME}
+    email = ${YOUR_EMAIL}" >> ./config
+    popd >/dev/null;
+  fi;
 
 
 };
@@ -437,7 +452,11 @@ function TrialBuildMeteorProject() {
 function PerformanceFix() {
 
     # Optimize file change responsivity
-    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+    INOT_STTNG="fs.inotify.max_user_watches=524288";
+    SYSCTL="/etc/sysctl.conf";
+    if [[ "$(cat ${SYSCTL} | grep -c ${INOT_STTNG})" -lt "1" ]]; then
+      echo ${INOT_STTNG} | sudo tee -a ${SYSCTL} && sudo sysctl -p;
+    fi;
 
 };
 
@@ -570,7 +589,6 @@ function determineLatestPackagePublished() {
         ";
     return;
   fi;
-  local PACKAGE_PATH=${YOUR_ORG}/${TARGET_PROJECT_NAME};
 #  echo -e "Finding ::  ${PACKAGE_PATH} ";
 #  echo -e "Found ::  $(sudo hab pkg search ${YOUR_ORG}) ";
 
@@ -584,10 +602,10 @@ function determineLatestPackagePublished() {
     # echo -e "PACKAGES: ${PACKAGES} ";
     for PACKAGE in "${PACKAGES[@]}"
     do
-      if [[ "XX" != "X$(echo ${PACKAGE} | grep ${PACKAGE_PATH})X" ]]; then
-        VERSION=${PACKAGE#${PACKAGE_PATH}/};
+      if [[ "XX" != "X$(echo ${PACKAGE} | grep ${PROJECT_UUID})X" ]]; then
+        VERSION=${PACKAGE#${PROJECT_UUID}/};
         UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
-        # echo -e "Package : ${PACKAGE} Path: ${PACKAGE_PATH} extracted version: ${VERSION} unique version: ${UNIQUE_VERSION}";
+        # echo -e "Package : ${PACKAGE} Path: ${PROJECT_UUID} extracted version: ${VERSION} unique version: ${UNIQUE_VERSION}";
         # echo -e " LATEST_VERSION: ${LATEST_VERSION} ";
         semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
       fi;
@@ -672,6 +690,10 @@ function BuildAndUploadMeteorProject() {
     
     echo "${PRTY} Committing and pushing project ";
     CommitAndPush;
+
+    # echo "${PRTY} *********** TEMPORARILY COPYING ********** ";
+    # echo "cp ${HABITA4METEOR_SOURCE_DIR}/BuildAndUpload.sh ./.habitat";
+    # cp ${HABITA4METEOR_SOURCE_DIR}/BuildAndUpload.sh ./.habitat
 
     echo "${PRTY} Building and uploading ";
     ./.habitat/BuildAndUpload.sh ${RELEASE_TAG};
@@ -901,8 +923,9 @@ CheckForHabitatOriginKeys;
 
 #  Starting SSH Agent if not already started
 startSSHAgent;
+
 # Add user key to agent;
-ssh-add ${CURRENT_USER_SSH_KEY_PRIV};
+AddSSHkeyToAgent ${CURRENT_USER_SSH_KEY_PRIV};
 
 
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
@@ -965,7 +988,6 @@ if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
   BuildAndUploadMeteorProject;
 
 fi;
-
 
 if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
 

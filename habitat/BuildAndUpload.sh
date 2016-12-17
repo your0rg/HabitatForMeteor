@@ -316,6 +316,39 @@ function ensureUserAlsoHasGlobalOriginKey() {
 }
 
 
+function copyExternalNodeModulesToInternal() {
+  local EXTERNAL_MODULES_DIRECTORY=".pkgs";
+  echo -e "  - Looking for external modules directory.";
+  if [[ -d ${EXTERNAL_MODULES_DIRECTORY} ]]; then
+
+    echo -e "  - Looking for external modules.";
+    if [[ $(find ${EXTERNAL_MODULES_DIRECTORY}/* -maxdepth 0 -type d | wc -l) -gt 0 ]]; then
+      mkdir -p node_modules;
+      pushd ${EXTERNAL_MODULES_DIRECTORY} >/dev/null;
+
+        echo "~~~~~~~~~~  Copy external modules to node_modules directory ~~~~~~~~~~~~~~~~~~~~~~";
+
+        for dir in ./*/
+        do
+          DNAME=${dir/#.\/};
+          DNAME=${DNAME/%\//};
+          echo "~~~~~~~~~~  Copying module '${DNAME}' ~~~~~~~~~~~~~~~~~~~~~~";
+          rm -fr ../node_modules/${DNAME};
+          cp -r ${DNAME} ../node_modules;
+        done
+
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+      popd >/dev/null;
+
+      return 0;
+    fi;
+  fi;
+  echo -e "${PRTY} Found no external modules.";
+
+}
+
+
 function buildMeteorProjectBundleIfNotExist() {
 
   echo "${PRTY} Set Meteor app metadata '${METEOR_METADATA}' version record 'version' to '${RELEASE_TAG}'...";
@@ -335,13 +368,25 @@ function buildMeteorProjectBundleIfNotExist() {
 
     echo "${PRTY} Stepping out to Meteor project directory";
     pushd .. &>/dev/null;
+      local BUILD_DIR="./.habitat/results";
+      local BUNDLE_DIR="${BUILD_DIR}/bundle";
+      local SETTINGS_FILE="settings.json";
+
+      echo "${PRTY} Copying any external Node modules from '${EXTERNAL_MODULES_DIRECTORY}' to 'node_modules' ...";
+      copyExternalNodeModulesToInternal;
 
       echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
-      meteor npm install  --production;
+
+      set +e; meteor npm -y install  --production; set -e;
 
       echo "${PRTY} Building Meteor and putting bundle in results directory...";
       echo "         ** The 'source tree' WARNING can safely be ignored ** ";
-      meteor build ./.habitat/results --directory --server-only;
+      meteor build ${BUILD_DIR} --directory --server-only;
+
+      if [[ -f ./${SETTINGS_FILE} ]]; then
+        cp ./${SETTINGS_FILE} ${BUNDLE_DIR};
+        chmod ug+rw,o-rwx ${BUNDLE_DIR}/${SETTINGS_FILE};
+      fi;
 
       echo -e "${PRTY} Meteor project rebuilt.
       Setting '${METEOR_VERSION_FLAG}' to contain '${RELEASE_TAG}.'";
