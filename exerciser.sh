@@ -11,10 +11,8 @@ export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
 export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
-
 # export EXECUTION_STAGE="step0_BEGIN_BY_CLEANING";
 export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
-
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
@@ -75,9 +73,13 @@ export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
 export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
 # Habitat for Meteor secrets directory
+
 export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
 export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh";
-export METEOR_SETTINGS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/settings.json";
+export METEOR_SETTINGS='{ "public": { "DUMMY": "dummy" } }';
+export METEOR_SETTINGS_FILE="settings.json";
+export METEOR_SETTINGS_EXAMPLE_FILE="\${METEOR_SETTINGS_FILE}.example";
+export METEOR_SETTINGS_FILE_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${METEOR_SETTINGS_FILE}";
 
 # Habitat for Meteor user secrets directory
 export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
@@ -422,16 +424,23 @@ function FixGitPrivileges() {
 
 # P1 : the url to verify
 # P2 : additional commands to meteor. Eg; test-packages
-function launchMeteorProcess()
+function LaunchMeteorProcess()
 {
+
   METEOR_URL=$1;
   STARTED=false;
 
+  echo -e "Verifying Meteor execution :
+        - METEOR_URL      = ${METEOR_URL}
+        - METEOR_SETTINGS = ${2}
+  ";
+
+#  export METEOR_SETTINGS="${METEOR_SETTINGS}";
   until wget -q --spider ${METEOR_URL};
   do
     echo "Waiting for ${METEOR_URL}";
     if ! ${STARTED}; then
-      meteor $2 &
+      meteor ${2} &
       STARTED=true;
     fi;
     sleep 5;
@@ -441,7 +450,7 @@ function launchMeteorProcess()
 }
 
 
-function killMeteorProcess()
+function KillMeteorProcess()
 {
   EXISTING_METEOR_PIDS=$(ps aux | grep meteor  | grep -v grep | grep ~/.meteor/packages | awk '{print $2}');
 #  echo ">${IFS}<  ${EXISTING_METEOR_PIDS} ";
@@ -451,18 +460,53 @@ function killMeteorProcess()
   done;
 }
 
+function IncorporateExternalPkgsIfAny() {
+
+  if [[ $(find .pkgs/* -maxdepth 0 -type d | wc -l) -gt 0 ]]; then
+
+    mkdir -p node_modules;
+    pushd .pkgs >/dev/null;
+
+      echo "~~~~~~~~~~  Copy external modules to node_modules directory ~~~~~~~~~~~~~~~~~~~~~~";
+      for dir in ./*/
+      do
+        DNAME=${dir/#.\/};
+        DNAME=${DNAME/%\//};
+        echo "~~~~~~~~~~  Copying module '${DNAME}' ~~~~~~~~~~~~~~~~~~~~~~";
+
+        pushd ${dir} >/dev/null;
+          meteor npm -y install;
+        popd >/dev/null;
+
+        rm -fr ../node_modules/${DNAME};
+        cp -r ${DNAME} ../node_modules;
+      done
+
+      echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+    popd >/dev/null;
+
+  fi;
+
+
+}
+
 function TrialBuildMeteorProject() {
 
     pushd ${THE_PROJECT_ROOT} >/dev/null;
-    # Install all NodeJS packages dependencies
-    meteor npm install
-    #
-    # Also install the one that change since the last release of 'meteor/todos'
-    meteor npm install --save bcrypt;
-    #
-    # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
-    launchMeteorProcess "http://localhost:3000/";
-    killMeteorProcess;
+
+      # See if this project has any 'externl' packages in it '.pkgs' folder
+      IncorporateExternalPkgsIfAny;
+
+      # Install all NodeJS packages dependencies
+      meteor npm install
+      #
+      # Also install the one that change since the last release of 'meteor/todos'
+#   meteor npm install --save bcrypt;
+      #
+      # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
+      LaunchMeteorProcess "http://localhost:3000/" "--settings=${METEOR_SETTINGS_FILE_PATH}";
+      KillMeteorProcess;
 
     popd >/dev/null;
 
@@ -515,19 +559,64 @@ function InitializeMeteorProject() {
 };
 
 
+
+function updateOrAddKVPair() {
+
+  # echo "PKG_JSN -- ${PKG_JSN}";
+  # echo "MRKR -- ${MRKR}";
+  local KEY="\"${1}\"";
+  local VAL="\"${2}\"";
+  local REPLACEMENT="";
+  echo "KEY -- ${KEY}";
+  echo "VAL -- ${VAL}";
+
+  if grep ${KEY} ${PKG_JSN}; then
+
+    sed -i "/${KEY}/c\ \ ${KEY}: ${VAL}," ${PKG_JSN};
+
+  else
+
+    REPLACEMENT+="  ${KEY}: ${VAL},";
+    REPLACEMENT+="\n  ${MRKR}: {";
+    sed -i "s|.*${MRKR}.*|${REPLACEMENT}|" ${PKG_JSN};
+
+  fi;
+  echo -e "-------
+$(grep ${KEY} ${PKG_JSN})
+--------";
+
+}
+
+
 function PatchPkgJson() {
 
-  local REPLACEMENT="";
-  REPLACEMENT+="  \"name\": \"${TARGET_PROJECT_NAME}\",";
-  REPLACEMENT+="\n  \"version\": \"0.1.4\",";
-  REPLACEMENT+="\n  \"license\": \"MIT\",";
-  REPLACEMENT+="\n  \"repository\": \"https://github.com/${PROJECT_UUID}\",";
-  REPLACEMENT+="\n  \"scripts\": {";
+  export PKG_JSN=${1};
+  export MRKR="\"scripts\"";
 
-  sed -i "s|.*scripts.*|${REPLACEMENT}|" ./package.json;
+  head -n 15 ${PKG_JSN};
+
+  updateOrAddKVPair "name" "${TARGET_PROJECT_NAME}";
+  updateOrAddKVPair "version" "0.1.4";
+  updateOrAddKVPair "license" "MIT";
+  updateOrAddKVPair "repository" "https://github.com/${PROJECT_UUID}";
 
 
 };
+
+
+# function PatchPkgJson() {
+
+#   local REPLACEMENT="";
+#   REPLACEMENT+="  \"name\": \"${TARGET_PROJECT_NAME}\",";
+#   REPLACEMENT+="\n  \"version\": \"0.1.4\",";
+#   REPLACEMENT+="\n  \"license\": \"MIT\",";
+#   REPLACEMENT+="\n  \"repository\": \"https://github.com/${PROJECT_UUID}\",";
+#   REPLACEMENT+="\n  \"scripts\": {";
+
+#   sed -i "s|.*scripts.*|${REPLACEMENT}|" ./package.json;
+
+
+# };
 
 
 function FixPkgJson() {
@@ -541,12 +630,11 @@ function FixPkgJson() {
   fi;
 
   # Adding required fields if missing
-  grep -c repository ${PKGJSN} >/dev/null || PatchPkgJson;
+  grep -c repository ${PKGJSN} >/dev/null || PatchPkgJson ${PKGJSN};
 
 #  echo "Fixing '${PLAN}' version to: '${RELEASE_TAG}' ";
   local REPLACEMENT="  \"version\": \"${RELEASE_TAG}\",";
   sed -i "s|.*\"version\":.*|${REPLACEMENT}|" ${PKGJSN};
-
 
 };
 
@@ -707,13 +795,16 @@ function BuildAndUploadMeteorProject() {
 
     echo "${PRTY} Prepare Meteor settings file ";
     PrepareMeteorSettingsFile;
+    cp ${METEOR_SETTINGS_FILE} ${HABITAT_FOR_METEOR_SECRETS_DIR};
     
-    echo "${PRTY} Committing and pushing project ";
-    CommitAndPush;
+    echo "${PRTY} Start tagging if none";
+    if [[ "X$(git describe 2> /dev/null)X" = "XX" ]]; then
+      git tag -a ${RELEASE_TAG} -m "Starting versioning with Habitat"
+    fi;
 
-    # echo "${PRTY} *********** TEMPORARILY COPYING ********** ";
-    # echo "cp ${HABITA4METEOR_SOURCE_DIR}/BuildAndUpload.sh ./.habitat";
-    # cp ${HABITA4METEOR_SOURCE_DIR}/BuildAndUpload.sh ./.habitat
+    echo "${PRTY} Committing and pushing project ";
+
+    CommitAndPush;
 
     echo "${PRTY} Building and uploading ";
     ./.habitat/BuildAndUpload.sh ${RELEASE_TAG};
@@ -874,13 +965,36 @@ echo -e "ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${
 };
 
 function PrepareMeteorSettingsFile() {
-  echo -e "PrepareMeteorSettingsFile";
-  if [ ! -f ${THE_PROJECT_ROOT}/settings.json ]; then
-    echo '{ "public": { "DUMMY": "dummy" } }' > ${THE_PROJECT_ROOT}/settings.json;
-  fi;
 
-  cp ${THE_PROJECT_ROOT}/settings.json ${HABITAT_FOR_METEOR_SECRETS_DIR};
-  git add ${THE_PROJECT_ROOT}/settings.json;
+  pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+    echo -e "Preparing Meteor Settings File -- ${THE_PROJECT_ROOT}/${METEOR_SETTINGS_FILE}";
+#    echo "${METEOR_SETTINGS_FILE_PATH}";
+#    ls -l ${METEOR_SETTINGS_FILE_PATH};
+
+    if [ -f ${METEOR_SETTINGS_FILE_PATH} ]; then
+
+      cp ${METEOR_SETTINGS_FILE_PATH} .;
+
+    else
+      if [ -f ${METEOR_SETTINGS_EXAMPLE_FILE} ]; then
+        echo -e "
+
+        There is a '${METEOR_SETTINGS_EXAMPLE_FILE}' file, **but** there is no '${METEOR_SETTINGS_FILE_PATH}' file!
+        
+        ";
+        exit;
+      fi;
+      echo '{ "public": { "DUMMY": "dummy" } }' > ${METEOR_SETTINGS_FILE};
+
+    fi;
+
+    touch .gitignore;
+    cat .gitignore | grep ${METEOR_SETTINGS_FILE} >/dev/null || echo "${METEOR_SETTINGS_FILE}" >> .gitignore;
+
+    METEOR_SETTINGS=$(cat settings.json);
+
+  popd >/dev/null;
 
 };
 
@@ -906,7 +1020,7 @@ if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
   rm -fr ${HOME}/.meteor;
   if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR} ]; then
     rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh;
-    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/settings.json;
+    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/${METEOR_SETTINGS_FILE};
     if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN} ]; then
       rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN};
     fi;
@@ -965,6 +1079,9 @@ if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
 
   echo "${PRTY} Fixing performance";
   PerformanceFix;
+
+  echo "${PRTY} Prepare Meteor settings file ";
+  PrepareMeteorSettingsFile;
 
   echo "${PRTY} Building sample project";
   TrialBuildMeteorProject;
@@ -1051,7 +1168,7 @@ if [[ "step5_INSTALL_SERVER_SCRIPTS" -ge "${EXECUTION_STAGE}" ]]; then
 
   pushd ${THE_PROJECT_ROOT} >/dev/null;
 
-  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE_PATH} ${SOURCE_SECRETS_FILE};
   VerifySSHasHabUser;
   ./.habitat/scripts/PushSiteCertificateToTarget.sh \
                ${TARGET_SRVR} \

@@ -333,6 +333,11 @@ function copyExternalNodeModulesToInternal() {
           DNAME=${dir/#.\/};
           DNAME=${DNAME/%\//};
           echo "~~~~~~~~~~  Copying module '${DNAME}' ~~~~~~~~~~~~~~~~~~~~~~";
+
+          pushd ${dir} >/dev/null;
+            meteor npm -y install;
+          popd >/dev/null;
+
           rm -fr ../node_modules/${DNAME};
           cp -r ${DNAME} ../node_modules;
         done

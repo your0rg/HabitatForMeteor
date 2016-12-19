@@ -2,15 +2,18 @@
 #
 cd {{pkg.svc_var_path}}
 
+export METEOR_SETTINGS="`cat settings.json`";
+
 echo "###########################################################";
 echo "########## Base directory     {{pkg.svc_path}} ";
 echo "########## Current directory  {{pkg.svc_var_path}} ";
 echo "########## Config directory   {{pkg.svc_config_path}} ";
-# echo "########## Mongo connector    ${MONG_CONN} ";
+echo "########## Mongo URL          {{cfg.mongo_url}}";
 echo "########## Meteor app URL     {{cfg.root_url}} ";
 echo "########## Meteor app port    {{cfg.port}} ";
 # echo "########## Meteor settings    ${METEOR_SETTINGS} ";
 echo "###########################################################";
+
 
 export MONGO_URL={{cfg.mongo_url}};
 export ROOT_URL={{cfg.root_url}};
