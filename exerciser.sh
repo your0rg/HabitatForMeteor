@@ -11,69 +11,45 @@ export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
 export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
-# export EXECUTION_STAGE="step0_BEGIN_BY_CLEANING";
-export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
-
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
 
   TEST_VARS_FILE="${HOME}/.testVars.sh";
   if [ ! -f ${TEST_VARS_FILE} ]; then
     cat << EOSVARS > ${TEST_VARS_FILE}
-#
-# Test variables for getting started with Habitat For Meteor
+
+#################################################################################
+##### Non-secret test variables for getting started with Habitat For Meteor #####
+#################################################################################
+
+### Controlling exerciser execution
+# Specify whether the script should assume **NO MISSING DETAILS**
+export NON_STOP="YES";   # don't ask for secrets and fail if not found 
+
+# Specify the execution stage you want to begin from
+export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
+
+### Locating public files within the developer VM
+# Location of developer tools
+export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
+
+# Location of your projects
+export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
 
 # The SSH secrets directory 
 export SSH_KEY_PATH="\${HOME}/.ssh";
 export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
-# Location of your developer tools
-export HABITAT_USER="hab";
-
-# Location of your developer tools
-export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
-
-# Name of your HabitatForMeteorFork
-export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
-
-# Organization of your HabitatForMeteorFork
-export HABITA4METEOR_FORK_ORG="yourOrg";
-
-# Location of your projects
-export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
-
-# Location of your target project
-export TARGET_PROJECT_NAME="todos";
-
-# Your full name
-export YOUR_NAME="You Yourself";
-
-# Your github organization or user name
-export YOUR_ORG="yourse1f-yourorg";
-
-# The SSH keys of the current user, for ssh-add
-export YOUR_ORG_IDENTITY_FILE="\${SSH_KEY_PATH}/\${YOUR_ORG}_rsa";
-
-# Your email address
-export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
-
-# The release tag you want to attach to the above project. It must be the
-# newest release anywhere locally or on GitHub or on apps.habitat.sh
-export RELEASE_TAG="0.0.48";
-
-# Domain name of the server where the project will be deployed
-export TARGET_SRVR="hab4metsrv";
-
-# Domain name of the server where the project will be deployed
-export NON_STOP="YES";
-
-
 # The SSH keys of the current user, for ssh-add
 export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
 export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
-# Habitat for Meteor secrets directory
 
+
+
+
+### Locating secrets within the developer VM
+# Habitat for Meteor secrets directory
 export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
 export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh";
 export METEOR_SETTINGS='{ "public": { "DUMMY": "dummy" } }';
@@ -84,33 +60,99 @@ export METEOR_SETTINGS_FILE_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${METEOR_S
 # Habitat for Meteor user secrets directory
 export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
 
-# Parameters for creating a SSH key pair for the 'hab' user.
+
+
+
+
+### Specifying your fork of HabitatForMeteor ###
+# Name of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
+
+# Organization of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_ORG="yourOrg";
+
+
+
+### Parameters for creating a SSH key pair for the 'hab' user.
 export HABITAT_USER_SSH_KEY_COMMENT="DevopsTeamLeader";
 export HABITAT_USER_SSH_PASS_PHRASE="memorablegobbledygook";
 export HABITAT_USER_SSH_KEY_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user";
 export HABITAT_USER_SSH_KEY_PRIV="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa";
 export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
 
+### Specifying parameters for creating SSL certificates for your project domain  ###
 # SSL certificate parameters of the server where the project will be deployed
+# Virtual host domain name
 export VHOST_DOMAIN="moon.planet.sun";
 export VHOST_CERT_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}";
+
+# Virtual host domain name
 export VHOST_CERT_PASSPHRASE="memorablegibberish";
 
+
+
+### Specifying your fork of a target project ###
+# Name of your fork of one the target projects
+export TARGET_PROJECT_NAME="";
+TARGET_PROJECT_NAME="meteor_todos"; # git clone https://github.com/meteor/todos meteor_todos
+#  TARGET_PROJECT_NAME="mmks"; # git clone https://github.com/warehouseman/meteor-mantra-kickstarter mmks
+
+# Your github organization for your fork of "todos" or "mmks"
+export YOUR_ORG="yourse1f-yourorg";
+
+# URI of your fork of HabitatForMeteor #
+export URIofYourProjectFork="https://github.com/${YOUR_ORG}/${TARGET_PROJECT_NAME}";
+
+# The release tag you want to attach to the above project. It must be the
+# newest release anywhere: locally, or on GitHub, or on apps.habitat.sh
+export RELEASE_TAG="0.0.48";
+
+
+
+
+
+### Specifying your public GitHub access  ###
+# Your full name
+export YOUR_NAME="You Yourself";
+
+# Your email address
+export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
+
+# Path to the SSH keys of the current user, for ssh-add
+export YOUR_ORG_IDENTITY_FILE="\${SSH_KEY_PATH}/\${YOUR_ORG}_rsa";
+
+
+
+
+
+### Specifying access parameters for your server VM  ###
+# Domain name of the server where the project will be deployed
+export TARGET_SRVR="hab4metsrv";
+
+# The 'habitat' admin account on the server
+export HABITAT_USER="hab";
+
 EOSVARS
-  fi;
-
-
-  ## Sourcing test variables file ....
-
-  source ${TEST_VARS_FILE};
+fi;
 }
 
 echo "${PRTY} Prepare environment variables used by exerciser ";
 PrepareNecessaryShellVarsForExerciser;
 
+## Sourcing test variables file ....
 
-
+source ${TEST_VARS_FILE};
 source habitat/scripts/target/secrets.sh.example;
+### secrets.sh provides obligatory secret settings for ...
+# The password the Meteor app will use to connect to a localhost MongoDB
+# The sudoer password for the account that will install Habitat
+# The sudoer password to give the 'hab' user account when it is created
+# The client-side path and filename of a key to be added to the remote host authorized_keys file
+# The path on the remote server where Nginx should look for SSL cert passwords
+# A string to insert in the Nginx config that will enable
+# A string to insert in the Nginx config that will enable certificate password storage
+# The paths to the location of your signed site certificates.
+
 
 
 echo "YOUR_ORG_IDENTITY_FILE = ${YOUR_ORG_IDENTITY_FILE}";
@@ -127,7 +169,6 @@ Test variables are ready for use:
   * edit with 'nano ${TEST_VARS_FILE};'
   * then re-source with 'source ${TEST_VARS_FILE};'
 ";
-
 
 
 function ConfigureSSHConfigForUser() {
@@ -232,6 +273,7 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 #     echo -e "Done preparing SSH config file.";
 
 # };
+
 
 
 
@@ -426,7 +468,6 @@ function FixGitPrivileges() {
 # P2 : additional commands to meteor. Eg; test-packages
 function LaunchMeteorProcess()
 {
-
   METEOR_URL=$1;
   STARTED=false;
 
@@ -495,7 +536,7 @@ function TrialBuildMeteorProject() {
 
     pushd ${THE_PROJECT_ROOT} >/dev/null;
 
-      # See if this project has any 'externl' packages in it '.pkgs' folder
+      # See if this project has any 'external' packages in it '.pkgs' folder
       IncorporateExternalPkgsIfAny;
 
       # Install all NodeJS packages dependencies
@@ -636,6 +677,7 @@ function FixPkgJson() {
   local REPLACEMENT="  \"version\": \"${RELEASE_TAG}\",";
   sed -i "s|.*\"version\":.*|${REPLACEMENT}|" ${PKGJSN};
 
+
 };
 
 
@@ -670,6 +712,32 @@ function FixReleaseNote() {
 
 };
 
+
+# function CommitAndPush() {
+# 
+#   echo -e "    - Commit ";
+# 
+#   # git diff --quiet --exit-code --cached ||
+#   # git status;
+# 
+#   # echo "grep;"
+#   # git status | \
+#   #   grep -c "nothing to commit";
+# 
+#   echo - "Committing now ...";
+#   # git status | \
+#   #   grep -c "nothing to commit" >/dev/null || \
+# 
+#   git diff --quiet --exit-code --cached || git commit -a -m "Release version v${RELEASE_TAG}";
+# 
+#   echo "Result -- $?";
+# 
+#   echo -e "    - Push ";
+#   git push;
+# 
+#   echo -e "   Clean";
+# 
+# };
 
 function CommitAndPush() {
 
@@ -803,7 +871,6 @@ function BuildAndUploadMeteorProject() {
     fi;
 
     echo "${PRTY} Committing and pushing project ";
-
     CommitAndPush;
 
     echo "${PRTY} Building and uploading ";

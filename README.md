@@ -2,13 +2,13 @@
 
 #### TL;DR
 
-Use [Habitat by Chef](https://www.habitat.sh/) for [Meteor](www.meteor.com) app deployment.  Bundle up your app with all the necessary installation and configuration instructions, get similar bundles for MongoDB and NGinx, define them as a single logical unit with their connections parameters and then launch the unit automatically at boot-time as a single entity.  Manage remotely using Habitat's supervisory tools.
+Future-proof your [Meteor](www.meteor.com) app deployments with [Habitat by Chef](https://www.habitat.sh/).  Bundle up your app with all the necessary installation and configuration instructions, get similar bundles for MongoDB, NGinx, PostgreSQL, etc, define them as a single logical unit with their connections parameters and then launch the unit automatically at boot-time as a single entity.  Manage remotely using Habitat's supervisory tools.
 
 ## A Habitat packager for Meteor DevOps
 
 Until, now there have been two main choices for deploying Meteor applications :
 
-1. `Galaxy`, is an option for those with the money and a direct say in infrastructure decisions.
+1. `Galaxy`, is an option for those with a say in infrastructure decisions.
 1. `mup`, is a ([now unsupported](https://voice.kadira.io/its-time-thank-you-bye-meteor-115dd649a8#.yymuveqzg)) single purpose hack for small budget operations.
 
 HabitatForMeteor is for everyone else.
@@ -17,18 +17,19 @@ If you take DevOps seriously, you know about [Chef](https://www.chef.io/chef), a
 
 [Habitat by Chef](https://www.habitat.sh/) is their new product, dedicated to standardizing deployment of any and all server-side applications.  Habitat understands very large installations and offers powerful capabilities for managing multiple logical groupings of services.  One specialized supervisor is the `Director` which permits launching a logical group of services, in a single machine, as though they are a single unit.
 
-Production Meteor applications need MongoDB, NodeJS and NGinx in order to run.  By using Habitat, we can bundle up the Node package of our application with all the instructions necessary to run it in NodeJS and connect it to MongoDB.  Habitat makes available similar bundles for MongoDB and NGinx.  We can define an outer "Director" bundle that includes all three together as a logical unit that launches at boot-time via `systemd` and can be reconfigured remotely using Habitat's management tools.
+Until recently, production Meteor applications only needed MongoDB, NodeJS and NGinx in order to run.  By using Habitat, we can bundle up the Node package of our application with all the instructions necessary to run it in NodeJS and connect it to MongoDB.  Habitat makes available similar bundles for MongoDB and NGinx.  We can define an outer `Director` bundle that includes all three together as a logical unit that launches at boot-time via `systemd` and can be reconfigured remotely using Habitat's management tools.
 
-Controlling your live applications' infrastructure begins to look a lot like, and not much harder, than the package management you do within your Meteor apps.
+With Apollo, the spectrum of possible deployment requirements broadens dramatically.  MongoDB and NGinx will no longer be the the only ones.  The Habitat public "depot" offers an expanding ecosystem of generic standardized installers, eg [MySql](https://app.habitat.sh/#/pkgs/core/mysql/5.7.14/20160812153521), [PostgreSQL](https://app.habitat.sh/#/pkgs/core/postgresql/9.5.3/20161214235406), and they aren't difficult to create.  So, once you begin deploying with HabitatForMeteor your deployment tasks will be future-proof.  Controlling your live applications' infrastructure begins to look a lot like, and not much harder, than the package management you do within your Meteor apps.
 
 Briefly, HabitatForMeteor...
 
-1. Sets up your development machine with the tools to wrap your Meteor application into a Habitat deployment package.
-2. Sets up a remote host with the Habitat deployment environment.
-3. Provides a single command to build a deployment package and publish it to a Habitat Depot.
-4. Provides a single command to pull a deployment package from a depot and deploy it to your remote host, *along with MongoDB, NodeJS, Nginx and the necessary connections between them*.
+1. Adds to your Meteor application the tools you need to wrap it into a Habitat deployment package.
+1. Provides a single command to build a deployment package and publish it to a Habitat Depot.
+1. Sets up a remote host with the Habitat deployment environment.
+1. Provides a single command to pull a deployment package from a depot and deploy it to your remote host, *along with MongoDB, NodeJS, Nginx and the necessary connections between them*.
 
-## Caution
+
+## Precautions
 
 This is an alpha stage project, and Habitat itself is early beta, so please expect some teething pains.
 
@@ -38,22 +39,23 @@ Also, this is a "feeler" project to see if there is much community interest.  We
 
 ### Complexity
 
-Habitat4Meteor has a lot of moving parts because it interacts with a number of different services :
+Habitat4Meteor has a lot of moving parts because it interacts with a number of different services and must manage quite a few of your deployment "secrets" :
 
 * pulls Habitat and installs it on your development machine if necessary
 * builds your Meteor applications
 * assembles your Meteor Node packages into Habitat packages
 * adjusts your applications' version numbering and creates releases in GitHub
 * connects by RPC to your remote host to prepare Habitat with its own user 'sudoer' account
+* connects by SCP to deliver installer scripts
 * connects by RPC to your remote host to create a `systemd` unit file for boot-time &/or manual launch of your application
 
 Initial set up may be a bit of a pain, and can take some time, but the end result is single click deploy **and** release management:  ready for inclusion in serious continuous deployment systems.
 
-![Habitat For Meteor](https://docs.google.com/drawings/d/19HVhiUMscFOl4vGXtzgbcbGn8rcltuxkBuRa6YrxiZk/pub?w=960&h=720)
+![Habitat For Meteor](https://docs.google.com/drawings/d/1YWjJnEXR4dmuE5R17owjhMdxg1ypBOGYlq3pUcQ0P6M/pub?w=480&h=360)
 
-### Getting started
+## Getting started
 
-#### Introduction
+### Client side preparations
 
 The steps below are designed to prepare everything in freshly installed Xubuntu virtual machines.
 
@@ -61,27 +63,15 @@ You will work exclusively in the client.
 
 You can cut'n paste the snippets unaltered and see the process unfold with no need to edit anything.  Those snippets can then form the basis of you own automation.  The steps depend on a set of shell variables, that you'll initialize immediately below. You will need to **be sure to re-source them** before trying any of the snippets below.
 
-
-
-#### General preparations
-
 1. *Accounts* :: You need accounts on several remote services :
-    1. [GitHub](https://github.com/) : You need user id and password, obviously.  You'll also need a personal token; see below.
-    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you are already logged into GitHub.
+    1. [GitHub](https://github.com/) : You need user id and password, obviously.  You need an SSH key for commits. You'll also need a "GitHub Personal Token" to authenticate with the Habitat depot API; see below.
+    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you already logged in to GitHub.  To interact with the Habitat depot API, you'll need a "GitHub Personal Token".
+    3. [Loggly](https://www.loggly.com/) and [MailGun](https://www.mailgun.com/) : If you are building the Meteor Mantra Kickstarter you'll need access token for these two too.
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv` (`${TARGET_SRVR}`).  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
 
-    To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv`.  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
+1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* scripts below expect the initial user on each machine to be called ´you´.
 
-    For your own convenience, after logging into the Xubuntu desktop in `hab4metdev`, you should start the browser and open it to this page.
-
-1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user on each machine to be called ´you´.
-
-1.  Install keys for todos project user on GitHub
-
-1.  Install Habitat Origin keys in '~/.ssh/hab_vault/habitat_user/'
-
-1.  Define the virtual host domain in '/etd/hosts'.
 
 
 

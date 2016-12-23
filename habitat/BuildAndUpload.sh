@@ -1,10 +1,30 @@
 #!/usr/bin/env bash
 #
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname "$SCRIPT")
+declare SCRIPT=$(readlink -f "$0")
+declare SCRIPTPATH=$(dirname "$SCRIPT")
 
-PRTY="BLDUPD  ==>  ";
+declare PRTY="BLDUPD  ==>  ";
+
+declare ENVVARSDIRTY=true;
+
+declare START_FROM=$(echo ${SCRIPTPATH} | grep -o ".habitat$");
+if [ "${START_FROM}" = ".habitat" ]; then
+  source ./.habitat/scripts/ManageShellVars.sh ".habitat/scripts/";
+else
+  source ./scripts/ManageShellVars.sh "";
+fi;
+
+loadShellVars;
+
+PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
+[ "${ENVVARSDIRTY}" = "true" ] && askUserForParameters PARM_NAMES[@];
+
+# declare USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
+# [ -f ${USER_VARS_FILE_NAME} ] && source ${USER_VARS_FILE_NAME};
+
+# declare TARGET_ARCHITECTURE="${TARGET_ARCHITECTURE:-x86_64}";
+# declare TARGET_OPERATING_SYSTEM="${TARGET_OPERATING_SYSTEM:-linux}";
 
 if [[ "X${1}X" == "XX" ]]; then
     echo "Usage :: ${0} releaseTag";
@@ -24,7 +44,7 @@ function getNewestHabitatBuildPackageIfAny() {
     HART_FILE_TIMESTAMP="${THE_FILE%${HART_FILE_SUFFIX}}";
   done
 
-  set +e;
+  set -e;
   HART_FILE="${HART_FILE_PREFIX}${HART_FILE_TIMESTAMP}${HART_FILE_SUFFIX}";
   if ls -l ${BUILD_ARTIFACTS}/${HART_FILE} &>/dev/null; then
     HABITAT_REBUILD=false;
@@ -210,7 +230,7 @@ function loadSemVerToolkit() {
 #  echo -e; set -e;
   loadSemVerScript;
   . ./semver.sh
-  . ./scripts/semver.sh;
+#  . ./scripts/semver.sh;
   # COHERENT_VERSIONS=0;
   # ERMSG="";
   # set +e;
@@ -450,7 +470,7 @@ function uploadHabitatArchiveFileToDepot() {
 
   set -e;
   echo -e "${PRTY} Uploading Habitat package '${BUILD_ARTIFACTS}/${HART_FILE}' to default depot...
-             using ${GITHUB_PERSONAL_TOKEN}";
+             using GitHub token : ${GITHUB_PERSONAL_TOKEN}";
   # ls -l ${BUILD_ARTIFACTS}/${HART_FILE};
 
           # echo -e "${PRTY} Quitting now.\nDone.\n\n\n\n";
@@ -576,6 +596,14 @@ function verifyHabitatArchiveFileIsInDepot() {
   fi;
   set +e;
 
+}
+
+export CURRENT_BRANCH="";
+export DETACHED="(unnamed branch)";
+function getGitBranch() {
+  local BRANCH_NAME="";
+  BRANCH_NAME="$(git symbolic-ref HEAD 2>/dev/null)" || BRANCH_NAME="${DETACHED}";     # detached HEAD
+  CURRENT_BRANCH=${BRANCH_NAME##refs/heads/};
 }
 
 
@@ -705,13 +733,20 @@ uploadHabitatArchiveFileToDepot;
 
 verifyHabitatArchiveFileIsInDepot;
 
+getGitBranch;
+if [[ "${CURRENT_BRANCH}" = "${DETACHED}" ]]; then
+  echo -e "ERROR ::  Can't work with a detached head ! ";
+  echo -e "${PRTY} Finishing now.\nDone.\n\n\n\n";
+  exit 1;
+fi;
+
 git remote update;
-GIT_DIFF_COUNT=$(git diff origin/master --name-only  | wc -l)
+GIT_DIFF_COUNT=$(git diff origin/${CURRENT_BRANCH} --name-only  | wc -l)
 if [[ "${GIT_DIFF_COUNT}" != "0" ]]; then
   echo -e "ERROR ::  Unexpected change in remote repository.
      Don't know how to resolve.    ** Release tags not committed. **
      The following file(s) have changed : ";
-  git diff origin/master --name-only | sed "/plan.sh\|package.json/d";
+  git diff origin/${CURRENT_BRANCH} --name-only | sed "/plan.sh\|package.json/d";
   echo -e "${PRTY} Finishing now.\nDone.\n\n\n\n";
   exit 1;
 fi;
