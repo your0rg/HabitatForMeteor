@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 #
-
-
 function loadSemVerScript() {
 
   SEMVER_SCRIPT_NAME="semver.sh";

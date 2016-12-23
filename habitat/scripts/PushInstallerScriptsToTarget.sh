@@ -6,10 +6,12 @@ function usage() {
      ${SCRIPTPATH}/PushInstallerScriptsToTarget.sh \\
                    \${TARGET_SRVR} \\
                    \${SETUP_USER} \\
+                   \${METEOR_SETTINGS_FILE} \\
                    \${SOURCE_SECRETS_FILE}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
+        METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/target/secrets.sh.example )
 
@@ -29,6 +31,11 @@ function errorCannotPingRemoteServer() {
 
 function errorNoUserAccountSpecified() {
   echo -e "\n\n    *** The user account for the remote server needs to be specified  ***";
+  usage;
+}
+
+function errorNoSettingsFileSpecified() {
+  echo -e "\n\n    *** A valid path to a Meteor settings.json file needs to be specified, not '${1}'  ***";
   usage;
 }
 
@@ -109,7 +116,8 @@ PRTY="PIStT  ==> ";
 
 TARGET_SRVR=${1};
 SETUP_USER=${2};
-SOURCE_SECRETS_FILE=${3};
+METEOR_SETTINGS_FILE=${3};
+SOURCE_SECRETS_FILE=${4};
 
 HABITAT_USER='hab';
 
@@ -118,6 +126,7 @@ PASSWORD_MINIMUM_LENGTH=4;
 
 echo -e "${PRTY} TARGET_SRVR=${TARGET_SRVR}";
 echo -e "${PRTY} SETUP_USER=${SETUP_USER}";
+echo -e "${PRTY} METEOR_SETTINGS_FILE=${METEOR_SETTINGS_FILE}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
 
 SCRIPTS_DIRECTORY="target";
@@ -157,6 +166,11 @@ echo -e "${PRTY} Added keys to ssh-agent";
 
 
 # ----------------
+echo -e "${PRTY} Testing settings file availability... [   ls \"${METEOR_SETTINGS_FILE}\"  ]";
+if [[ "X${METEOR_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
+if [ ! -f "${METEOR_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
+
+# ----------------
 echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
 if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
 if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
@@ -165,7 +179,7 @@ source ${SOURCE_SECRETS_FILE};
 
 echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
 echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
-echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
+echo -e "${PRTY} HABITAT_USER_SSH_KEY_PUBL=${HABITAT_USER_SSH_KEY_PUBL}";
 
 # ----------------
 echo -e "${PRTY} Validating target host's user's sudo password... ";
@@ -189,8 +203,8 @@ if [[ "X${MONGODB_PWD}X" = "XX" ]]; then errorNoSuitablePasswordInFile "null"; f
 # ----------------
 HABITAT_USER_SSH_KEY_FILE_NAME="authorized_key";
 echo -e "${PRTY} Validating target host's user's SSH ${HABITAT_USER_SSH_KEY_FILE_NAME}... ";
-if [[ "X${HABITAT_USER_SSH_KEY_FILE}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
-ssh-keygen -lvf ${HABITAT_USER_SSH_KEY_FILE} > /tmp/kyfp.txt || errorBadPathToSSHKey ${HABITAT_USER_SSH_KEY_FILE};
+if [[ "X${HABITAT_USER_SSH_KEY_PUBL}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
+ssh-keygen -lvf ${HABITAT_USER_SSH_KEY_PUBL} > /tmp/kyfp.txt || errorBadPathToSSHKey ${HABITAT_USER_SSH_KEY_PUBL};
 echo -e "${PRTY} Target's user's SSH key fingerprint...";
 cat /tmp/kyfp.txt;
 
@@ -199,13 +213,18 @@ echo -e "${PRTY} Ready to push HabitatForMeteor deployment scripts to the target
        '${TARGET_SRVR}' prior to placing a RPC to install our Meteor project....";
 
 echo -e "${PRTY} Inserting secrets and keys in, '${BUNDLE_NAME}'...";
+chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
+cp -p ${METEOR_SETTINGS_FILE} ${SCRIPTS_DIRECTORY};
 chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
 cp -p ${SOURCE_SECRETS_FILE} ${SCRIPTS_DIRECTORY};
-cp -p ${HABITAT_USER_SSH_KEY_FILE} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
+cp -p ${HABITAT_USER_SSH_KEY_PUBL} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
 
 echo -e "${PRTY} Bundling up the scripts as, '${BUNDLE_NAME}'...";
 tar zcf ${BUNDLE_NAME}  --exclude='*.example' ${SCRIPTS_DIRECTORY};
 chmod go-xrw ${BUNDLE_NAME};
+
+TARGET_SETTINGS_FILE=$(basename "$METEOR_SETTINGS_FILE");
+rm -f ./${SCRIPTS_DIRECTORY}/${TARGET_SETTINGS_FILE};
 
 TARGET_SECRETS_FILE=$(basename "$SOURCE_SECRETS_FILE");
 rm -f ./${SCRIPTS_DIRECTORY}/${TARGET_SECRETS_FILE};
@@ -231,7 +250,7 @@ ssh ${SETUP_USER}@${TARGET_SRVR} "./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatT
 echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";
 startSSHAgent;
 expect << EOF
-  spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE%.pub}
+  spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
   expect "Enter passphrase"
   send "${HABITAT_USER_SSH_PASS}\r"
   expect eof
@@ -242,6 +261,8 @@ echo -e "${PRTY} Testing SSH connection using... [   ssh ${HABITAT_USER}@${TARGE
 if [[ "X${HABITAT_USER}X" = "XX" ]]; then errorNoUserAccountSpecified "null"; fi;
 REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) || errorCannotCallRemoteProcedure "${HABITAT_USER}@${TARGET_SRVR}";
 [[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${HABITAT_USER}") ]] ||  errorUnexpectedRPCResult;
+
+if [[ "${NON_STOP}" = "YES" ]]; then exit 0; fi;
 
 pushd ${SCRIPTPATH}/../.. >/dev/null;
 echo -e "\n${PRTY} Now you can upload your site certificates to a secure location in the 'hab' user's account.

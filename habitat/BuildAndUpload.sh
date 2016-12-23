@@ -44,7 +44,7 @@ function getNewestHabitatBuildPackageIfAny() {
     HART_FILE_TIMESTAMP="${THE_FILE%${HART_FILE_SUFFIX}}";
   done
 
-#  set +e;
+  set -e;
   HART_FILE="${HART_FILE_PREFIX}${HART_FILE_TIMESTAMP}${HART_FILE_SUFFIX}";
   if ls -l ${BUILD_ARTIFACTS}/${HART_FILE} &>/dev/null; then
     HABITAT_REBUILD=false;
@@ -177,7 +177,6 @@ function detectIncompletePackageJSON() {
   JSN=$(cat ${jsonFILE});
 
   FLD=name;
-
   jsonDoesHaveElement "${JSN}" ${FLD} || appendToDefectReport "${MSGB}${jsonFILE}${MSGM}${FLD}${MSGE}";
 
   FLD=version;
@@ -337,6 +336,44 @@ function ensureUserAlsoHasGlobalOriginKey() {
 }
 
 
+function copyExternalNodeModulesToInternal() {
+  local EXTERNAL_MODULES_DIRECTORY=".pkgs";
+  echo -e "  - Looking for external modules directory.";
+  if [[ -d ${EXTERNAL_MODULES_DIRECTORY} ]]; then
+
+    echo -e "  - Looking for external modules.";
+    if [[ $(find ${EXTERNAL_MODULES_DIRECTORY}/* -maxdepth 0 -type d | wc -l) -gt 0 ]]; then
+      mkdir -p node_modules;
+      pushd ${EXTERNAL_MODULES_DIRECTORY} >/dev/null;
+
+        echo "~~~~~~~~~~  Copy external modules to node_modules directory ~~~~~~~~~~~~~~~~~~~~~~";
+
+        for dir in ./*/
+        do
+          DNAME=${dir/#.\/};
+          DNAME=${DNAME/%\//};
+          echo "~~~~~~~~~~  Copying module '${DNAME}' ~~~~~~~~~~~~~~~~~~~~~~";
+
+          pushd ${dir} >/dev/null;
+            meteor npm -y install;
+          popd >/dev/null;
+
+          rm -fr ../node_modules/${DNAME};
+          cp -r ${DNAME} ../node_modules;
+        done
+
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+      popd >/dev/null;
+
+      return 0;
+    fi;
+  fi;
+  echo -e "${PRTY} Found no external modules.";
+
+}
+
+
 function buildMeteorProjectBundleIfNotExist() {
 
   echo "${PRTY} Set Meteor app metadata '${METEOR_METADATA}' version record 'version' to '${RELEASE_TAG}'...";
@@ -356,13 +393,25 @@ function buildMeteorProjectBundleIfNotExist() {
 
     echo "${PRTY} Stepping out to Meteor project directory";
     pushd .. &>/dev/null;
+      local BUILD_DIR="./.habitat/results";
+      local BUNDLE_DIR="${BUILD_DIR}/bundle";
+      local SETTINGS_FILE="settings.json";
+
+      echo "${PRTY} Copying any external Node modules from '${EXTERNAL_MODULES_DIRECTORY}' to 'node_modules' ...";
+      copyExternalNodeModulesToInternal;
 
       echo "${PRTY} Ensuring Meteor directory has all necessary node_modules...";
-      meteor npm install;
+
+      set +e; meteor npm -y install  --production; set -e;
 
       echo "${PRTY} Building Meteor and putting bundle in results directory...";
       echo "         ** The 'source tree' WARNING can safely be ignored ** ";
-      meteor build ./.habitat/results --directory --server-only;
+      meteor build ${BUILD_DIR} --directory --server-only;
+
+      if [[ -f ./${SETTINGS_FILE} ]]; then
+        cp ./${SETTINGS_FILE} ${BUNDLE_DIR};
+        chmod ug+rw,o-rwx ${BUNDLE_DIR}/${SETTINGS_FILE};
+      fi;
 
       echo -e "${PRTY} Meteor project rebuilt.
       Setting '${METEOR_VERSION_FLAG}' to contain '${RELEASE_TAG}.'";
@@ -561,17 +610,26 @@ function getGitBranch() {
 function lastMessage() {
   pushd ${SCRIPTPATH}/.. >/dev/null;
   echo -e "
-              Your package is published on the Habitat depot.
+          Your package is published on the Habitat depot. You can see it at:
+
+            https://app.habitat.sh/#/pkgs/${HABITAT_PKG_ORIGIN}/${HABITAT_PKG_NAME}
+
+                                        - o 0 o -
 
         * Next Step * : Prepare your target host for deploying the package by
              placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
 
         cd $(pwd);
-        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \${TARGET_SRVR} \${SETUP_USER} \${SOURCE_SECRETS_FILE};
+        ./.habitat/scripts/PushInstallerScriptsToTarget.sh \\
+              \${TARGET_SRVR} \\
+              \${SETUP_USER} \\
+              \${METEOR_SETTINGS_FILE} \\
+              \${SOURCE_SECRETS_FILE};
 
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
+        METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/scripts/target/secrets.sh.example )
 
@@ -655,17 +713,21 @@ echo -e "${PRTY} Ready to commit changes.
      5) Tag the commit and push all to the remote repository
 
             ";
+if [[ "${NON_STOP}" = "YES" ]]; then
+  echo "${PRTY} Committing changes automatically ...";
+else
+  read -r -p "Proceed? [y/N] " response;
+  case ${response} in
+      [yY][eE][sS]|[yY])
+          echo "${PRTY} Continuing...";
+          ;;
+      *)
+          echo -e "${PRTY} Quitting now.\nDone.";
+          exit 1;
+          ;;
+  esac
 
-read -r -p "Proceed? [y/N] " response;
-case ${response} in
-    [yY][eE][sS]|[yY])
-        echo "${PRTY} Continuing...";
-        ;;
-    *)
-        echo -e "${PRTY} Quitting now.\nDone.";
-        exit 1;
-        ;;
-esac
+fi;
 
 uploadHabitatArchiveFileToDepot;
 

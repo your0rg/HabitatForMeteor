@@ -12,137 +12,132 @@ export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
 ## Preparing file of test variables for getting started with Habitat For Meteor
+function PrepareNecessaryShellVarsForExerciser() {
 
-TEST_VARS_FILE="${HOME}/.testVars.sh";
-if [ ! -f ${TEST_VARS_FILE} ]; then
-  cat << EOSVARS > ${TEST_VARS_FILE}
-  
-  #################################################################################
-  ##### Non-secret test variables for getting started with Habitat For Meteor #####
-  #################################################################################
+  TEST_VARS_FILE="${HOME}/.testVars.sh";
+  if [ ! -f ${TEST_VARS_FILE} ]; then
+    cat << EOSVARS > ${TEST_VARS_FILE}
 
-  ### Controlling exerciser execution
-  # Specify whether the script should assume **NO MISSING DETAILS**
-  export NON_STOP="YES";   # don't ask for secrets and fail if not found 
+#################################################################################
+##### Non-secret test variables for getting started with Habitat For Meteor #####
+#################################################################################
 
-  # Specify the execution stage you want to begin from
-  export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
+### Controlling exerciser execution
+# Specify whether the script should assume **NO MISSING DETAILS**
+export NON_STOP="YES";   # don't ask for secrets and fail if not found 
 
+# Specify the execution stage you want to begin from
+export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
 
+### Locating public files within the developer VM
+# Location of developer tools
+export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
 
+# Location of your projects
+export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
 
-  ### Locating public files within the developer VM
-  # Location of developer tools
-  export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
+# The SSH secrets directory 
+export SSH_KEY_PATH="\${HOME}/.ssh";
+export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
-  # Location of projects
-  export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
-
-  # The SSH secrets directory 
-  export SSH_KEY_PATH="\${HOME}/.ssh";
-  export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
-
-  # The SSH keys of the current user, for ssh-add
-  export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
-  export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
+# The SSH keys of the current user, for ssh-add
+export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
+export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
 
 
 
 
-  ### Locating secrets within the developer VM
-  # Habitat for Meteor secrets directory
-  export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
-  export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh";
-  export METEOR_SETTINGS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/settings.json";
+### Locating secrets within the developer VM
+# Habitat for Meteor secrets directory
+export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
+export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh";
+export METEOR_SETTINGS='{ "public": { "DUMMY": "dummy" } }';
+export METEOR_SETTINGS_FILE="settings.json";
+export METEOR_SETTINGS_EXAMPLE_FILE="\${METEOR_SETTINGS_FILE}.example";
+export METEOR_SETTINGS_FILE_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${METEOR_SETTINGS_FILE}";
 
-  # Habitat for Meteor user secrets directory
-  export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
-
-
-
-
-
-  ### Specifying your fork of HabitatForMeteor ###
-  # Name of your HabitatForMeteorFork
-  export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
-
-  # Organization of your HabitatForMeteorFork
-  export HABITA4METEOR_FORK_ORG="yourOrg";
-
-  # URI of your fork of HabitatForMeteor #
-  export URIofYourForkOfHabitatForMeteor="git@github.com/${HABITA4METEOR_FORK_ORG}/${HABITA4METEOR_FORK_NAME}";
+# Habitat for Meteor user secrets directory
+export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
 
 
 
 
 
-  ### Specifying your fork of a target project ###
-  # Name of your fork of one the target projects
-  export TARGET_PROJECT_NAME="";
-  TARGET_PROJECT_NAME="meteor_todos"; # git clone https://github.com/meteor/todos meteor_todos
+### Specifying your fork of HabitatForMeteor ###
+# Name of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
+
+# Organization of your HabitatForMeteorFork
+export HABITA4METEOR_FORK_ORG="yourOrg";
+
+
+
+### Parameters for creating a SSH key pair for the 'hab' user.
+export HABITAT_USER_SSH_KEY_COMMENT="DevopsTeamLeader";
+export HABITAT_USER_SSH_PASS_PHRASE="memorablegobbledygook";
+export HABITAT_USER_SSH_KEY_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user";
+export HABITAT_USER_SSH_KEY_PRIV="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa";
+export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
+
+### Specifying parameters for creating SSL certificates for your project domain  ###
+# SSL certificate parameters of the server where the project will be deployed
+# Virtual host domain name
+export VHOST_DOMAIN="moon.planet.sun";
+export VHOST_CERT_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}";
+
+# Virtual host domain name
+export VHOST_CERT_PASSPHRASE="memorablegibberish";
+
+
+
+### Specifying your fork of a target project ###
+# Name of your fork of one the target projects
+export TARGET_PROJECT_NAME="";
+TARGET_PROJECT_NAME="meteor_todos"; # git clone https://github.com/meteor/todos meteor_todos
 #  TARGET_PROJECT_NAME="mmks"; # git clone https://github.com/warehouseman/meteor-mantra-kickstarter mmks
 
-  # Your github organization for your fork of "todos" or "mmks"
-  export YOUR_ORG="yourse1f-yourorg";
+# Your github organization for your fork of "todos" or "mmks"
+export YOUR_ORG="yourse1f-yourorg";
 
-  # URI of your fork of HabitatForMeteor #
-  export URIofYourProjectFork="https://github.com/${YOUR_ORG}/${TARGET_PROJECT_NAME}";
+# URI of your fork of HabitatForMeteor #
+export URIofYourProjectFork="https://github.com/${YOUR_ORG}/${TARGET_PROJECT_NAME}";
 
-  # The release tag you want to attach to the above project. It must be the
-  # newest release anywhere: locally, or on GitHub, or on apps.habitat.sh
-  export RELEASE_TAG="0.0.14";
-
-
-
-
-
-  ### Specifying your public GitHub access  ###
-  # Your full name
-  export YOUR_NAME="You Yourself";
-
-  # Your email address
-  export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
-
-  # Path to the SSH keys of the current user, for ssh-add
-  export YOUR_ORG_IDENTITY_FILE="\${SSH_KEY_PATH}/\${YOUR_ORG}_rsa";
+# The release tag you want to attach to the above project. It must be the
+# newest release anywhere: locally, or on GitHub, or on apps.habitat.sh
+export RELEASE_TAG="0.0.48";
 
 
 
 
 
-  ### Specifying access parameters for your server VM  ###
-  # Domain name of the server where the project will be deployed
-  export TARGET_SRVR="hab4metsrv";
+### Specifying your public GitHub access  ###
+# Your full name
+export YOUR_NAME="You Yourself";
 
-  # The 'habitat' admin account on the server
-  export HABITAT_USER="hab";
+# Your email address
+export YOUR_EMAIL="yourse1f-yourorg@gmail.com";
 
-  # Parameters for creating a SSH key pair for the 'hab' user.
-  export HABITAT_USER_SSH_KEY_COMMENT="DevopsTeamLeader";
-  export HABITAT_USER_SSH_PASS_PHRASE="memorablegobbledygook";
-  export HABITAT_USER_SSH_KEY_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user";
-  export HABITAT_USER_SSH_KEY_PRIV="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa";
-  export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
+# Path to the SSH keys of the current user, for ssh-add
+export YOUR_ORG_IDENTITY_FILE="\${SSH_KEY_PATH}/\${YOUR_ORG}_rsa";
 
 
 
 
 
-  ### Specifying parameters for creating SSL certificates for your project domain  ###
-  # SSL certificate parameters of the server where the project will be deployed
-  # Virtual host domain name
-  export VHOST_DOMAIN="moon.planet.sun";
-  export VHOST_CERT_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}";
+### Specifying access parameters for your server VM  ###
+# Domain name of the server where the project will be deployed
+export TARGET_SRVR="hab4metsrv";
 
-  # Virtual host domain name
-  export VHOST_CERT_PASSPHRASE="memorablegibberish";
-
-
+# The 'habitat' admin account on the server
+export HABITAT_USER="hab";
 
 EOSVARS
 fi;
+}
 
+echo "${PRTY} Prepare environment variables used by exerciser ";
+PrepareNecessaryShellVarsForExerciser;
 
 ## Sourcing test variables file ....
 
@@ -192,6 +187,8 @@ function ConfigureSSHConfigForUser() {
       echo -e "Unable to find SSH key at: '${THE_KEYS}' ...  ";
       exit 1;
     fi;
+
+    chmod go-rwx ${THE_KEYS};
 
     export PTRN="# ${THE_USER} account on ${THE_HOST}";
     export PTRNB="${PTRN} «begins»";
@@ -282,13 +279,25 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 
 function startSSHAgent() {
 
-  echo -e "${PRTY} Starting 'ssh-agent' ...";
-  if [ -z "${SSH_AUTH_SOCK}" ]; then
+  if [ ! -S "${SSH_AUTH_SOCK}" ]; then
+    echo -e "${PRTY} Starting 'ssh-agent' because SSH_AUTH_SOCK='${SSH_AUTH_SOCK}'...";
     eval $(ssh-agent -s);
     echo -e "${PRTY} Started 'ssh-agent' ...";
   fi;
 
 };
+
+
+function AddSSHkeyToAgent() {
+
+  local KEY_PRESENT=$(ssh-add -l | grep -c ${1});
+  if [[ "${KEY_PRESENT}" -lt "1" ]]; then
+    echo -e "${PRTY} Remembering SSH key: '${1}'...";
+    ssh-add ${1};
+  fi;
+
+};
+
 
 function PrepareDependencies() {
 
@@ -298,12 +307,53 @@ function PrepareDependencies() {
     sudo apt -y install curl;
     sudo apt -y install git;
     sudo apt -y install build-essential;
+    sudo apt -y install whois;
     #
     # Prepare 'git'
     git config --global user.email "${YOUR_EMAIL}";
     git config --global user.name "${YOUR_NAME}";
     git config --global push.default simple;
     #
+
+};
+
+
+
+function CheckHostsFile() {
+
+  echo -e "Verifying hosts file settings";
+  HSTS="/etc/hosts";
+  READY=0;
+  if ! (( $( grep -c "${TARGET_SRVR}" ${HSTS} ) )); then echo "No mapping for '${TARGET_SRVR}'."; READY=1; fi;
+  if ! (( $( grep -c "${VHOST_DOMAIN}" ${HSTS} ) )); then echo "No mapping for '${VHOST_DOMAIN}'."; READY=1; fi;
+  ((READY)) && exit 1;
+
+  if ! ping -c1 ${TARGET_SRVR} &>/dev/null; then echo "Can't reach '${TARGET_SRVR}'."; export READY=1; fi;
+  if ! ping -c1 ${VHOST_DOMAIN} &>/dev/null; then echo "Can't reach '${VHOST_DOMAIN}'."; export READY=1; fi;
+  ((READY)) && exit 1;
+  return 0;
+  #
+
+};
+
+
+
+function CheckForHabitatOriginKeys() {
+
+  if [ ! -d ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} ]; then
+    echo -e "Cannot find Habitat Origin Keys in '${HABITAT_FOR_METEOR_USER_SECRETS_DIR}'!";
+    mkdir -p ${HABITAT_FOR_METEOR_USER_SECRETS_DIR};
+    exit 1;
+  fi;
+
+  pushd ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} >/dev/null;
+
+    if [ ! -f ${YOUR_ORG}-*.sig.key ]; then
+      echo -e "Cannot find Habitat Origin Keys!";
+      exit 1;
+    fi;
+
+  popd >/dev/null;
 
 };
 
@@ -400,26 +450,38 @@ function FixGitPrivileges() {
   pushd .git >/dev/null;
 
   local OLD_URL_PATTERN="url = git";
-  local NEW_URL_LINE="    url = git@${YOUR_ORG}.github.com:${YOUR_ORG}/${TARGET_PROJECT_NAME}.git";
+  local NEW_URL_LINE="    url = git@${YOUR_ORG}.github.com:${PROJECT_UUID}.git";
+  echo "Setting repo ownership: 'git@github.com:${PROJECT_UUID}.git'.";
   sed -i "s|.*url = git.*|${NEW_URL_LINE}|" ./config;
-
-  popd >/dev/null;
+  echo "Identifying repo owner: 'git@github.com:${PROJECT_UUID}.git'.";
+  if [[ -z $(grep "email" config) ]]; then
+    echo -e "[user]
+    name = ${YOUR_NAME}
+    email = ${YOUR_EMAIL}" >> ./config
+    popd >/dev/null;
+  fi;
 
 
 };
 
 # P1 : the url to verify
 # P2 : additional commands to meteor. Eg; test-packages
-function launchMeteorProcess()
+function LaunchMeteorProcess()
 {
   METEOR_URL=$1;
   STARTED=false;
 
+  echo -e "Verifying Meteor execution :
+        - METEOR_URL      = ${METEOR_URL}
+        - METEOR_SETTINGS = ${2}
+  ";
+
+#  export METEOR_SETTINGS="${METEOR_SETTINGS}";
   until wget -q --spider ${METEOR_URL};
   do
     echo "Waiting for ${METEOR_URL}";
     if ! ${STARTED}; then
-      meteor $2 &
+      meteor ${2} &
       STARTED=true;
     fi;
     sleep 5;
@@ -429,7 +491,7 @@ function launchMeteorProcess()
 }
 
 
-function killMeteorProcess()
+function KillMeteorProcess()
 {
   EXISTING_METEOR_PIDS=$(ps aux | grep meteor  | grep -v grep | grep ~/.meteor/packages | awk '{print $2}');
 #  echo ">${IFS}<  ${EXISTING_METEOR_PIDS} ";
@@ -439,18 +501,53 @@ function killMeteorProcess()
   done;
 }
 
+function IncorporateExternalPkgsIfAny() {
+
+  if [[ $(find .pkgs/* -maxdepth 0 -type d | wc -l) -gt 0 ]]; then
+
+    mkdir -p node_modules;
+    pushd .pkgs >/dev/null;
+
+      echo "~~~~~~~~~~  Copy external modules to node_modules directory ~~~~~~~~~~~~~~~~~~~~~~";
+      for dir in ./*/
+      do
+        DNAME=${dir/#.\/};
+        DNAME=${DNAME/%\//};
+        echo "~~~~~~~~~~  Copying module '${DNAME}' ~~~~~~~~~~~~~~~~~~~~~~";
+
+        pushd ${dir} >/dev/null;
+          meteor npm -y install;
+        popd >/dev/null;
+
+        rm -fr ../node_modules/${DNAME};
+        cp -r ${DNAME} ../node_modules;
+      done
+
+      echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+    popd >/dev/null;
+
+  fi;
+
+
+}
+
 function TrialBuildMeteorProject() {
 
     pushd ${THE_PROJECT_ROOT} >/dev/null;
-    # Install all NodeJS packages dependencies
-    meteor npm install
-    #
-    # Also install the one that change since the last release of 'meteor/todos'
-    meteor npm install --save bcrypt;
-    #
-    # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
-    launchMeteorProcess "http://localhost:3000/";
-    killMeteorProcess;
+
+      # See if this project has any 'external' packages in it '.pkgs' folder
+      IncorporateExternalPkgsIfAny;
+
+      # Install all NodeJS packages dependencies
+      meteor npm install
+      #
+      # Also install the one that change since the last release of 'meteor/todos'
+#   meteor npm install --save bcrypt;
+      #
+      # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
+      LaunchMeteorProcess "http://localhost:3000/" "--settings=${METEOR_SETTINGS_FILE_PATH}";
+      KillMeteorProcess;
 
     popd >/dev/null;
 
@@ -460,7 +557,11 @@ function TrialBuildMeteorProject() {
 function PerformanceFix() {
 
     # Optimize file change responsivity
-    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p;
+    INOT_STTNG="fs.inotify.max_user_watches=524288";
+    SYSCTL="/etc/sysctl.conf";
+    if [[ "$(cat ${SYSCTL} | grep -c ${INOT_STTNG})" -lt "1" ]]; then
+      echo ${INOT_STTNG} | sudo tee -a ${SYSCTL} && sudo sysctl -p;
+    fi;
 
 };
 
@@ -499,19 +600,64 @@ function InitializeMeteorProject() {
 };
 
 
+
+function updateOrAddKVPair() {
+
+  # echo "PKG_JSN -- ${PKG_JSN}";
+  # echo "MRKR -- ${MRKR}";
+  local KEY="\"${1}\"";
+  local VAL="\"${2}\"";
+  local REPLACEMENT="";
+  echo "KEY -- ${KEY}";
+  echo "VAL -- ${VAL}";
+
+  if grep ${KEY} ${PKG_JSN}; then
+
+    sed -i "/${KEY}/c\ \ ${KEY}: ${VAL}," ${PKG_JSN};
+
+  else
+
+    REPLACEMENT+="  ${KEY}: ${VAL},";
+    REPLACEMENT+="\n  ${MRKR}: {";
+    sed -i "s|.*${MRKR}.*|${REPLACEMENT}|" ${PKG_JSN};
+
+  fi;
+  echo -e "-------
+$(grep ${KEY} ${PKG_JSN})
+--------";
+
+}
+
+
 function PatchPkgJson() {
 
-  local REPLACEMENT="";
-  REPLACEMENT+="  \"name\": \"${TARGET_PROJECT_NAME}\",";
-  REPLACEMENT+="\n  \"version\": \"0.1.4\",";
-  REPLACEMENT+="\n  \"license\": \"MIT\",";
-  REPLACEMENT+="\n  \"repository\": \"https://github.com/${PROJECT_UUID}\",";
-  REPLACEMENT+="\n  \"scripts\": {";
+  export PKG_JSN=${1};
+  export MRKR="\"scripts\"";
 
-  sed -i "s|.*scripts.*|${REPLACEMENT}|" ./package.json;
+  head -n 15 ${PKG_JSN};
+
+  updateOrAddKVPair "name" "${TARGET_PROJECT_NAME}";
+  updateOrAddKVPair "version" "0.1.4";
+  updateOrAddKVPair "license" "MIT";
+  updateOrAddKVPair "repository" "https://github.com/${PROJECT_UUID}";
 
 
 };
+
+
+# function PatchPkgJson() {
+
+#   local REPLACEMENT="";
+#   REPLACEMENT+="  \"name\": \"${TARGET_PROJECT_NAME}\",";
+#   REPLACEMENT+="\n  \"version\": \"0.1.4\",";
+#   REPLACEMENT+="\n  \"license\": \"MIT\",";
+#   REPLACEMENT+="\n  \"repository\": \"https://github.com/${PROJECT_UUID}\",";
+#   REPLACEMENT+="\n  \"scripts\": {";
+
+#   sed -i "s|.*scripts.*|${REPLACEMENT}|" ./package.json;
+
+
+# };
 
 
 function FixPkgJson() {
@@ -525,7 +671,7 @@ function FixPkgJson() {
   fi;
 
   # Adding required fields if missing
-  grep -c repository ${PKGJSN} >/dev/null || PatchPkgJson;
+  grep -c repository ${PKGJSN} >/dev/null || PatchPkgJson ${PKGJSN};
 
 #  echo "Fixing '${PLAN}' version to: '${RELEASE_TAG}' ";
   local REPLACEMENT="  \"version\": \"${RELEASE_TAG}\",";
@@ -567,29 +713,47 @@ function FixReleaseNote() {
 };
 
 
+# function CommitAndPush() {
+# 
+#   echo -e "    - Commit ";
+# 
+#   # git diff --quiet --exit-code --cached ||
+#   # git status;
+# 
+#   # echo "grep;"
+#   # git status | \
+#   #   grep -c "nothing to commit";
+# 
+#   echo - "Committing now ...";
+#   # git status | \
+#   #   grep -c "nothing to commit" >/dev/null || \
+# 
+#   git diff --quiet --exit-code --cached || git commit -a -m "Release version v${RELEASE_TAG}";
+# 
+#   echo "Result -- $?";
+# 
+#   echo -e "    - Push ";
+#   git push;
+# 
+#   echo -e "   Clean";
+# 
+# };
+
 function CommitAndPush() {
 
   echo -e "    - Commit ";
-
-  # git diff --quiet --exit-code --cached ||
-  # git status;
-
-  # echo "grep;"
-  # git status | \
-  #   grep -c "nothing to commit";
-
-  echo - "Committing now ...";
-  # git status | \
-  #   grep -c "nothing to commit" >/dev/null || \
-
-  git diff --quiet --exit-code --cached || git commit -a -m "Release version v${RELEASE_TAG}";
-
-  echo "Result -- $?";
+  git add -A;
+  if [[ "X$(git status -s)X" = "XX" ]]; then 
+    echo - "Nothing left to commit ...";
+  else
+    echo - "Committing now ...";
+    git commit -a -m "Release version v${RELEASE_TAG}";
+  fi;
 
   echo -e "    - Push ";
   git push;
 
-  echo -e "   Clean";
+  echo -e "   Repo is clean";
 
 };
 
@@ -601,7 +765,6 @@ function determineLatestPackagePublished() {
         ";
     return;
   fi;
-  local PACKAGE_PATH=${YOUR_ORG}/${TARGET_PROJECT_NAME};
 #  echo -e "Finding ::  ${PACKAGE_PATH} ";
 #  echo -e "Found ::  $(sudo hab pkg search ${YOUR_ORG}) ";
 
@@ -615,10 +778,10 @@ function determineLatestPackagePublished() {
     # echo -e "PACKAGES: ${PACKAGES} ";
     for PACKAGE in "${PACKAGES[@]}"
     do
-      if [[ "XX" != "X$(echo ${PACKAGE} | grep ${PACKAGE_PATH})X" ]]; then
-        VERSION=${PACKAGE#${PACKAGE_PATH}/};
+      if [[ "XX" != "X$(echo ${PACKAGE} | grep ${PROJECT_UUID})X" ]]; then
+        VERSION=${PACKAGE#${PROJECT_UUID}/};
         UNIQUE_VERSION=$(echo ${VERSION} | cut -f1 -d/);
-        # echo -e "Package : ${PACKAGE} Path: ${PACKAGE_PATH} extracted version: ${VERSION} unique version: ${UNIQUE_VERSION}";
+        # echo -e "Package : ${PACKAGE} Path: ${PROJECT_UUID} extracted version: ${VERSION} unique version: ${UNIQUE_VERSION}";
         # echo -e " LATEST_VERSION: ${LATEST_VERSION} ";
         semverGT ${UNIQUE_VERSION} ${LATEST_VERSION} && LATEST_VERSION=${UNIQUE_VERSION};
       fi;
@@ -700,7 +863,13 @@ function BuildAndUploadMeteorProject() {
 
     echo "${PRTY} Prepare Meteor settings file ";
     PrepareMeteorSettingsFile;
+    cp ${METEOR_SETTINGS_FILE} ${HABITAT_FOR_METEOR_SECRETS_DIR};
     
+    echo "${PRTY} Start tagging if none";
+    if [[ "X$(git describe 2> /dev/null)X" = "XX" ]]; then
+      git tag -a ${RELEASE_TAG} -m "Starting versioning with Habitat"
+    fi;
+
     echo "${PRTY} Committing and pushing project ";
     CommitAndPush;
 
@@ -730,11 +899,6 @@ function VerifyHostsFile() {
 
 function VerifyHostsAccess() {
 
-  #  Starting SSH Agent if not already started
-  startSSHAgent;
-
-  # Add user key to agent;
-  ssh-add ${CURRENT_USER_SSH_KEY_PRIV};
 
   ssh-keygen -f "${SSH_KEY_PATH}/known_hosts" -R ${TARGET_SRVR};
   #
@@ -868,13 +1032,36 @@ echo -e "ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${
 };
 
 function PrepareMeteorSettingsFile() {
-  echo -e "PrepareMeteorSettingsFile";
-  if [ ! -f ${THE_PROJECT_ROOT}/settings.json ]; then
-    echo '{ "public": { "DUMMY": "dummy" } }' > ${THE_PROJECT_ROOT}/settings.json;
-  fi;
 
-  cp ${THE_PROJECT_ROOT}/settings.json ${HABITAT_FOR_METEOR_SECRETS_DIR};
-  git add ${THE_PROJECT_ROOT}/settings.json;
+  pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+    echo -e "Preparing Meteor Settings File -- ${THE_PROJECT_ROOT}/${METEOR_SETTINGS_FILE}";
+#    echo "${METEOR_SETTINGS_FILE_PATH}";
+#    ls -l ${METEOR_SETTINGS_FILE_PATH};
+
+    if [ -f ${METEOR_SETTINGS_FILE_PATH} ]; then
+
+      cp ${METEOR_SETTINGS_FILE_PATH} .;
+
+    else
+      if [ -f ${METEOR_SETTINGS_EXAMPLE_FILE} ]; then
+        echo -e "
+
+        There is a '${METEOR_SETTINGS_EXAMPLE_FILE}' file, **but** there is no '${METEOR_SETTINGS_FILE_PATH}' file!
+        
+        ";
+        exit;
+      fi;
+      echo '{ "public": { "DUMMY": "dummy" } }' > ${METEOR_SETTINGS_FILE};
+
+    fi;
+
+    touch .gitignore;
+    cat .gitignore | grep ${METEOR_SETTINGS_FILE} >/dev/null || echo "${METEOR_SETTINGS_FILE}" >> .gitignore;
+
+    METEOR_SETTINGS=$(cat settings.json);
+
+  popd >/dev/null;
 
 };
 
@@ -895,18 +1082,54 @@ echo -e "${PRTY} Processing from execution stage '${EXECUTION_STAGE}' ...
 
 ";
 
-
-PrepareSemVer;
-PrepareSecretsFile;
-
 if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
 
   rm -fr ${HOME}/.meteor;
-  rm -fr ${HOME}/.ssh/hab_vault;
-  rm -fr ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
-  rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR};
+  if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR} ]; then
+    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh;
+    rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/${METEOR_SETTINGS_FILE};
+    if [ -d ${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN} ]; then
+      rm -fr ${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN};
+    fi;
+    if [ -d ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} ]; then
+      rm -fr ${HABITAT_FOR_METEOR_USER_SECRETS_DIR}/id_rsa*;
+    fi;
+  fi;
+
+  if [ -d ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME} ]; then
+    rm -fr ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
+  fi;
+
+  rm -fr ${HOME}/.testVars.sh;
+
+  echo -e "${PRTY} 
+
+        Cleanup is complete!
+        Rerun exerciser with '\${EXECUTION_STAGE}' set to 'step1_ONCE_ONLY_INITIALIZATIONS'.
+
+        ";
+  exit 0;
 
 fi;
+
+
+# Ensure Hosts can be reached
+CheckHostsFile;
+
+# Ensure semver.sh has been sourced
+PrepareSemVer;
+
+# Ensure server-side secrets are accessible
+PrepareSecretsFile;
+
+# Ensure Habitat Origin keys are accessible
+CheckForHabitatOriginKeys;
+
+#  Starting SSH Agent if not already started
+startSSHAgent;
+
+# Add user key to agent;
+AddSSHkeyToAgent ${CURRENT_USER_SSH_KEY_PRIV};
 
 
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
@@ -924,10 +1147,13 @@ if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
   echo "${PRTY} Fixing performance";
   PerformanceFix;
 
+  echo "${PRTY} Prepare Meteor settings file ";
+  PrepareMeteorSettingsFile;
+
   echo "${PRTY} Building sample project";
   TrialBuildMeteorProject;
 
-  echo "${PRTY} Preparing SSH config file for user '$(whoami)' to interact with server, '${TARGET_SRVR}'.";
+  echo "${PRTY} Preparing SSH config file for you on server '${TARGET_SRVR}'.";
   ConfigureSSHConfigForUser $(whoami) ${TARGET_SRVR} ${CURRENT_USER_SSH_KEY_PRIV};
 
 
@@ -970,7 +1196,6 @@ if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
 
 fi;
 
-
 if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
 
   echo "
@@ -982,7 +1207,7 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
   echo "${PRTY} Verifying hosts file mappings."; 
   VerifyHostsFile;
   
-  echo "${PRTY} Verifying server accessibility."; 
+  echo "${PRTY} Verifying server accessability."; 
   VerifyHostsAccess;
   
   echo "${PRTY} Generating SSH keys for user '${HABITAT_USER}'."; 
@@ -1010,7 +1235,7 @@ if [[ "step5_INSTALL_SERVER_SCRIPTS" -ge "${EXECUTION_STAGE}" ]]; then
 
   pushd ${THE_PROJECT_ROOT} >/dev/null;
 
-  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE_PATH} ${SOURCE_SECRETS_FILE};
   VerifySSHasHabUser;
   ./.habitat/scripts/PushSiteCertificateToTarget.sh \
                ${TARGET_SRVR} \
