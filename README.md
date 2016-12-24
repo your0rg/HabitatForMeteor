@@ -84,11 +84,14 @@ You can cut'n paste the snippets unaltered and see the process unfold with no ne
 To get started, fork HabitatForMeteor and clone it from to `${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME}`.
 
 ```
+export HABITA4METEOR_PARENT_DIR="tools";
+export HABITA4METEOR_FORK_ORG="your0rg";
+export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
 mkdir -p ${HABITA4METEOR_PARENT_DIR};
 cd ${HABITA4METEOR_PARENT_DIR};
 git clone git@github.com:${HABITA4METEOR_FORK_ORG}/${HABITA4METEOR_FORK_NAME};
 cd ${HABITA4METEOR_FORK_NAME};
-git checkout mmks_merger;
+
 
 ```
 

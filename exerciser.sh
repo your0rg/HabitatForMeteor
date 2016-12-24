@@ -24,7 +24,7 @@ function PrepareNecessaryShellVarsForExerciser() {
 
 ### Controlling exerciser execution
 # Specify whether the script should assume **NO MISSING DETAILS**
-export NON_STOP="YES";   # don't ask for secrets and fail if not found 
+export NON_STOP="YES";   # don't ask for secrets and fail if not found
 
 # Specify the execution stage you want to begin from
 export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
@@ -36,7 +36,7 @@ export HABITA4METEOR_PARENT_DIR="\${HOME}/tools";
 # Location of your projects
 export TARGET_PROJECT_PARENT_DIR="\${HOME}/projects";
 
-# The SSH secrets directory 
+# The SSH secrets directory
 export SSH_KEY_PATH="\${HOME}/.ssh";
 export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
@@ -568,7 +568,7 @@ function PerformanceFix() {
 
 
 function PrepareMeteorProject() {
-    
+
     pushd ${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME} >/dev/null;
     ./Update_or_Install_H4M_into_Meteor_App.sh ${THE_PROJECT_ROOT};
     popd >/dev/null;
@@ -577,7 +577,7 @@ function PrepareMeteorProject() {
 
 
 function PreparePlanFile() {
-    
+
     pushd ${THE_PROJECT_ROOT}/.habitat >/dev/null;
     cp ${HABITA4METEOR_SOURCE_DIR}/plan.sh.example plan.sh;
     sed -i "/^pkg_origin/c\pkg_origin=${YOUR_ORG}" plan.sh;
@@ -586,7 +586,7 @@ function PreparePlanFile() {
     sed -i "/^pkg_maintainer/c\pkg_maintainer=\"${YOUR_NAME} <${YOUR_EMAIL}>\"" plan.sh;
     sed -i "/^pkg_upstream_url/c\pkg_upstream_url=https://github.com/${PROJECT_UUID};" plan.sh;
     popd >/dev/null;
-    
+
 
 };
 
@@ -714,36 +714,36 @@ function FixReleaseNote() {
 
 
 # function CommitAndPush() {
-# 
+#
 #   echo -e "    - Commit ";
-# 
+#
 #   # git diff --quiet --exit-code --cached ||
 #   # git status;
-# 
+#
 #   # echo "grep;"
 #   # git status | \
 #   #   grep -c "nothing to commit";
-# 
+#
 #   echo - "Committing now ...";
 #   # git status | \
 #   #   grep -c "nothing to commit" >/dev/null || \
-# 
+#
 #   git diff --quiet --exit-code --cached || git commit -a -m "Release version v${RELEASE_TAG}";
-# 
+#
 #   echo "Result -- $?";
-# 
+#
 #   echo -e "    - Push ";
 #   git push;
-# 
+#
 #   echo -e "   Clean";
-# 
+#
 # };
 
 function CommitAndPush() {
 
   echo -e "    - Commit ";
   git add -A;
-  if [[ "X$(git status -s)X" = "XX" ]]; then 
+  if [[ "X$(git status -s)X" = "XX" ]]; then
     echo - "Nothing left to commit ...";
   else
     echo - "Committing now ...";
@@ -760,7 +760,7 @@ function CommitAndPush() {
 
 function determineLatestPackagePublished() {
 
-  if [[ "XX" == "X${YOUR_ORG}X" ]]; then 
+  if [[ "XX" == "X${YOUR_ORG}X" ]]; then
     echo -e "Could not determine latest package published. No Habitat Origin is defined.
         ";
     return;
@@ -864,7 +864,7 @@ function BuildAndUploadMeteorProject() {
     echo "${PRTY} Prepare Meteor settings file ";
     PrepareMeteorSettingsFile;
     cp ${METEOR_SETTINGS_FILE} ${HABITAT_FOR_METEOR_SECRETS_DIR};
-    
+
     echo "${PRTY} Start tagging if none";
     if [[ "X$(git describe 2> /dev/null)X" = "XX" ]]; then
       git tag -a ${RELEASE_TAG} -m "Starting versioning with Habitat"
@@ -902,13 +902,16 @@ function VerifyHostsAccess() {
 
   ssh-keygen -f "${SSH_KEY_PATH}/known_hosts" -R ${TARGET_SRVR};
   #
-  echo -e "Attempting naive connection to server.";
-  local RES=$(ssh -tq -oStrictHostKeyChecking=no -oBatchMode=yes -l $(whoami) ${TARGET_SRVR} whoami);
+  echo -e "Attempting naive connection to server '${TARGET_SRVR}', as user '${SETUP_USER_UID}'.";
+  echo "ssh -tq -oStrictHostKeyChecking=no -oBatchMode=yes -l ${SETUP_USER_UID} ${TARGET_SRVR} whoami";
+
+  # local RES=$(ssh -tq -oStrictHostKeyChecking=no -oBatchMode=yes -l $(whoami) ${TARGET_SRVR} whoami);
+  local RES=$(ssh -tq -oStrictHostKeyChecking=no -oBatchMode=yes -l ${SETUP_USER_UID} ${TARGET_SRVR} whoami);
   echo -e "Server user is :
   ${RES}";
 
-  echo -e "Attempting safe connection to server.";
-  RES=$(ssh $(whoami)@${TARGET_SRVR} whoami);
+  echo -e "Attempting safe connection to server, as user '${SETUP_USER_UID}'.";
+  RES=$(ssh ${SETUP_USER_UID}@${TARGET_SRVR} whoami);
   echo -e "Server user is :
   ${RES}";
 
@@ -977,6 +980,7 @@ function PrepareSecretsFile() {
   echo -e "Verifying secrets file.";
   mkdir -p ${HABITAT_FOR_METEOR_SECRETS_DIR};
   cp habitat/scripts/target/secrets.sh.example ${SOURCE_SECRETS_FILE};
+  sed -i "s|/home/you|${HOME}|" ${SOURCE_SECRETS_FILE};
 
   local CHOICE="n";
   local SETUP_USER_UID="";
@@ -1048,7 +1052,7 @@ function PrepareMeteorSettingsFile() {
         echo -e "
 
         There is a '${METEOR_SETTINGS_EXAMPLE_FILE}' file, **but** there is no '${METEOR_SETTINGS_FILE_PATH}' file!
-        
+
         ";
         exit;
       fi;
@@ -1102,7 +1106,7 @@ if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
 
   rm -fr ${HOME}/.testVars.sh;
 
-  echo -e "${PRTY} 
+  echo -e "${PRTY}
 
         Cleanup is complete!
         Rerun exerciser with '\${EXECUTION_STAGE}' set to 'step1_ONCE_ONLY_INITIALIZATIONS'.
@@ -1137,10 +1141,10 @@ if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
 
   echo "${PRTY} Installing Git";
   PrepareDependencies;
-  
+
   echo "${PRTY} Installing Meteor";
   GetMeteor;
-  
+
   echo "${PRTY} Installing sample project";
   GetMeteorProject;
 
@@ -1203,23 +1207,23 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ${PRTY} Prepare for SCP & SSH RPC calls ...";
 
-  
-  echo "${PRTY} Verifying hosts file mappings."; 
+
+  echo "${PRTY} Verifying hosts file mappings.";
   VerifyHostsFile;
-  
-  echo "${PRTY} Verifying server accessability."; 
+
+  echo "${PRTY} Verifying server accessability.";
   VerifyHostsAccess;
-  
-  echo "${PRTY} Generating SSH keys for user '${HABITAT_USER}'."; 
+
+  echo "${PRTY} Generating SSH keys for user '${HABITAT_USER}'.";
   GenerateHabUserSSHKeysIfNotExist;
-  
+
   echo "${PRTY} Preparing SSH config file for user '${HABITAT_USER}' on server '${TARGET_SRVR}'.";
   ConfigureSSHConfigForUser ${HABITAT_USER} ${TARGET_SRVR} ${HABITAT_USER_SSH_KEY_PRIV};
-  
-  echo "${PRTY} Generating site certificates for site : '${VHOST_DOMAIN}'."; 
+
+  echo "${PRTY} Generating site certificates for site : '${VHOST_DOMAIN}'.";
   GenerateSiteCertificateIfNotExist;
-  
-  echo "${PRTY} Prepare secrets file for uploading to server."; 
+
+  echo "${PRTY} Prepare secrets file for uploading to server.";
   PrepareSecretsFile;
 
 #  ConfigureSSHConfigForHabitatUserIfNotDone;
@@ -1243,7 +1247,7 @@ if [[ "step5_INSTALL_SERVER_SCRIPTS" -ge "${EXECUTION_STAGE}" ]]; then
                ${HABITAT_FOR_METEOR_SECRETS_DIR} \
                ${VHOST_DOMAIN};
   popd;
-  
+
 fi;
 
 
