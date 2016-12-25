@@ -24,7 +24,7 @@ function PrepareNecessaryShellVarsForExerciser() {
 
 ### Controlling exerciser execution
 # Specify whether the script should assume **NO MISSING DETAILS**
-export NON_STOP="YES";   # don't ask for secrets and fail if not found
+export NON_STOP="NO";   # don't ask for secrets and fail if not found
 
 # Specify the execution stage you want to begin from
 export EXECUTION_STAGE="step1_ONCE_ONLY_INITIALIZATIONS";
@@ -94,7 +94,7 @@ export VHOST_CERT_PASSPHRASE="memorablegibberish";
 ### Specifying your fork of a target project ###
 # Name of your fork of one the target projects
 export TARGET_PROJECT_NAME="";
-TARGET_PROJECT_NAME="meteor_todos"; # git clone https://github.com/meteor/todos meteor_todos
+TARGET_PROJECT_NAME="todos"; # git clone https://github.com/meteor/todos meteor_todos
 #  TARGET_PROJECT_NAME="mmks"; # git clone https://github.com/warehouseman/meteor-mantra-kickstarter mmks
 
 # Your github organization for your fork of "todos" or "mmks"

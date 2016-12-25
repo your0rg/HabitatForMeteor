@@ -9,10 +9,16 @@ declare PRTY="BLDUPD  ==>  ";
 declare ENVVARSDIRTY=true;
 
 declare START_FROM=$(echo ${SCRIPTPATH} | grep -o ".habitat$");
-if [ "${START_FROM}" = ".habitat" ]; then
-  source ./.habitat/scripts/ManageShellVars.sh ".habitat/scripts/";
+
+if [ "${NON_STOP}" = "YES" ]; then
+  echo -e "Shell var file, '${HOME}/.userVars.sh', contains :";
+  cat ${HOME}/.userVars.sh | cut -c 1-45;
 else
-  source ./scripts/ManageShellVars.sh "";
+  if [ "${START_FROM}" = ".habitat" ]; then
+    source ./.habitat/scripts/ManageShellVars.sh ".habitat/scripts/";
+  else
+    source ./scripts/ManageShellVars.sh "";
+  fi;
 fi;
 
 loadShellVars;
@@ -297,7 +303,7 @@ function detectMissingHabitatOriginKey() {
 
   echo "${PRTY} Confirming availability of Habitat Origin key for '${HABITAT_PKG_ORIGIN}'.";
   mkdir -p ${HOME}/.hab/cache/keys;
-  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
+  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then
     appendToDefectReport "Could not get origin key. No Habitat Origin is defined.
     ";
     return;
@@ -314,7 +320,7 @@ cat \${somewhere}/${HABITAT_PKG_ORIGIN}-\${yyyymmddhhmmss}.sig.key | sudo hab or
 sudo hab setup;  # First time use only!'
     ...or...
 
-STMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1); 
+STMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1);
 export STMP=\${STMP%.};
 export TRY=\"* Generated origin key pair ${HABITAT_PKG_ORIGIN}-\";
 export KEY_STAMP=\${STMP#\${TRY}};
@@ -502,7 +508,7 @@ function retryCommand() {
 }
 
 function findHabitatArchiveFileInDepot() {
-  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
+  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then
     appendToDefectReport "No Habitat Origin is defined
         ";
     return;
@@ -513,7 +519,7 @@ function findHabitatArchiveFileInDepot() {
 export LATEST_PUBLISHED_PACKAGE_VERSION="0.0.0-aa0";
 function determineLatestPackagePublished() {
 
-  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then 
+  if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then
     appendToDefectReport "Could not determine latest package published. No Habitat Origin is defined.
         ";
     return;
