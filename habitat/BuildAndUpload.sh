@@ -10,9 +10,15 @@ declare ENVVARSDIRTY=true;
 
 declare START_FROM=$(echo ${SCRIPTPATH} | grep -o ".habitat$");
 
+declare HAB_DIR=${HOME}/.hab;
+mkdir -p ${HAB_DIR};
+
+
+export USER_VARS_FILE_NAME="${HAB_DIR}/envVars.sh";
+
 if [ "${NON_STOP}" = "YES" ]; then
-  echo -e "Shell var file, '${HOME}/.userVars.sh', contains :";
-  cat ${HOME}/.userVars.sh | cut -c 1-45;
+  echo -e "Shell var file, '${USER_VARS_FILE_NAME}', contains :";
+  cat ${USER_VARS_FILE_NAME} | cut -c 1-45;
 else
   if [ "${START_FROM}" = ".habitat" ]; then
     source ./.habitat/scripts/ManageShellVars.sh ".habitat/scripts/";
@@ -25,12 +31,6 @@ loadShellVars;
 
 PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
 [ "${ENVVARSDIRTY}" = "true" ] && askUserForParameters PARM_NAMES[@];
-
-# declare USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
-# [ -f ${USER_VARS_FILE_NAME} ] && source ${USER_VARS_FILE_NAME};
-
-# declare TARGET_ARCHITECTURE="${TARGET_ARCHITECTURE:-x86_64}";
-# declare TARGET_OPERATING_SYSTEM="${TARGET_OPERATING_SYSTEM:-linux}";
 
 if [[ "X${1}X" == "XX" ]]; then
     echo "Usage :: ${0} releaseTag";
@@ -302,7 +302,7 @@ function detectIncoherentVersionSemantics() {
 function detectMissingHabitatOriginKey() {
 
   echo "${PRTY} Confirming availability of Habitat Origin key for '${HABITAT_PKG_ORIGIN}'.";
-  mkdir -p ${HOME}/.hab/cache/keys;
+  mkdir -p ${HAB_DIR}/cache/keys;
   if [[ "XX" == "X${HABITAT_PKG_ORIGIN}X" ]]; then
     appendToDefectReport "Could not get origin key. No Habitat Origin is defined.
     ";
@@ -324,8 +324,8 @@ STMP=\$(hab origin key generate ${HABITAT_PKG_ORIGIN} | tail -n 1);
 export STMP=\${STMP%.};
 export TRY=\"* Generated origin key pair ${HABITAT_PKG_ORIGIN}-\";
 export KEY_STAMP=\${STMP#\${TRY}};
-cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | hab origin key import; echo "";
-cat ${HOME}/.hab/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | hab origin key import; echo "";
+cat ${HAB_DIR}/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.pub | hab origin key import; echo "";
+cat ${HAB_DIR}/cache/keys/${HABITAT_PKG_ORIGIN}-\${KEY_STAMP}.sig.key | hab origin key import; echo "";
 
 ";
 #     TEMPORARY NOTE: An unresolved issue means that the key must be available in ~/.hab/cache/keys as well as in /hab/cache/keys

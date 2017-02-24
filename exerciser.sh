@@ -171,6 +171,28 @@ Test variables are ready for use:
 ";
 
 
+function startSSHAgent() {
+
+  if [ ! -S "${SSH_AUTH_SOCK}" ]; then
+    echo -e "${PRTY} Starting 'ssh-agent' because SSH_AUTH_SOCK='${SSH_AUTH_SOCK}'...";
+    eval $(ssh-agent -s);
+    echo -e "${PRTY} Started 'ssh-agent' ...";
+  fi;
+
+};
+
+
+function AddSSHkeyToAgent() {
+
+  local KEY_PRESENT=$(ssh-add -l | grep -c ${1});
+  if [[ "${KEY_PRESENT}" -lt "1" ]]; then
+    echo -e "${PRTY} Remembering SSH key: '${1}'...";
+    ssh-add ${1};
+  fi;
+
+};
+
+
 function ConfigureSSHConfigForUser() {
 
     local THE_USER="${1}";
@@ -205,17 +227,22 @@ function ConfigureSSHConfigForUser() {
     #
     #
     echo -e "
-    ${PTRNB}
-    Host ${THE_USER}.${THE_HOST}
-        HostName ${THE_HOST}
-        User ${THE_USER}
-        PreferredAuthentications publickey
-        IdentityFile ${THE_KEYS}
-    ${PTRNE}
-    " >> ${SSH_CONFIG_FILE}
+#
+${PTRNB}
+Host ${THE_USER}.${THE_HOST}
+    HostName ${THE_HOST}
+    User ${THE_USER}
+    PreferredAuthentications publickey
+    IdentityFile ${THE_KEYS}
+${PTRNE}
+#
+" >> ${SSH_CONFIG_FILE}
 
-    sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}
+    sed -i "s/ *$//" ${SSH_CONFIG_FILE}; # trim whitespace to EOL
+    sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}; # blank lines to 1 line
 
+    startSSHAgent;
+    AddSSHkeyToAgent ${THE_KEYS};
 };
 
 
@@ -269,34 +296,13 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 #     ${PTRNE}
 #     " >> ${SSH_CONFIG_FILE}
 #     #
-#     sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}
+#     sed -i "s/ *$//" ${SSH_CONFIG_FILE}; # trim whitespace to EOL
+#     sed -i "/^$/N;/^\n$/D" ${SSH_CONFIG_FILE}; # blank lines to 1 line
 #     echo -e "Done preparing SSH config file.";
 
 # };
 
 
-
-
-function startSSHAgent() {
-
-  if [ ! -S "${SSH_AUTH_SOCK}" ]; then
-    echo -e "${PRTY} Starting 'ssh-agent' because SSH_AUTH_SOCK='${SSH_AUTH_SOCK}'...";
-    eval $(ssh-agent -s);
-    echo -e "${PRTY} Started 'ssh-agent' ...";
-  fi;
-
-};
-
-
-function AddSSHkeyToAgent() {
-
-  local KEY_PRESENT=$(ssh-add -l | grep -c ${1});
-  if [[ "${KEY_PRESENT}" -lt "1" ]]; then
-    echo -e "${PRTY} Remembering SSH key: '${1}'...";
-    ssh-add ${1};
-  fi;
-
-};
 
 
 function PrepareDependencies() {
@@ -423,23 +429,47 @@ function GetMeteor() {
 
 };
 
+function need_to_clone() {
+
+  [ -d ${1} ] || return 0;
+
+  pushd ${1} >/dev/null;
+
+#    if git diff-index --quiet HEAD --; then
+    if git diff-index         HEAD --; then
+      return 1;
+    else
+      echo -e "
+
+      *** BAD STATE :: Commits required on project ${1}! ***
+
+      Cannot continue.  Review 'git status' and correct as
+      as needed, before retrying.
+
+      *** ";
+
+      git status;
+      exit 1;
+    fi
+
+  popd >/dev/null;
+
+  return 1;
+}
+
 
 
 function GetMeteorProject() {
 
-  # Prepare directory
   mkdir -p ${TARGET_PROJECT_PARENT_DIR};
-  if [ ! -s ${TARGET_PROJECT_NAME} ]; then
-    pushd ${TARGET_PROJECT_PARENT_DIR} >/dev/null;
-
-      #
-      # Install example project
-      rm -fr ${TARGET_PROJECT_NAME};
+  pushd ${TARGET_PROJECT_PARENT_DIR} >/dev/null;
+    if need_to_clone ${TARGET_PROJECT_NAME}; then
       echo "Git cloning : 'git@github.com:${PROJECT_UUID}.git'.";
       git clone git@github.com:${PROJECT_UUID}.git;
-
-    popd >/dev/null;
-  fi;
+    else
+      echo "Repo ${TARGET_PROJECT_NAME} exists unaltered.";
+    fi;
+  popd >/dev/null;
 
 };
 
@@ -466,7 +496,7 @@ function FixGitPrivileges() {
 
 # P1 : the url to verify
 # P2 : additional commands to meteor. Eg; test-packages
-function LaunchMeteorProcess()
+function LaunchDefaultMeteorProcess()
 {
   METEOR_URL=$1;
   STARTED=false;
@@ -488,6 +518,35 @@ function LaunchMeteorProcess()
   done
 
   echo "Meteor is running on ${METEOR_URL}";
+}
+
+
+# P1 : the url to verify
+# P2 : Meteor startup command
+function LaunchMeteorScript()
+{
+  METEOR_URL=$1;
+  STARTED=false;
+
+  echo -e "Verifying Meteor execution :
+        - METEOR_URL      = ${METEOR_URL}
+        - METEOR_SETTINGS = ${2}
+  ";
+
+  #  export METEOR_SETTINGS="${METEOR_SETTINGS}";
+  until wget -q --spider ${METEOR_URL};
+  do
+    if ! ${STARTED}; then
+      echo "Starting Meteor app on '${METEOR_URL}'.";
+      nohup ${2} &
+      STARTED=true;
+    fi;
+    sleep 5;
+    echo "Testing comms with '${METEOR_URL}'...";
+  done
+
+  echo "Ok!  Found Meteor running on ${METEOR_URL}";
+  rm -f nohup.out;
 }
 
 
@@ -529,24 +588,49 @@ function IncorporateExternalPkgsIfAny() {
 
   fi;
 
+}
 
+function has_JSON_element() {
+  return $(cat ${1} | jq .${2} | grep -c null 2>/dev/null);
 }
 
 function TrialBuildMeteorProject() {
 
     pushd ${THE_PROJECT_ROOT} >/dev/null;
 
-      # See if this project has any 'external' packages in it '.pkgs' folder
-      IncorporateExternalPkgsIfAny;
+      if has_JSON_element package.json scripts.install_all; then
 
-      # Install all NodeJS packages dependencies
-      meteor npm install
-      #
-      # Also install the one that change since the last release of 'meteor/todos'
-#   meteor npm install --save bcrypt;
-      #
-      # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
-      LaunchMeteorProcess "http://localhost:3000/" "--settings=${METEOR_SETTINGS_FILE_PATH}";
+        # Will use project's own installation script
+        meteor npm run install_all;
+
+      else
+
+        export NON_STOP="YES";
+        meteor npm run install;
+
+      fi;
+
+    popd >/dev/null;
+
+};
+
+
+function TrialRunMeteorProject() {
+
+    pushd ${THE_PROJECT_ROOT} >/dev/null;
+
+      if has_JSON_element "package.json" "scripts.run_development"; then
+
+        # Will use project's own installation script
+        LaunchMeteorScript "http://localhost:3000/" "meteor npm run run_development";
+
+      else
+
+        # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
+        LaunchDefaultMeteorProcess "http://localhost:3000/" "--settings=${METEOR_SETTINGS_FILE_PATH}";
+
+      fi;
+
       KillMeteorProcess;
 
     popd >/dev/null;
@@ -712,32 +796,6 @@ function FixReleaseNote() {
 
 };
 
-
-# function CommitAndPush() {
-#
-#   echo -e "    - Commit ";
-#
-#   # git diff --quiet --exit-code --cached ||
-#   # git status;
-#
-#   # echo "grep;"
-#   # git status | \
-#   #   grep -c "nothing to commit";
-#
-#   echo - "Committing now ...";
-#   # git status | \
-#   #   grep -c "nothing to commit" >/dev/null || \
-#
-#   git diff --quiet --exit-code --cached || git commit -a -m "Release version v${RELEASE_TAG}";
-#
-#   echo "Result -- $?";
-#
-#   echo -e "    - Push ";
-#   git push;
-#
-#   echo -e "   Clean";
-#
-# };
 
 function CommitAndPush() {
 
@@ -1080,7 +1138,11 @@ sudo ls -l &>/dev/null;
 
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
-PRTY="XRSZ :: ";
+PRTY="
+
+
+±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±11
+XRSZ :: ";
 
 echo -e "${PRTY} Processing from execution stage '${EXECUTION_STAGE}' ...
 
@@ -1157,6 +1219,9 @@ if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
   echo "${PRTY} Building sample project";
   TrialBuildMeteorProject;
 
+  echo "${PRTY} Trial running sample project";
+  TrialRunMeteorProject;
+
   echo "${PRTY} Preparing SSH config file for you on server '${TARGET_SRVR}'.";
   ConfigureSSHConfigForUser $(whoami) ${TARGET_SRVR} ${CURRENT_USER_SSH_KEY_PRIV};
 
@@ -1183,12 +1248,15 @@ if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
   set -e;
 
   echo "${PRTY} Preparing Habitat Origin Keys";
+  read -r -p "Proceed? [y/N] " response;
   RefreshHabitatOriginKeys;
 
   echo "${PRTY} Ensuring Git and Habitat keys work ...";
+  read -r -p "Proceed? [y/N] " response;
   PreparingKeysAndPrivileges;
 
   echo "${PRTY} Update release tag to next consecutive and set ...";
+  read -r -p "Proceed? [y/N] " response;
   SetReleaseTag;
 
 
@@ -1196,6 +1264,7 @@ if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ${PRTY} Build project and upload ...";
+  read -r -p "Proceed? [y/N] " response;
   BuildAndUploadMeteorProject;
 
 fi;
@@ -1206,6 +1275,7 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ${PRTY} Prepare for SCP & SSH RPC calls ...";
+  read -r -p "Proceed? [y/N] " response;
 
 
   echo "${PRTY} Verifying hosts file mappings.";

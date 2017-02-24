@@ -15,6 +15,9 @@ PRTY="UPINDP :: ";
 ENVVARSDIRTY=false;
 ENVVARSDIRTY=true;
 
+declare HAB_DIR=${HOME}/.hab;
+mkdir -p ${HAB_DIR};
+
 echo "Some tasks need to be run as root...";
 sudo ls -l &>/dev/null;
 
@@ -82,12 +85,13 @@ cd ${SCRIPTPATH};
 echo -e "${PRTY}Working in ${SCRIPTPATH}";
 
 echo -e "${PRTY}Configure environment variables...";
-declare USER_VARS="${HOME}/.userVars.sh";
+export USER_VARS_FILE_NAME="${HAB_DIR}/envVars.sh";
+
 declare SVs="false";
 [ "${NON_STOP}" = "YES" ] || SVs="true";
-[ -f ${USER_VARS} ] || SVs="true";
+[ -f ${USER_VARS_FILE_NAME} ] || SVs="true";
 
-[ $(cat ~/.userVars.sh | \
+[ $(cat ${USER_VARS_FILE_NAME} | \
 grep GITHUB_PERSONAL_TOKEN | \
 cut -d "'" -f 2 | \
 grep -ocwE '^[[:alnum:]]{40}') -gt 0 ] || \
@@ -95,6 +99,8 @@ SVs="true";
 
 if [[ "${SVs}" = "true" ]]; then
   echo -e "User vars need to be set...";
+  export TARGET_ARCHITECTURE="x86_64";
+  export TARGET_OPERATING_SYSTEM="linux";
   . ./ManageShellVars.sh "";
   loadShellVars;
   PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");

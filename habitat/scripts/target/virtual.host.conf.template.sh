@@ -5,6 +5,13 @@ cat <<EOVHCT
 
 server {
 
+  listen   80;
+  server_name ${VIRTUAL_HOST_DOMAIN_NAME};
+  return   301 https://$server_name$request_uri;
+}
+
+server {
+
   listen   443;
   server_name ${VIRTUAL_HOST_DOMAIN_NAME};
 

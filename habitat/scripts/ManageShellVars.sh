@@ -6,10 +6,9 @@ SCRIPT=$(readlink -m "$0");
 
 . ./${1}shellVars.sh;
 
-USER_VARS_FILE_NAME="${HOME}/.userVars.sh";
-
 function loadShellVars() {
 
+  [ -x ${USER_VARS_FILE_NAME} ] && echo "No shell vars file specified!" && exit 1;
   if [ -f ${USER_VARS_FILE_NAME} ]; then
     source ${USER_VARS_FILE_NAME};
   else

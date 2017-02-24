@@ -153,11 +153,11 @@ sudo -A rm /etc/systemd/system/${UNIT_FILE} >> ${LOG} 2>&1;
 echo -e "${PRETTY} Deleting director toml file '${DIRECTOR_TOML_FILE_PATH}', in case there's one already . . ." | tee -a ${LOG};
 sudo -A rm -fr ${DIRECTOR_TOML_FILE_PATH} >> ${LOG};
 
-echo -e "${PRETTY} Ensuring Habitat Supervisor is available" | tee -a ${LOG};
+echo -e "${PRETTY} Ensuring Habitat Supervisor is available (installing if necessary...)" | tee -a ${LOG};
 sudo -A hab install core/hab-sup >> ${LOG} 2>&1;
 sudo -A hab pkg binlink core/hab-sup hab-sup;
 
-echo -e "${PRETTY} Ensuring Habitat Director is available" | tee -a ${LOG};
+echo -e "${PRETTY} Ensuring Habitat Director is available (installing if necessary...)" | tee -a ${LOG};
 sudo -A hab install core/hab-director; # > /dev/null 2>&1;
 sudo -A hab pkg binlink core/hab-director hab-director;
 

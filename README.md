@@ -70,7 +70,7 @@ You can cut'n paste the snippets unaltered and see the process unfold with no ne
 
 1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv` (`${TARGET_SRVR}`).  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
 
-1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* scripts below expect the initial user on each machine to be called ´you´.
+1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user ID on each machine to be ´you´.
 
 1.  Install keys for todos project user on GitHub
 
@@ -165,7 +165,7 @@ __________________________________________
 
 1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv` (`${TARGET_SRVR}`).  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
 
-1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user on each machine to be called ´you´.
+1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user ID on each machine to be ´you´.
 
 1.  Install keys for todos project user on GitHub
 
@@ -261,7 +261,7 @@ It will insert HabitatForMeteor into a hidden directory, `.habitat`, in your pro
     popd;
 
     ```
-    The script prompts for several constants that need to be set in order that you get the correct version of Habitat, including the *GitHub Personal Token*, mentioned above. It records these values in `${HOME}/.userVars.sh`.
+    The script prompts for several constants that need to be set in order that you get the correct version of Habitat, including the *GitHub Personal Token*, mentioned above. It records these values in `${HOME}/.hab/envVars.sh`.
 
     When finished, it will have performed some sanity checks on the `.habitat` directory of your app, updating &/or installing as necessary.
     * ensured non-varying files are ignored by `git`
@@ -509,6 +509,7 @@ The **client side** steps to perform server side preparations are :
     sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
     #
     echo -e "
+    #
     ${PTRNB}
     Host ${TARGET_SRVR}
         HostName ${TARGET_SRVR}
@@ -516,6 +517,7 @@ The **client side** steps to perform server side preparations are :
         PreferredAuthentications publickey
         IdentityFile ${CURRENT_USER_SSH_KEY_FILE}
     ${PTRNE}
+    #
     " >> ${HOME}/.ssh/config
 
     HABITAT_USER="hab";
@@ -528,6 +530,7 @@ The **client side** steps to perform server side preparations are :
     sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
     #
     echo -e "
+    #
     ${PTRNB}
     Host ${TARGET_SRVR}
         HostName ${TARGET_SRVR}
@@ -535,9 +538,11 @@ The **client side** steps to perform server side preparations are :
         PreferredAuthentications publickey
         IdentityFile ${HABITAT_USER_SSH_KEY_FILE}
     ${PTRNE}
+    #
     " >> ${HOME}/.ssh/config
     #
-    sed -i "/^$/N;/^\n$/D" ${HOME}/.ssh/config
+    sed -i "s/ *$//" ${HOME}/.ssh/config; # trim whitespace to EOL
+    sed -i "/^$/N;/^\n$/D" ${HOME}/.ssh/config; # blank lines to 1 line
     ```
 
 
@@ -579,7 +584,7 @@ The **client side** steps to perform server side preparations are :
 
     ```
 
-1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.  The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.  If you have been using the snippets unaltered, ´SETUP_USER_PWD´, is the only setting you'll need to change.  Give it the password of ´you´.
+1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.  The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.  If you have been using the snippets unaltered, ´SETUP_USER_PWD´, is the only setting you'll need to change.  Give it the password of user ´you´.
 
     1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
     2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
