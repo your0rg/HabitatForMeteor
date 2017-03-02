@@ -55,7 +55,7 @@ Initial set up may be a bit of a pain, and can take some time, but the end resul
 
 ## Getting started
 
-### Client side preparations
+### Global preparations
 
 The steps below are designed to prepare everything in freshly installed Xubuntu virtual machines.
 
@@ -65,21 +65,33 @@ You can cut'n paste the snippets unaltered and see the process unfold with no ne
 
 1. *Accounts* :: You need accounts on several remote services :
     1. [GitHub](https://github.com/) : You need user id and password, obviously.  You need an SSH key for commits. You'll also need a "GitHub Personal Token" to authenticate with the Habitat depot API; see below.
-    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you already logged in to GitHub.  To interact with the Habitat depot API, you'll need a "GitHub Personal Token".
+    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you already logged in to GitHub.  To interact with the Habitat depot API, you'll need a [GitHub Personal Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
     3. [Loggly](https://www.loggly.com/) and [MailGun](https://www.mailgun.com/) : If you are building the Meteor Mantra Kickstarter you'll need access token for these two too.
 
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv` (`${TARGET_SRVR}`).  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
+1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines. The dev machine needs at least 12G disk space, while the server can be 8Gb.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv` (`${TARGET_SRVR}`). 
+
+1.  *Manage Domain Names* ::  If you don't have a domain name service on your hypervisor host, you'll need to edit the `/etc/hosts` file on both `hab4metdev` and `hab4metsrv`.  The scripts below assume that the public domain name of your Meteor app will be `moon.planet.sun`.  Set up your DNS or `/etc/hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name and vice versa. The server machine needs two names (typically for the same IP address, or not, depending on your set up) `moon.planet.sun` as well as `hab4metsrv`.  Be sure that the server machine has both names in its `/etc/hosts` file.
+    Example :
+
+    ```
+    127.0.0.1   localhost
+    127.0.1.1   hab4metsrv
+
+    # The following lines are desirable for IPv6 capable hosts
+    ::1     localhost ip6-localhost ip6-loopback
+    ff02::1 ip6-allnodes
+    ff02::2 ip6-allrouters
+
+    192.168.122.224 hab4metdev
+    192.168.122.243 hab4metsrv
+    192.168.122.243 moon.planet.sun
+
+    ```
 
 1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user ID on each machine to be ´you´.
 
-1.  Install keys for todos project user on GitHub
 
-1.  Install Habitat Origin keys in '~/.ssh/hab_vault/habitat_user/'
-
-1.  Define the virtual host domain in '/etd/hosts'.
-
-
-### Install
+#### Install
 
 To get started, fork HabitatForMeteor and clone it from to `${HABITA4METEOR_PARENT_DIR}/${HABITA4METEOR_FORK_NAME}`.
 
@@ -95,21 +107,21 @@ cd ${HABITA4METEOR_FORK_NAME};
 
 ```
 
+#### Getting started "exerciser"
 
-### Getting started "exerciser"
-
-In order to make initial setup as easy as possible we have provided an [exerciser](https://github.com/your0rg/HabitatForMeteor/blob/master/exerciser.sh) script with the functionality for every step of the process to deploy either the Meteor [Todos](https://github.com/meteor/todos) app or the [Meteor Mantra Kickstarter](https://github.com/warehouseman/meteor-mantra-kickstarter).  It's probably a good idea to fork HabitatForMeteor, rather than just clone it so you can immediately commit your preferred settings.
+In order to make initial setup as easy as possible we have provided an [exerciser](https://github.com/your0rg/HabitatForMeteor/blob/master/exerciser.sh) script with the functionality for every step of the process to deploy either the Meteor [Todos](https://github.com/meteor/todos) app or the [Meteor Mantra Kickstarter](https://github.com/warehouseman/meteor-mantra-kickstarter).  It's probably a good idea to fork HabitatForMeteor, rather than just clone it, so you can immediately commit your preferred settings.
 
 The script tries to be fully idempotent; you can repeat execution beginning at any of [the provided stages](https://github.com/your0rg/HabitatForMeteor/blob/master/exerciser.sh#L6-L12) using the `${EXECUTION_STAGE}` variable. 
 
+Most of the steps the "exerciser" performs are on the `hab4metdev` machine, including pushing to `hab4metsrv`, the target server, therefore our first task is to ensure the "exerciser" can interact with `hab4metsrv`. 
 
-### Initial values
+#### Initial values
 
-The first thing the script does is create a file of execution parameters, [${HOME}/.testVars.sh](https://github.com/your0rg/HabitatForMeteor/blob/master/exerciser.sh#L23), **only if** there is not one already.
+The first thing the script does is create a file of execution parameters, [${HOME}/.h4mVars.sh](https://github.com/your0rg/HabitatForMeteor/blob/master/exerciser.sh#L23), **only if** there is not one already. In that case, it will generate the file and then quit, to give you a chance to check the settings.
 
 Some of the values in the file cannot be left as is.
 
-You should edit `exerciser.sh` to provide suitable values for your setup. In the list below of sections of *required* project specifications the **[Obligatory]** flag indicates those you **must** alter.  After you have run the exerciser for the first time you should edit `${HOME}/.testVars.sh` to change settings.
+You should edit `${HOME}/.h4mVars.sh` to provide suitable values for your setup. In the list below of sections of *required* project specifications the **[Obligatory]** flag indicates those you **must** alter.  After you have run the exerciser for the first time you should edit `${HOME}/.h4mVars.sh` to change settings.
 
  1. [Controlling exerciser execution](https://github.com/your0rg/HabitatForMeteor/blob/master/exerciser.sh#L24-L29)
      * Specify whether the script should assume **no missing details**
@@ -151,27 +163,236 @@ You should edit `exerciser.sh` to provide suitable values for your setup. In the
 
 
 
+#### Server side operations
+
+As mentioned above, the "exerciser" expects a properly prepared target server, so we do that next.  Bear in mind that, in real use, these are necessarily separate tasks; developers will bundled up a Meteor application and push it to a Habitat depot, subsequently operations staff will prepare a server and then pull a Habitat bundle into it from the depot.
+
+There are a number of considerations.
+
+The first is that the initialization script will create a new user named `hab` that has "sudoer" privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for all future deployments.  For security it will be stored as a `SUDO_ASK_PASS` script in the `hab` user's `.ssh` directory ( `/home/hab/.ssh` ) and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
+
+Next, you'll need to have ready an SSL certificate file set.  Digital Ocean [explains how to do this](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-16-04) very well as usual.  If you need a "real" certificate from a certificate authority (CA), [StartSSL](https://www.startssl.com/), offers **free** 3 yr., Class 1 certificates that certify up to 10 domains.
+
+The following steps assume you are simply working between two virtual machines with a self-signed certificate for an imaginary domain.
+
+*It is important to notice that these server-side preparations are done from `hab4metdev` the developer machine, using SCP and RPC via SSH!  There should be no need to go to `hab4metsrv`*
+
+The **client side** steps to perform server side preparations are :
+
+1. *Specify the target server in your hosts file* :: Find the IP address of your server, for example `192.168.122.123` and add the following line to the file `/etc/hosts`:
+    ```
+    192.168.122.123 hab4metsrv
+    ```
+
+1. *Specify the site domain name in your hosts file* :: For simplicity sake, we'll assume it's the same IP as the server: `192.168.122.123`, but it doesn't have to be.  Add the following line to the file `/etc/hosts`:
+    ```
+    192.168.122.123 moon.planet.sun
+    ```
+
+1. *Dependencies* :: Be sure you have `expect` installed.  Cut'n paste this line and supply your `sudoer` password as requested:
+    ```
+    sudo apt install -y expect;
+    ```
+
+1. *Prepare SSH keys* :: The `hab` user requires SSH keys, which are best kept separate from any others.  If you already have SSH keys you want to use, you can skip this, otherwise...  Paste the following lines at a command prompt.
+
+    ```
+    COMMENT="DevopsTeamLeader";
+    SSHPPHRASE="memorablegobbledygook";
+    HABITAT_USER_SSH_KEY_PATH="${HOME}/.ssh/hab_vault/habitat_user"
+    #
+    mkdir -p ${HABITAT_USER_SSH_KEY_PATH};
+    rm -f ${HABITAT_USER_SSH_KEY_PATH}/id_rsa*;
+    ssh-keygen \
+      -t rsa \
+      -C "${COMMENT}" \
+      -f "${HABITAT_USER_SSH_KEY_PATH}/id_rsa" \
+      -P "${SSHPPHRASE}" \
+      && cat ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
+    chmod go-rwx ${HABITAT_USER_SSH_KEY_PATH}/id_rsa;
+    chmod go-wx ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
+    chmod go-w ${HABITAT_USER_SSH_KEY_PATH};
+
+    ```
+    You now have the `hab` user's keys stored at `${HOME}/.ssh/hab_vault/habitat_user` with password `memorablegobbledygook`.
+
+    You'll also need to distinguish the `hab` user's keys from your own, by means of a SSH `config` file.  Paste the following lines at a command prompt.
+    ```
+    CURRENT_USER=$(whoami);
+    TARGET_SRVR="hab4metsrv";
+    CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
+    #
+    ping -c 4 ${TARGET_SRVR};
+    #
+    export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
+    export PTRNB="${PTRN} «begins»";
+    export PTRNE="${PTRN} «ends»";
+    #
+    mkdir -p ${HOME}/.ssh;
+    touch ${HOME}/.ssh/config;
+    cp ${HOME}/.ssh/config ${HOME}/.ssh/config_BK;
+    chmod ugo-w ${HOME}/.ssh/config_BK;
+    sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
+    #
+    echo -e "${PTRNB}
+    Host ${TARGET_SRVR}
+        HostName ${TARGET_SRVR}
+        User ${CURRENT_USER}
+        PreferredAuthentications publickey
+        IdentityFile ${CURRENT_USER_SSH_KEY_FILE}
+    ${PTRNE}
+    " >> ${HOME}/.ssh/config
+
+    HABITAT_USER="hab";
+    HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/hab_vault/habitat_user/id_rsa";
+    #
+    export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
+    export PTRNB="${PTRN} «begins»";
+    export PTRNE="${PTRN} «ends»";
+    #
+    sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
+    #
+    echo -e "${PTRNB}
+    Host ${TARGET_SRVR}
+        HostName ${TARGET_SRVR}
+        User ${HABITAT_USER}
+        PreferredAuthentications publickey
+        IdentityFile ${HABITAT_USER_SSH_KEY_FILE}
+    ${PTRNE}
+    " >> ${HOME}/.ssh/config
+    #
+    sed -i "s/ *$//" ${HOME}/.ssh/config; # trim whitespace to EOL
+    sed -i "/^$/N;/^\n$/D" ${HOME}/.ssh/config; # blank lines to 1 line
+    ```
+    You can view the result with...
+    ```
+    cat ${HOME}/.ssh/config
+
+    ```
+
+1. *Verify SSH to the server* :: This step expects that you already have an account in your own name on the target server, as described in [Prepare Secure Shell](#client-side-preparations-1), above. Cut'n paste this snippet ...
+    ```
+    TARGET_SRVR="hab4metsrv";
+    CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
+    #
+    eval $(ssh-agent);
+    ssh-add ${CURRENT_USER_SSH_KEY_FILE}
+
+    ```
+    ... and then this one ...
+    ```
+    YOUR_UID_ON_TARGET_SRVR=$(whoami);
+    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${YOUR_UID_ON_TARGET_SRVR} ${TARGET_SRVR} whoami;
+    ```
 
 
+1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  If you have been using the snippets unaltered, ´SETUP_USER_PWD´, is the only setting you'll need to change.  Give it the password of user ´you´.
+
+    **Caution** Needless to say, you'll want to do a good job of purging this file after use, or keeping close care of it, same as you would with the server certificates.
+
+    The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.  
+
+    1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
+    2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
+    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming a site name, `moon.planet.sun`, and a certificates storage location of, `/home/you/.ssh/hab_vault/` the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="/home/you/.ssh/hab_vault/moon.planet.sun"`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
+
+        Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
+
+1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
+    ```
+    export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
+    export TARGET_SRVR="hab4metsrv";
+    export SETUP_USER="$(whoami)";
+    export METEOR_SETTINGS_FILE="${HOME}/.ssh/hab_vault/settings.json";
+    export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
+    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+    ```
+The required arguments are :
+
+    - TARGET_SRVR is the host where the project will be installed.
+    - YOUR_UID_ON_TARGET_SRVR is a previously prepared 'sudoer' account on '${TARGET_SRVR}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
+    - METEOR_SETTINGS_FILE specifies the location of your [Meteor settings.json](http://galaxy-guide.meteor.com/environment-variables.html) file. It **must** exist, even if you leave it empty.
+    - SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
+
+    **early release note** While all these scripts and snippets are designed to be idempotent, (meaning that you can run them repeatedly without negative consequences), the current version of this script (PushInstallerScriptsToTarget.sh) tries to wipe out and recreate the 'hab' user each time.  It fails if the 'hab' user has files open or tasks running.
+
+1. *Verify SSH to the 'hab' user now works* :: Cut'n paste the following :
+    ```
+    HABITAT_USER="hab";
+    TARGET_SRVR="hab4metsrv";
+    HABITAT_USER_SSH_KEY_FILE="/home/you/.ssh/hab_vault/habitat_user/id_rsa";
+    HABITAT_USER_SSH_PASS="memorablegobbledygook";
+    #
+    eval $(ssh-agent);
+    expect << EOF
+      spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
+      expect "Enter passphrase"
+      send "${HABITAT_USER_SSH_PASS}\r"
+      expect eof
+    EOF
+    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami;
+
+    ```
+
+
+1. *Prepare SSL certificate* :: The main point of putting your Meteor app behind Nginx is to be able to offer secure HTTPS access to your users.  For that you need a SSL certificate.
+
+    We prepare them now on the client.  In subsequent steps they'll be copied to the target server, and ultimately used by your app in its Habitat bundle.
+
+    Paste the following line at a command prompt.
+
+    ```
+    SSLPPHRASE="memorablegibberish";
+    VHOST_DOMAIN="moon.planet.sun";
+    SUBJ="/C=ZZ/ST=Planet/L=Moon/O=YouGuyz/CN=${VHOST_DOMAIN}";
+    CERT_PATH="${HOME}/.ssh/hab_vault/${VHOST_DOMAIN}";
+    #
+    mkdir -p ${CERT_PATH};
+    rm -f ${CERT_PATH}/*;
+    echo ${SSLPPHRASE} > ${CERT_PATH}/server.pp;
+    openssl req \
+    -new \
+    -newkey rsa:4096 \
+    -days 1825 \
+    -x509 \
+    -subj "${SUBJ}" \
+    -passout file:${CERT_PATH}/server.pp \
+    -keyout ${CERT_PATH}/server.key \
+    -out ${CERT_PATH}/server.crt
+
+    ```
+    You can view the result with...
+    ```
+    ls -l ${CERT_PATH}
+
+    ```
+
+1. *Install Your SSL certificates* :: Use the script, `PushSiteCertificateToTarget.sh` to upload the SSL certificate you created earlier. Eg;
+    ```
+    export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
+    export TARGET_SRVR="hab4metsrv";
+    export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
+    export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
+    export SOURCE_CERTS_DIR="${HOME}/.ssh/hab_vault";
+    ${HABITAT_PROJ_DIR}/habitat/scripts/PushSiteCertificateToTarget.sh \
+                   ${TARGET_SRVR} \
+                   ${SOURCE_SECRETS_FILE} \
+                   ${SOURCE_CERTS_DIR} \
+                   ${VIRTUAL_HOST_DOMAIN_NAME}
+    ```
+The required arguments are :
+
+    - TARGET_SRVR is the host where you installed the project.
+    - SOURCE_SECRETS_FILE is the same one as described earlier.
+    - SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
+    - VIRTUAL_HOST_DOMAIN_NAME is the fully qualified domain name you specified in the certificate.
 
 
 __________________________________________
 
 #### Client side preparations
 
-1. *Accounts* :: You need accounts on several remote services :
-    1. [GitHub](https://github.com/) : You need user id and password, obviously.  You'll also need a personal token; see below.
-    2. [Habitat](https://app.habitat.sh/) : You can sign directly into Habitat with only your GitHub ID, **if** you already logged in to GitHub.
-
-1. *Prepare Virtual Machines* :: Prepare two Xubuntu Xenial Xerus virtual machines.  To quickly run through the *getting started* snippets below, cutting and pasting with no edits, you should name the machines `hab4metdev` & `hab4metsrv` (`${TARGET_SRVR}`).  Set up their `hosts` files so the developer (`hab4metdev`) machine can address the server (`hab4metsrv`) machine by name. The dev machine needs at least 12G disk space, while the server can be 8Gb.
-
-1. *Prepare Secure Shell* :: Ensure that both machines are fully SSH enabled, including being able to SSH & SCP from `hab4metdev` machine to `hab4metsrv` machine without password.  The *getting started* snippets below expect the initial user ID on each machine to be ´you´.
-
-1.  Install keys for todos project user on GitHub
-
-1.  Install Habitat Origin keys in '~/.ssh/hab_vault/habitat_user/'
-
-1.  Define the virtual host domain in '/etd/hosts'
+1.  *Install keys for `git push` of example projects* :: Habitat For Meteor manages `git` release tags and versions for you, but you must confirm that the developer (`hab4metdev`) machine is configured to pull, commit and push your Meteor app from/to GitHub.
 
 1. *Install Meteor* :: Find the latest correct installation command in the Meteor documentation page [Install](https://www.meteor.com/install), although realistically it's unlikely to change.  At last look it was :
     ```
@@ -439,215 +660,6 @@ This step first attempts to catch any lapses in the discipline described in the 
     - a new release created on GitHub : ( eg; Similar to [our todos repo](https://github.com/yourse1f-yourorg/todos) )
     - a new package published on the Habitat Depot : ( eg; Similar to [our, embarrassingly numerous, publications](https://app.habitat.sh/#/pkgs/yourse1f-yourorg/todos) )
 
-#### Server side operations
-
-With your Meteor application bundled up as a Habitat package and available for download from the Habitat Depot, you are now ready to prepare a server for Habitat supervised deployments.
-
-There are a number of considerations.
-
-The first is that the initialization script will create a new user named `hab` that has "sudoer" privileges.  This is done for security reasons -- basically to keep it distinct from the user account used by the client.  That account will need to be given an SSH public key for use from its `${HOME}/.ssh/authorized_keys` file.  The `sudo` password for the initial user account will be used once over RPC, while the `sudo` password for the habitat user account will be used for all future deployments.  For security it will be stored as an `SUDO_ASK_PASS` script in the `hab` user's `${HOME}/.ssh` directory and executable by `hab` exclusively. Passwords are verified to have minimum 8 chars.
-
-Next, you'll need to have ready an SSL certificate file set.  Digital Ocean [explains how to do this](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-16-04) very well as usual.  If you need a "real" certificate from a certificate authority (CA), [StartSSL](https://www.startssl.com/), offers **free** 3 yr., Class 1 certificates that certify up to 10 domains.
-
-The following steps assume you are simply working between two virtual machines with a self-signed certificate for an imaginary domain.
-
-  **It is important to notice that these server-side preparations are done from the developer client machine, using SCP and RPC via SSH!  Unless, otherwise indicated, the provided command snippets are to be run in a terminal window on the client.** (Logging into individual machines just isn't *the DevOps way*.)
-
-The **client side** steps to perform server side preparations are :
-
-1. *Specify the target server in your hosts file* :: Find the IP address of your server, for example `192.168.122.123` and add the following line to the file `/etc/hosts`:
-    ```
-    192.168.122.123 hab4metsrv
-    ```
-
-1. *Specify the site domain name in your hosts file* :: For simplicity sake, we'll assume it's the same IP as the server: `192.168.122.123`, but it doesn't have to be.  Add the following line to the file `/etc/hosts`:
-    ```
-    192.168.122.123 moon.planet.sun
-    ```
-
-1. *Dependencies* :: Be sure you have `expect` installed.  Cut'n paste this line and supply your `sudoer` password as requested:
-    ```
-    sudo apt install -y expect;
-    ```
-
-1. *Prepare SSH keys* :: Paste the following lines at a command prompt.
-
-    ```
-    COMMENT="DevopsTeamLeader";
-    SSHPPHRASE="memorablegobbledygook";
-    HABITAT_USER_SSH_KEY_PATH="${HOME}/.ssh/hab_vault/habitat_user"
-    #
-    mkdir -p ${HABITAT_USER_SSH_KEY_PATH};
-    rm -f ${HABITAT_USER_SSH_KEY_PATH}/id_rsa*;
-    ssh-keygen \
-      -t rsa \
-      -C "${COMMENT}" \
-      -f "${HABITAT_USER_SSH_KEY_PATH}/id_rsa" \
-      -P "${SSHPPHRASE}" \
-      && cat ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
-    chmod go-rwx ${HABITAT_USER_SSH_KEY_PATH}/id_rsa;
-    chmod go-wx ${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub;
-    chmod go-w ${HABITAT_USER_SSH_KEY_PATH};
-
-    ```
-    You'll also need to distinguish the `hab` user's keys from you own, by means of a SSH `config` file.  Paste the following lines at a command prompt.
-    ```
-    CURRENT_USER=$(whoami);
-    TARGET_SRVR="hab4metsrv";
-    CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
-    #
-    ping -c 4 ${TARGET_SRVR};
-    #
-    export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
-    export PTRNB="${PTRN} «begins»";
-    export PTRNE="${PTRN} «ends»";
-    #
-    mkdir -p ${HOME}/.ssh;
-    touch ${HOME}/.ssh/config;
-    cp ${HOME}/.ssh/config ${HOME}/.ssh/config_BK;
-    chmod ugo-w ${HOME}/.ssh/config_BK;
-    sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
-    #
-    echo -e "
-    #
-    ${PTRNB}
-    Host ${TARGET_SRVR}
-        HostName ${TARGET_SRVR}
-        User ${CURRENT_USER}
-        PreferredAuthentications publickey
-        IdentityFile ${CURRENT_USER_SSH_KEY_FILE}
-    ${PTRNE}
-    #
-    " >> ${HOME}/.ssh/config
-
-    HABITAT_USER="hab";
-    HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/hab_vault/habitat_user/id_rsa";
-    #
-    export PTRN="# ${HABITAT_USER} account on ${TARGET_SRVR}";
-    export PTRNB="${PTRN} «begins»";
-    export PTRNE="${PTRN} «ends»";
-    #
-    sed -i "/${PTRNB}/,/${PTRNE}/d" ${HOME}/.ssh/config;
-    #
-    echo -e "
-    #
-    ${PTRNB}
-    Host ${TARGET_SRVR}
-        HostName ${TARGET_SRVR}
-        User ${HABITAT_USER}
-        PreferredAuthentications publickey
-        IdentityFile ${HABITAT_USER_SSH_KEY_FILE}
-    ${PTRNE}
-    #
-    " >> ${HOME}/.ssh/config
-    #
-    sed -i "s/ *$//" ${HOME}/.ssh/config; # trim whitespace to EOL
-    sed -i "/^$/N;/^\n$/D" ${HOME}/.ssh/config; # blank lines to 1 line
-    ```
-
-
-1. *Verify SSH to the server* :: Cut'n paste this snippet ...
-    ```
-    TARGET_SRVR="hab4metsrv";
-    CURRENT_USER_SSH_KEY_FILE="${HOME}/.ssh/id_rsa";
-    #
-    eval $(ssh-agent);
-    ssh-add ${CURRENT_USER_SSH_KEY_FILE}
-
-    ```
-    ... and then this one ...
-    ```
-    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l $(whoami) ${TARGET_SRVR} whoami;
-    ```
-
-
-1. *Prepare SSL certificate* :: Paste the following line at a command prompt.
-
-    ```
-    SSLPPHRASE="memorablegibberish";
-    VHOST_DOMAIN="moon.planet.sun";
-    SUBJ="/C=ZZ/ST=Planet/L=Moon/O=YouGuyz/CN=${VHOST_DOMAIN}";
-    CERT_PATH="${HOME}/.ssh/hab_vault/${VHOST_DOMAIN}";
-    #
-    mkdir -p ${CERT_PATH};
-    rm -f ${CERT_PATH}/*;
-    echo ${SSLPPHRASE} > ${CERT_PATH}/server.pp;
-    openssl req \
-    -new \
-    -newkey rsa:4096 \
-    -days 1825 \
-    -x509 \
-    -subj "${SUBJ}" \
-    -passout file:${CERT_PATH}/server.pp \
-    -keyout ${CERT_PATH}/server.key \
-    -out ${CERT_PATH}/server.crt
-
-    ```
-
-1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  Needless to say, you'll want to do a good job of expunging this file after use, or keeping close care of it, same as you would with the server certificates.  The scripts snippets below expect you to store the file at `${HOME}/.ssh/hab_vault/secrets.sh`.  If you have been using the snippets unaltered, ´SETUP_USER_PWD´, is the only setting you'll need to change.  Give it the password of user ´you´.
-
-    1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
-    2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
-    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming a site name, `moon.planet.sun`, and a certificates storage location of, `/home/you/.ssh/hab_vault/` the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="/home/you/.ssh/hab_vault/moon.planet.sun"`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
-
-        Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
-
-1. *Install Remote Host For Habitat* :: The script, `PushInstallerScriptsToTarget.sh` only needs run once, fortunately, because it must be supplied with quite a few arguments. Eg;
-    ```
-    export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
-    export TARGET_SRVR="hab4metsrv";
-    export SETUP_USER="you";
-    export METEOR_SETTINGS_FILE="${HOME}/.ssh/hab_vault/settings.json";
-    export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
-    ```
-The required arguments are :
-
-    - TARGET_SRVR is the host where the project will be installed.
-    - SETUP_USER is a previously prepared 'sudoer' account on '${TARGET_SRVR}'. This account will only be used for initial set up, during whicha new account called ´hab´ will be created for all subsequently access.
-    - METEOR_SETTINGS_FILE specifies the location of your [Meteor settings.json](http://galaxy-guide.meteor.com/environment-variables.html) file. It **must** exist, even if you leave it empty.
-    - SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
-
-    **early release note** While all these scripts and snippets are designed to be idempotent, (meaning that you can run them repeatedly without negative consequences), the current version of this script (PushInstallerScriptsToTarget.sh) tries to wipe out and recreate the 'hab' user each time.  It fails if the 'hab' user has files open or tasks running.
-
-1. *Verify SSH to the 'hab' user now works* :: Cut'n paste the following :
-    ```
-    HABITAT_USER="hab";
-    TARGET_SRVR="hab4metsrv";
-    HABITAT_USER_SSH_KEY_FILE="/home/you/.ssh/hab_vault/habitat_user/id_rsa";
-    HABITAT_USER_SSH_PASS="memorablegobbledygook";
-    #
-    eval $(ssh-agent);
-    expect << EOF
-      spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
-      expect "Enter passphrase"
-      send "${HABITAT_USER_SSH_PASS}\r"
-      expect eof
-    EOF
-    ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami;
-
-    ```
-
-
-1. *Install Your SSL certificates* :: Use the script, `PushSiteCertificateToTarget.sh` to upload the SSL certificate you created earlier. Eg;
-    ```
-    export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
-    export TARGET_SRVR="hab4metsrv";
-    export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
-    export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    export SOURCE_CERTS_DIR="${HOME}/.ssh/hab_vault";
-    ${HABITAT_PROJ_DIR}/habitat/scripts/PushSiteCertificateToTarget.sh \
-                   ${TARGET_SRVR} \
-                   ${SOURCE_SECRETS_FILE} \
-                   ${SOURCE_CERTS_DIR} \
-                   ${VIRTUAL_HOST_DOMAIN_NAME}
-    ```
-The required arguments are :
-
-    - TARGET_SRVR is the host where you installed the project.
-    - SOURCE_SECRETS_FILE is the same one as described earlier.
-    - SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
-    - VIRTUAL_HOST_DOMAIN_NAME is the fully qualified domain name you specified in the certificate.
 
 
 #### Deployment

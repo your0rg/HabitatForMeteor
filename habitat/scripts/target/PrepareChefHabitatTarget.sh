@@ -76,6 +76,12 @@ PRTY=" TGTSRV  --> ";
 SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
 export LOG=/tmp/HabitatPreparation.log;
+if [[ -f ${LOG} ]]; then
+  sudo chmod ugo+rw ${LOG};
+else
+  touch ${LOG};
+fi;
+
 echo -e "Habitat Preparation Log :: $(date)
 =======================================================" > ${LOG};
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}."  | tee -a ${LOG};

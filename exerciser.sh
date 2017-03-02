@@ -14,7 +14,7 @@ export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
 
-  TEST_VARS_FILE="${HOME}/.testVars.sh";
+  TEST_VARS_FILE="${HOME}/.h4mVars.sh";
   if [ ! -f ${TEST_VARS_FILE} ]; then
     cat << EOSVARS > ${TEST_VARS_FILE}
 
@@ -71,6 +71,8 @@ export HABITA4METEOR_FORK_NAME="HabitatForMeteor";
 # Organization of your HabitatForMeteorFork
 export HABITA4METEOR_FORK_ORG="yourOrg";
 
+# URI of your fork of HabitatForMeteor #
+export URIofYourHabitatForMeteorFork="https://github.com/\${HABITA4METEOR_FORK_ORG}/\${HABITA4METEOR_FORK_NAME}";
 
 
 ### Parameters for creating a SSH key pair for the 'hab' user.
@@ -95,13 +97,13 @@ export VHOST_CERT_PASSPHRASE="memorablegibberish";
 # Name of your fork of one the target projects
 export TARGET_PROJECT_NAME="";
 TARGET_PROJECT_NAME="todos"; # git clone https://github.com/meteor/todos meteor_todos
-#  TARGET_PROJECT_NAME="mmks"; # git clone https://github.com/warehouseman/meteor-mantra-kickstarter mmks
+# TARGET_PROJECT_NAME="mmks"; # git clone https://github.com/warehouseman/meteor-mantra-kickstarter mmks
 
 # Your github organization for your fork of "todos" or "mmks"
 export YOUR_ORG="yourse1f-yourorg";
 
-# URI of your fork of HabitatForMeteor #
-export URIofYourProjectFork="https://github.com/${YOUR_ORG}/${TARGET_PROJECT_NAME}";
+# URI of your project fork #
+export URIofYourProjectFork="https://github.com/\${YOUR_ORG}/\${TARGET_PROJECT_NAME}";
 
 # The release tag you want to attach to the above project. It must be the
 # newest release anywhere: locally, or on GitHub, or on apps.habitat.sh
@@ -133,7 +135,21 @@ export TARGET_SRVR="hab4metsrv";
 export HABITAT_USER="hab";
 
 EOSVARS
-fi;
+
+
+  echo -e "
+
+    The file of environment variables '~/.h4mVars.sh' has been generated.
+    Please edit as required, and then re-run this script with :
+
+        ./exerciser.sh;
+    ";
+  exit 0;
+
+
+  fi;
+
+
 }
 
 echo "${PRTY} Prepare environment variables used by exerciser ";
@@ -226,16 +242,13 @@ function ConfigureSSHConfigForUser() {
     sed -i "/${PTRNB}/,/${PTRNE}/d" ${SSH_CONFIG_FILE};
     #
     #
-    echo -e "
-#
-${PTRNB}
+    echo -e "${PTRNB}
 Host ${THE_USER}.${THE_HOST}
     HostName ${THE_HOST}
     User ${THE_USER}
     PreferredAuthentications publickey
     IdentityFile ${THE_KEYS}
 ${PTRNE}
-#
 " >> ${SSH_CONFIG_FILE}
 
     sed -i "s/ *$//" ${SSH_CONFIG_FILE}; # trim whitespace to EOL
@@ -531,6 +544,7 @@ function LaunchMeteorScript()
   echo -e "Verifying Meteor execution :
         - METEOR_URL      = ${METEOR_URL}
         - METEOR_SETTINGS = ${2}
+        - NON_STOP        = ${NON_STOP}
   ";
 
   #  export METEOR_SETTINGS="${METEOR_SETTINGS}";
@@ -538,6 +552,7 @@ function LaunchMeteorScript()
   do
     if ! ${STARTED}; then
       echo "Starting Meteor app on '${METEOR_URL}'.";
+      export NON_STOP="YES";
       nohup ${2} &
       STARTED=true;
     fi;
@@ -621,12 +636,12 @@ function TrialRunMeteorProject() {
 
       if has_JSON_element "package.json" "scripts.run_development"; then
 
-        # Will use project's own installation script
-        LaunchMeteorScript "http://localhost:3000/" "meteor npm run run_development";
+echo "        # Will use project's own installation script"
+        LaunchMeteorScript "http://localhost:3000/" "meteor npm run sanity_check";
 
       else
 
-        # Start it up, look for any other issues and test on URL :: http://localhost:3000/.
+echo "        # Start it up, look for any other issues and test on URL :: http://localhost:3000/."
         LaunchDefaultMeteorProcess "http://localhost:3000/" "--settings=${METEOR_SETTINGS_FILE_PATH}";
 
       fi;
@@ -1033,11 +1048,12 @@ function PrepareSecretsFile() {
     echo -e "Secrets file found.";
     source ${SOURCE_SECRETS_FILE};
     if [[ "${NON_STOP}" = "YES" ]]; then return 0; fi;
+  else
+    mkdir -p ${HABITAT_FOR_METEOR_SECRETS_DIR};
+    cp habitat/scripts/target/secrets.sh.example ${SOURCE_SECRETS_FILE};
   fi;
 
   echo -e "Verifying secrets file.";
-  mkdir -p ${HABITAT_FOR_METEOR_SECRETS_DIR};
-  cp habitat/scripts/target/secrets.sh.example ${SOURCE_SECRETS_FILE};
   sed -i "s|/home/you|${HOME}|" ${SOURCE_SECRETS_FILE};
 
   local CHOICE="n";
@@ -1045,13 +1061,13 @@ function PrepareSecretsFile() {
   local SETUP_USER_PWD="";
   while [[ ! "X${CHOICE}X" == "XyX" ]]
   do
-    SETUP_USER_UID=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_UID | cut -d '"' -f 2);
+    eval SETUP_USER_UID=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_UID | cut -d '"' -f 2);
     SETUP_USER_PWD=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_PWD | cut -d '"' -f 2);
 
     echo -e "   -----------------------------------------
 
-    According to the file '${SOURCE_SECRETS_FILE}'
-    your user ID and password on the remote server are : '${SETUP_USER_UID}' and '${SETUP_USER_PWD}'.
+    According to the file '${SOURCE_SECRETS_FILE}' your user ID
+    and password on the remote server are : '${SETUP_USER_UID}' and '${SETUP_USER_PWD}'.
     ".
 
     read -ep "Is this correct? (y/n/q) ::  " -n 1 -r USER_ANSWER
@@ -1166,7 +1182,8 @@ if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
     rm -fr ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
   fi;
 
-  rm -fr ${HOME}/.testVars.sh;
+  rm -fr ${HOME}/.h4mVars
+.sh;
 
   echo -e "${PRTY}
 
@@ -1248,15 +1265,12 @@ if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
   set -e;
 
   echo "${PRTY} Preparing Habitat Origin Keys";
-  read -r -p "Proceed? [y/N] " response;
   RefreshHabitatOriginKeys;
 
   echo "${PRTY} Ensuring Git and Habitat keys work ...";
-  read -r -p "Proceed? [y/N] " response;
   PreparingKeysAndPrivileges;
 
   echo "${PRTY} Update release tag to next consecutive and set ...";
-  read -r -p "Proceed? [y/N] " response;
   SetReleaseTag;
 
 
@@ -1264,7 +1278,6 @@ if [[ "step3_BUILD_AND_UPLOAD" -ge "${EXECUTION_STAGE}" ]]; then
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ${PRTY} Build project and upload ...";
-  read -r -p "Proceed? [y/N] " response;
   BuildAndUploadMeteorProject;
 
 fi;
@@ -1275,8 +1288,6 @@ if [[ "step4_PREPARE_FOR_SSH_RPC" -ge "${EXECUTION_STAGE}" ]]; then
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   ${PRTY} Prepare for SCP & SSH RPC calls ...";
-  read -r -p "Proceed? [y/N] " response;
-
 
   echo "${PRTY} Verifying hosts file mappings.";
   VerifyHostsFile;

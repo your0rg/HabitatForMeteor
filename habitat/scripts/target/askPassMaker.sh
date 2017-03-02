@@ -17,12 +17,9 @@ function makeAskPassService() {
   touch ${BL_PATH};
   sed -i "/${PTRNB}/,/${PTRNE}/d" ${BL_PATH};
   #
-  echo -e "
-#
-${PTRNB}
+  echo -e "${PTRNB}
 export SUDO_ASKPASS=\"${SUPWD}\";
 ${PTRNE}
-#
 " >> ${BL_PATH}
   #
   sed -i "s/ *$//" ${BL_PATH}; # trim whitespace to EOL
