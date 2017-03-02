@@ -165,7 +165,7 @@ You should edit `${HOME}/.h4mVars.sh` to provide suitable values for your setup.
 
 #### Server side operations
 
-As mentioned above, the "exerciser" expects a properly prepared target server, so we do that next.  Bear in mind that, in real use, these are necessarily separate tasks; developers will bundled up a Meteor application and push it to a Habitat depot, subsequently operations staff will prepare a server and then pull a Habitat bundle into it from the depot.
+As mentioned above, the "exerciser" expects a properly prepared target server, so we do that next.  Bear in mind that, in real use, these are necessarily separate tasks; developers will bundle up a Meteor application and push it to a Habitat depot, subsequently operations staff will prepare a server and then pull a Habitat bundle into it from the depot.
 
 There are a number of considerations.
 
@@ -286,6 +286,12 @@ The **client side** steps to perform server side preparations are :
     ```
 
 
+1. *Prepare a Meteor settings file* :: A METEOR_SETTINGS_FILE is expected at `${HOME}/.ssh/hab_vault/settings.json`.  For this first step it can be empty, so do :
+
+    ```
+    touch ~/.ssh/hab_vault/settings.json;
+    ```
+
 1. *Prepare your secrets file* :: The SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. There is an example secrets file at [HabitatForMeteor/habitat/scripts/target/secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example).  If you have been using the snippets unaltered, ´SETUP_USER_PWD´, is the only setting you'll need to change.  Give it the password of user ´you´.
 
     **Caution** Needless to say, you'll want to do a good job of purging this file after use, or keeping close care of it, same as you would with the server certificates.
@@ -314,12 +320,11 @@ The required arguments are :
     - METEOR_SETTINGS_FILE specifies the location of your [Meteor settings.json](http://galaxy-guide.meteor.com/environment-variables.html) file. It **must** exist, even if you leave it empty.
     - SOURCE_SECRETS_FILE holds user and connections secrets to be installed server side. An example secrets file can be found at [HabitatForMeteor / habitat / scripts / target /secrets.sh.example](https://github.com/your0rg/HabitatForMeteor/blob/master/habitat/scripts/target/secrets.sh.example)
 
-    **early release note** While all these scripts and snippets are designed to be idempotent, (meaning that you can run them repeatedly without negative consequences), the current version of this script (PushInstallerScriptsToTarget.sh) tries to wipe out and recreate the 'hab' user each time.  It fails if the 'hab' user has files open or tasks running.
 
 1. *Verify SSH to the 'hab' user now works* :: Cut'n paste the following :
     ```
     HABITAT_USER="hab";
-    TARGET_SRVR="hab4metsrv";
+    TARGET_SRVR="hab.hab4metsrv";
     HABITAT_USER_SSH_KEY_FILE="/home/you/.ssh/hab_vault/habitat_user/id_rsa";
     HABITAT_USER_SSH_PASS="memorablegobbledygook";
     #
@@ -673,13 +678,20 @@ With a server prepared as above, any machine possessing private keys to the ´ha
     export semver='';    # An optional version number, eg; 0.1.8
     export timestamp=''; # An optional timestamp, eg; 20161231235959
     #
-    ssh hab@hab4metsrv "~/HabitatPkgInstallerScripts/HabitatPackageRunner.sh ${VIRTUAL_HOST_DOMAIN_NAME} ${YOUR_ORG} ${YOUR_PKG} ${semver} ${timestamp}";
+    ssh hab@hab.hab4metsrv "~/HabitatPkgInstallerScripts/HabitatPackageRunner.sh ${VIRTUAL_HOST_DOMAIN_NAME} ${YOUR_ORG} ${YOUR_PKG} ${semver} ${timestamp}";
 
     ´´´
 
 Use a browser to visit [https://moon.planet.sun/](https://moon.planet.sun/).  It will throw a hissy-fit about your "insecure" self-signed certifiacte. Take the necessary override steps and the Meteor `todos` application will load.
 
 Reboot to verify that it relaunches without any hiccups.
+
+*Test & debug trick to avoid repeatAdly entering the `hab` user passphrase :*
+
+    ```
+    ssh-add ${HOME}/.ssh/hab_vault/habitat_user/id_rsa;
+    ```
+
 
 #### No secrets
 

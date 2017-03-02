@@ -368,7 +368,16 @@ function CheckForHabitatOriginKeys() {
   pushd ${HABITAT_FOR_METEOR_USER_SECRETS_DIR} >/dev/null;
 
     if [ ! -f ${YOUR_ORG}-*.sig.key ]; then
-      echo -e "Cannot find Habitat Origin Keys!";
+      echo -e "
+
+      *** Cannot find Habitat Origin Keys! ***
+
+    The directory '${HABITAT_FOR_METEOR_USER_SECRETS_DIR}'
+    is expected to contain two files named as follows :
+       - yourse1f-yourorg-yyyymmddhhmmss.pub
+       - yourse1f-yourorg-yyyymmddhhmmss.sig.key
+
+      ";
       exit 1;
     fi;
 

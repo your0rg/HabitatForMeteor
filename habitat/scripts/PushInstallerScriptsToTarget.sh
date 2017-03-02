@@ -240,11 +240,14 @@ echo -e "${PRTY} Decompressing the bundle...";
 ssh ${SETUP_USER}@${TARGET_SRVR} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Setting up SUDO_ASK_PASS on the target...";
+# echo "scp ./target/askPassMaker.sh ${SETUP_USER}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;";
 scp ./target/askPassMaker.sh ${SETUP_USER}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;
+# echo "ssh ${SETUP_USER}@${TARGET_SRVR} \"source askPassMaker.sh; makeAskPassService ${SETUP_USER} ${SETUP_USER_PWD};\" >/dev/null || errorUnexpectedRPCResult;";
 ssh ${SETUP_USER}@${TARGET_SRVR} "source askPassMaker.sh; makeAskPassService ${SETUP_USER} ${SETUP_USER_PWD};" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Installing Habitat on the target...";
-ssh ${SETUP_USER}@${TARGET_SRVR} "./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
+# echo "ssh ${SETUP_USER}@${TARGET_SRVR} \". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh\" || errorUnexpectedRPCResult;";
+ssh ${SETUP_USER}@${TARGET_SRVR} ". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
 
 # ----------------
 echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";

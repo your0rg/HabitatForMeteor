@@ -77,7 +77,7 @@ SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
 export LOG=/tmp/HabitatPreparation.log;
 if [[ -f ${LOG} ]]; then
-  sudo chmod ugo+rw ${LOG};
+  sudo -A chmod ugo+rw ${LOG};
 else
   touch ${LOG};
 fi;

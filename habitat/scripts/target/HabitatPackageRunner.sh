@@ -6,6 +6,17 @@ SCRIPTNAME=$(basename "${SCRIPT}");
 
 source ${HOME}/.bash_login;
 
+function errorNoSettingsFileSpecified() {
+  echo -e "\n\n    *** A valid path to a Meteor settings.json file needs to be specified, not '${1}'  ***";
+  usage;
+}
+
+function errorNoSecretsFileSpecified() {
+  echo -e "\n\n    *** A valid path to a file of secrets for the remote server needs to be specified, not '${1}'  ***";
+  usage;
+}
+
+
 function usage() {
   echo -e "USAGE :
 
@@ -35,6 +46,7 @@ export YOUR_PKG_TIMESTAMP=${5};
 
 # if [[ "X${USER_TOML_FILE_PATH}X" = "XX" ]]; then usage "USER_TOML_FILE_PATH=${USER_TOML_FILE_PATH}"; fi;
 TARGET_SECRETS_FILE=${SCRIPTPATH}/secrets.sh;
+TARGET_SETTINGS_FILE=${SCRIPTPATH}/settings.json;
 
 if [[ "X${VIRTUAL_HOST_DOMAIN_NAME}X" = "XX" ]]; then usage "VIRTUAL_HOST_DOMAIN_NAME=${VIRTUAL_HOST_DOMAIN_NAME}"; fi;
 if [[ "X${YOUR_ORG}X" = "XX" ]]; then usage "YOUR_ORG=${YOUR_ORG}"; fi;
@@ -44,6 +56,10 @@ echo -e "${PRTY} Testing secrets file availability... [   ls \"${TARGET_SECRETS_
 if [[ "X${TARGET_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
 if [ ! -f "${TARGET_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${TARGET_SECRETS_FILE}"; fi;
 source ${TARGET_SECRETS_FILE};
+
+echo -e "${PRTY} Testing settings file availability... [   ls \"${TARGET_SETTINGS_FILE}\"  ]";
+if [[ "X${TARGET_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
+if [ ! -f "${TARGET_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${TARGET_SETTINGS_FILE}"; fi;
 
 VERSION_PATH="/${YOUR_PKG_VERSION}";
 if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then unset VERSION_PATH; fi;
@@ -75,6 +91,7 @@ NGINX_VHOSTS_PUBLICATIONS="${NGINX_WORK_DIRECTORY}/sites-enabled";
 NGINX_VHOSTS_CERTIFICATES="${NGINX_WORK_DIRECTORY}/tls";
 NGINX_ROOT_DIRECTORY="${NGINX_WORK_DIRECTORY}/www-data";
 NGINX_VIRTUAL_HOST_FILE_PATH=${NGINX_VHOSTS_DEFINITIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
+
 
 pushd HabitatPkgInstallerScripts >/dev/null;
 
@@ -232,6 +249,8 @@ ${SCRIPTPATH}/app.user.toml.template.sh > ${SCRIPTPATH}/${USER_TOML_FILE};
 echo -e "${PRETTY} Copying user toml file to '${WORK_DIR}' directory" | tee -a ${LOG};
 sudo -A cp ${SCRIPTPATH}/${USER_TOML_FILE} ${WORK_DIR} >> ${LOG};
 
+echo -e "${PRETTY} Copying Meteor settings file to '${WORK_DIR}/var' directory" | tee -a ${LOG};
+sudo -A cp ${TARGET_SETTINGS_FILE} ${WORK_DIR}/var >> ${LOG};
 
 echo -e "${PRETTY} Enabling the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl enable ${UNIT_FILE};
@@ -251,6 +270,20 @@ sudo -A mkdir -p ${META_DIR}/var/logs; # > /dev/null;
 # sudo -A ls -l ${META_DIR}/data;
 # sudo -A ls -l ${META_DIR}/data/index.html;
 # sudo -A echo -e "nginx is ready" >> ${META_DIR}/data/index.html;
+
+# declare NGINX_CONF="/hab/svc/nginx/config/nginx.conf";
+declare NGINX_CONF="/hab/pkgs/${YOUR_ORG}/nginx/1.10.1/20161105150115/config/nginx.conf";
+
+declare EXISTING_SETTING="keepalive_timeout";
+declare MISSING_SETTING="server_names_hash_bucket_size";
+declare REPLACEMENT="    ${MISSING_SETTING} 64;\n    ${EXISTING_SETTING} 60;";
+
+if ! sudo -A grep "${MISSING_SETTING}" ${NGINX_CONF} >/dev/null; then
+  echo -e "
+  FIXME : This hack should not be necessary when Habitat accepts my PR.
+  ";
+  sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${NGINX_CONF};
+fi;
 
 echo -e "${PRETTY} Start up the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl start ${UNIT_FILE};
