@@ -153,6 +153,9 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell >>  
 echo -e "${PRTY} Ensuring mkpasswd is installed.  "  | tee -a ${LOG};
 sudo -A apt install -y whois;
 
+echo -e "${PRTY} Ensuring able to parse JSON files.  "  | tee -a ${LOG};
+sudo -A apt install -y jq;
+
 
 if ! id -u ${HAB_USER} &>/dev/null; then
 

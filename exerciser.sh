@@ -11,6 +11,14 @@ export step4_PREPARE_FOR_SSH_RPC=$((${step3_BUILD_AND_UPLOAD}+1));
 export step5_INSTALL_SERVER_SCRIPTS=$((${step4_PREPARE_FOR_SSH_RPC}+1));
 export step6_INITIATE_DEPLOY=$((${step5_INSTALL_SERVER_SCRIPTS}+1));
 
+
+function InstalledAlready() {
+  declare INSTALLED_ALREADY=${1};
+  [ $(which ${INSTALLED_ALREADY}) ] && \
+      echo "'${INSTALLED_ALREADY}' is installed." || \
+      sudo apt-get -y install ${INSTALLED_ALREADY};
+};
+
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
 
@@ -152,7 +160,11 @@ EOSVARS
 
 }
 
-echo "${PRTY} Prepare environment variables used by exerciser ";
+InstalledAlready "expect";
+
+echo -e "
+
+    ${PRTY} Prepare environment variables used by exerciser ";
 PrepareNecessaryShellVarsForExerciser;
 
 ## Sourcing test variables file ....
@@ -320,19 +332,25 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 
 function PrepareDependencies() {
 
-    #
-    # Get dependencies
-    sudo apt -y install expect;
-    sudo apt -y install curl;
-    sudo apt -y install git;
-    sudo apt -y install build-essential;
-    sudo apt -y install whois;
-    #
-    # Prepare 'git'
-    git config --global user.email "${YOUR_EMAIL}";
-    git config --global user.name "${YOUR_NAME}";
-    git config --global push.default simple;
-    #
+  #
+  # Get dependencies
+  # sudo apt -y install expect;
+  # sudo apt -y install curl;
+  # sudo apt -y install git;
+  # sudo apt -y install build-essential;
+  # sudo apt -y install whois;
+  InstalledAlready expect;
+  InstalledAlready curl;
+  InstalledAlready git;
+  InstalledAlready jq;
+  InstalledAlready build-essential;
+  InstalledAlready whois;
+  #
+  # Prepare 'git'
+  git config --global user.email "${YOUR_EMAIL}";
+  git config --global user.name "${YOUR_NAME}";
+  git config --global push.default simple;
+  #
 
 };
 

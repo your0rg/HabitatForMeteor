@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-SCRIPT=$(readlink -f "$0");
-SCRIPTPATH=$(dirname "$SCRIPT");
-SCRIPTNAME=$(basename "${SCRIPT}");
+declare SCRIPT=$(readlink -f "$0");
+declare SCRIPTPATH=$(dirname "$SCRIPT");
+declare SCRIPTNAME=$(basename "${SCRIPT}");
 
 source ${HOME}/.bash_login;
 
@@ -73,10 +73,12 @@ PACKAGE_PATH=${SERVICE_PATH}${VERSION_PATH}${TIMESTAMP_PATH};
 
 UNIT_FILE=${SERVICE_UID}.service;
 
-WORK_DIR=/hab/svc/${YOUR_PKG};
-META_DIR=/hab/svc/${PACKAGE_PATH};
+SVC_DIR=/hab/svc;
+
+WORK_DIR=${SVC_DIR}/${YOUR_PKG};
+META_DIR=${SVC_DIR}/${PACKAGE_PATH};
 DNLD_DIR=/hab/pkgs/${SERVICE_PATH};
-NGINX_DIR=/hab/svc/nginx;
+NGINX_DIR=${SVC_DIR}/nginx;
 
 USER_TOML_FILE="user.toml";
 USER_TOML_FILE_PATH=${WORK_DIR}/${USER_TOML_FILE};
@@ -94,6 +96,29 @@ NGINX_VIRTUAL_HOST_FILE_PATH=${NGINX_VHOSTS_DEFINITIONS}/${VIRTUAL_HOST_DOMAIN_N
 
 
 pushd HabitatPkgInstallerScripts >/dev/null;
+
+
+echo -e "${PRETTY} Preparing 'user.toml' file for core/postgresql bundle." | tee -a ${LOG};
+declare POSTGRES_SERVICE="${SVC_DIR}/postgresql";
+sudo -A mkdir -p ${POSTGRES_SERVICE};
+sudo -A chown root:root ${POSTGRES_SERVICE};
+sudo -A chmod 755 ${POSTGRES_SERVICE};
+
+declare POSTGRES_USER_TOML="${POSTGRES_SERVICE}/user.toml";
+sudo -A touch ${POSTGRES_USER_TOML};
+sudo -A chown root:root ${POSTGRES_USER_TOML};
+sudo -A chmod 666 ${POSTGRES_USER_TOML};
+
+echo -e "${PRETTY} Patching core/postgresql 'user.toml' file." | tee -a ${LOG};
+export PG_PWD=$(cat ./settings.json | jq -r .PG_PWD);
+
+declare EXISTING_SETTING="initdb_superuser_password";
+declare REPLACEMENT="${EXISTING_SETTING} = \"${PG_PWD}\";";
+grep "${EXISTING_SETTING}" ${POSTGRES_USER_TOML} >/dev/null \
+         && sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${POSTGRES_USER_TOML} \
+         || echo ${REPLACEMENT} > ${POSTGRES_USER_TOML};
+sudo -A chmod 644 ${POSTGRES_USER_TOML};
+
 
 echo -e "${PRETTY} Creating Nginx virtual host directory structure." | tee -a ${LOG};
 sudo -A mkdir -p ${NGINX_VHOSTS_DEFINITIONS};
@@ -273,7 +298,7 @@ sudo -A mkdir -p ${META_DIR}/var/logs; # > /dev/null;
 # sudo -A ls -l ${META_DIR}/data/index.html;
 # sudo -A echo -e "nginx is ready" >> ${META_DIR}/data/index.html;
 
-# declare NGINX_CONF="/hab/svc/nginx/config/nginx.conf";
+# declare NGINX_CONF="${SVC_DIR}/nginx/config/nginx.conf";
 declare NGINX_CONF="/hab/pkgs/${YOUR_ORG}/nginx/1.10.1/20161105150115/config/nginx.conf";
 
 declare EXISTING_SETTING="keepalive_timeout";
@@ -311,7 +336,7 @@ echo -e "                   sudo systemctl start ${UNIT_FILE}  ";
 echo -e "                   sudo systemctl restart ${UNIT_FILE}  ";
 
 echo -e "# Surveillance";
-echo -e "                   sudo journalctl -fb -u ${UNIT_FILE}  ";
+echo -e "                   sudo journalctl -n 200 -fb -u ${UNIT_FILE}  ";
 echo -e "";
 echo -e "";
 
@@ -326,8 +351,8 @@ exit 0;
 # sudo -A rm -f  /hab/cache/artifacts/fleetingclouds-todos-*.hart;
 # sudo -A rm -fr /hab/pkgs/core/nginx;
 # sudo -A rm -fr /hab/pkgs/fleetingclouds;
-# sudo -A rm -fr /hab/svc/nginx;
-# sudo -A rm -fr /hab/svc/todos;
+# sudo -A rm -fr ${SVC_DIR}/nginx;
+# sudo -A rm -fr ${SVC_DIR}/todos;
 # sudo -A rm -fr /home/hab/nginx;
 
 # sudo -A updatedb && locate nginx;
