@@ -250,7 +250,9 @@ echo -e "${PRETTY} Copying user toml file to '${WORK_DIR}' directory" | tee -a $
 sudo -A cp ${SCRIPTPATH}/${USER_TOML_FILE} ${WORK_DIR} >> ${LOG};
 
 echo -e "${PRETTY} Copying Meteor settings file to '${WORK_DIR}/var' directory" | tee -a ${LOG};
+sudo -A mkdir -p ${WORK_DIR}/var >> ${LOG};
 sudo -A cp ${TARGET_SETTINGS_FILE} ${WORK_DIR}/var >> ${LOG};
+sudo -A chown -R hab:hab ${WORK_DIR}/var >> ${LOG};
 
 echo -e "${PRETTY} Enabling the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl enable ${UNIT_FILE};

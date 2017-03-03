@@ -1063,7 +1063,7 @@ function PrepareSecretsFile() {
   fi;
 
   echo -e "Verifying secrets file.";
-  sed -i "s|/home/you|${HOME}|" ${SOURCE_SECRETS_FILE};
+  sed -i "s|/home/you/|${HOME}/|" ${SOURCE_SECRETS_FILE};
 
   local CHOICE="n";
   local SETUP_USER_UID="";

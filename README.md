@@ -300,7 +300,7 @@ The **client side** steps to perform server side preparations are :
 
     1. Passwords: The script needs to know the password Meteor will use to connect to MongoDB, the sudoer password for the initial connection user,  and the sudoer password for the habitat user.  These three passwords are used internally in the server. Passwords are **not** used in the SSH and SCP connections.
     2. Habitat user key file: The path and filename, on the developer's (your) machine, of a copy of the `hab` user's SSH public key. Obviously the key pair will have to be safely recorded for future use.
-    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming a site name, `moon.planet.sun`, and a certificates storage location of, `/home/you/.ssh/hab_vault/` the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="/home/you/.ssh/hab_vault/moon.planet.sun"`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
+    3. Certificates:  To install Nginx's SSL certificate, the script needs to be able to find the certificate, it's decryption key and the decryption key pass phrase.  Assuming a site name, `moon.planet.sun`, and a certificates storage location of, `${HOME}/.ssh/hab_vault/` the exported shell variable must be **exactly** `export  MOON_PLANET_SUN_CERT_PATH="${HOME}/.ssh/hab_vault/moon.planet.sun"`.  All three of the required certificate files must be in the specified subdirectory, `moon.planet.sun`, and must be named **exactly** "server.crt", "server.key", "server.pp" (for now).
 
         Finally, the shell variable, `ENABLE_GLOBAL_CERT_PASSWORD_FILE`, can be commented out to stop Nginx trying to load certificates' passwords. You'll still need an empty `server.pp` file, if you elect to go for a passwordless cert.
 
@@ -324,8 +324,8 @@ The required arguments are :
 1. *Verify SSH to the 'hab' user now works* :: Cut'n paste the following :
     ```
     HABITAT_USER="hab";
-    TARGET_SRVR="hab.hab4metsrv";
-    HABITAT_USER_SSH_KEY_FILE="/home/you/.ssh/hab_vault/habitat_user/id_rsa";
+    TARGET_SRVR="hab4metsrv";
+    HABITAT_USER_SSH_KEY_FILE="${HOME}/.ssh/hab_vault/habitat_user/id_rsa";
     HABITAT_USER_SSH_PASS="memorablegobbledygook";
     #
     eval $(ssh-agent);

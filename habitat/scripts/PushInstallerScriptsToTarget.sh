@@ -39,6 +39,19 @@ function errorNoSettingsFileSpecified() {
   usage;
 }
 
+function warningEmptySettingsFileSpecified() {
+  echo -e "\n\n    *** An empty Meteor settings.json file was detected at, '${1}'  ***
+
+  ";
+  read -ep "Do you wish to (q)uit or fix that and (c)ontinue? (q/c) ::  " -n 1 -r USER_ANSWER
+  CHOICE=$(echo ${USER_ANSWER:0:1} | tr '[:upper:]' '[:lower:]')
+  if [[ "X${CHOICE}X" == "XqX" ]]; then
+    echo "Skipping this operation."; exit 1;
+  fi;
+  echo -e " Continuing... ";
+
+}
+
 function errorNoSecretsFileSpecified() {
   echo -e "\n\n    *** A valid path to a file of secrets for the remote server needs to be specified, not '${1}'  ***";
   usage;
@@ -102,6 +115,7 @@ SAPMF
 
 set -e;
 
+CURR_DIR=$(pwd);
 SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}.";
@@ -168,7 +182,11 @@ echo -e "${PRTY} Added keys to ssh-agent";
 # ----------------
 echo -e "${PRTY} Testing settings file availability... [   ls \"${METEOR_SETTINGS_FILE}\"  ]";
 if [[ "X${METEOR_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
+if [ "${METEOR_SETTINGS_FILE:0:1}" != "/" ]; then
+  METEOR_SETTINGS_FILE="${CURR_DIR}/${METEOR_SETTINGS_FILE}";
+fi;
 if [ ! -f "${METEOR_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
+if [ ! -s "${METEOR_SETTINGS_FILE}" ]; then warningEmptySettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
 
 # ----------------
 echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
