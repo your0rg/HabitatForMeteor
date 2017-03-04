@@ -125,7 +125,7 @@ declare CERT_PATH=$(echo ${!CP});
 # echo "~~~~~~~~~~~~~~~~~~~~~~ ${CERT_PATH} ~~~~~~~~~~~~";
 
 # declare TARGET_CERT_PATH="/home/hab/.ssh/hab_vault/${VIRTUAL_HOST_DOMAIN_NAME}";
-echo -e "${PRTY} Copying '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate 
+echo -e "${PRTY} Copying '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate
                from ${SOURCE_CERTS_DIR}
                  to ${TARGET_SRVR}:${TARGET_CERT_PATH}";
 ssh ${HABITAT_USER}@${TARGET_SRVR} mkdir -p ${CERT_PATH};
@@ -137,7 +137,7 @@ echo -e "\n${PRTY} If you already executed './PushInstallerScriptsToTarget.sh' t
             Next step : From any machine with passwordless SSH access to the
                         the server '${TARGET_SRVR}' you can now run...
 
-      ssh ${HABITAT_USER}@${TARGET_SRVR} \"~/${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}\";
+      ssh ${HABITAT_USER}@${TARGET_SRVR} \". ~/.bash_login && ~/${BUNDLE_DIRECTORY_NAME}/HabitatPackageRunner.sh \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} \${semver} \${timestamp}\";
       # The first three arguments are obligatory. The last two permit specifying older releases.
 
 Quitting...

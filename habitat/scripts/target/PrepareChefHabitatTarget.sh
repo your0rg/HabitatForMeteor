@@ -131,30 +131,55 @@ if [[ $(sudo -A touch "/root/$(date)"  &>/dev/null; echo $?;) -gt 0 ]]; then
   echo -e "ERROR : SUDO_ASKPASS doesn't work.  Is the password correct for : '$(whoami)'"  | tee -a ${LOG};
 fi;
 
+
+
+declare APT_SRC_LST="/etc/apt/sources.list.d";
+
 echo -e "${PRTY} Ensuring mongo-shell is installed.  "  | tee -a ${LOG};
+declare MONGO_LST="mongodb-org-3.2.list";
+declare MONGO_APT=${APT_SRC_LST}/${MONGO_LST};
+declare UNIQ=$(lsb_release -sc)"/mongodb-org";
+declare MONGO_SRC="deb http://repo.mongodb.org/apt/ubuntu ${UNIQ}/3.2 multiverse";
 
-sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927;
-# sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 &>/dev/null;
-echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.2 multiverse" \
-         | sudo -A tee /etc/apt/sources.list.d/mongodb-org-3.2.list >>  ${LOG};
+declare MONGO_APT_KEY_HASH="EA312927";
+apt-key list | grep ${MONGO_APT_KEY_HASH} &>/dev/null \
+   && echo " Have mongo shell apt key." \
+   || sudo -A apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv ${MONGO_APT_KEY_HASH} >/dev/null;
+
+cat ${MONGO_APT} 2>/dev/null \
+   |  grep ${UNIQ} >/dev/null \
+   || echo ${MONGO_SRC} \
+   |  sudo -A tee ${MONGO_APT};
+
+
+echo -e "${PRTY} Ensuring postgresql client is installed.  "  | tee -a ${LOG};
+declare PGRES_LST="pgdg.list";
+declare PGRES_APT=${APT_SRC_LST}/${PGRES_LST};
+declare UNIQ=$(lsb_release -sc)"-pgdg";
+declare PGRES_SRC="deb http://apt.postgresql.org/pub/repos/apt/ ${UNIQ} main";
+
+declare PGRES_APT_KEY_HASH="ACCC4CF8";
+apt-key list | grep ${PGRES_APT_KEY_HASH} &>/dev/null \
+    && echo " Have postgresql client apt key." \
+    || wget --quiet -O - https://www.postgresql.org/media/keys/${PGRES_APT_KEY_HASH}.asc \
+    | sudo apt-key add - >/dev/null;
+
+cat ${PGRES_APT} 2>/dev/null \
+    |  grep ${UNIQ} >/dev/null \
+    || echo ${PGRES_SRC} \
+    |  sudo -A tee ${PGRES_APT};
+
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get update >>  ${LOG};
-# sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell=3.2.10 >>  ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell >>  ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client-9.6 >>  ${LOG};
 
-# echo -e "${PRTY} Purging any existing user: '${HAB_USER}' . . .  " | tee -a ${LOG};
-# if sudo -A deluser --quiet --remove-home ${HAB_USER}  >>  ${LOG}; then
-
-#   echo "Removing '${HAB_USER}' from sudoers ";
-#   sudo -A rm -fr "/etc/sudoers.d/${HAB_USER}" >>  ${LOG};
-#   echo "Purged user, '${HAB_USER}'.  Reinstantiating...";
-
-# fi;
 
 echo -e "${PRTY} Ensuring mkpasswd is installed.  "  | tee -a ${LOG};
-sudo -A apt install -y whois;
+sudo -A apt-get install -y whois;
 
 echo -e "${PRTY} Ensuring able to parse JSON files.  "  | tee -a ${LOG};
-sudo -A apt install -y jq;
+sudo -A apt-get install -y jq;
+sudo -A apt-get install -y tree;
 
 
 if ! id -u ${HAB_USER} &>/dev/null; then

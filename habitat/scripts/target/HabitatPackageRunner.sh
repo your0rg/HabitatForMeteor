@@ -113,7 +113,7 @@ echo -e "${PRETTY} Patching core/postgresql 'user.toml' file." | tee -a ${LOG};
 export PG_PWD=$(cat ./settings.json | jq -r .PG_PWD);
 
 declare EXISTING_SETTING="initdb_superuser_password";
-declare REPLACEMENT="${EXISTING_SETTING} = \"${PG_PWD}\";";
+declare REPLACEMENT="${EXISTING_SETTING} = \"${PG_PWD}\"";
 grep "${EXISTING_SETTING}" ${POSTGRES_USER_TOML} >/dev/null \
          && sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${POSTGRES_USER_TOML} \
          || echo ${REPLACEMENT} > ${POSTGRES_USER_TOML};
