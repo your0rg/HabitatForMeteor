@@ -129,7 +129,7 @@ sh ${SCRIPTPATH}/index.html.template.sh > index.html;
 sudo -A cp index.html ${NGINX_ROOT_DIRECTORY};
 
 declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
-declare CERT_P3ATH=$(echo ${!CP});
+declare CERT_PATH=$(echo ${!CP});
 # sudo -A mkdir -p ${CERT_PATH};
 # sudo -A chown -R hab:hab ${CERT_PATH};
 # ls -l "${CERT_PATH}";
