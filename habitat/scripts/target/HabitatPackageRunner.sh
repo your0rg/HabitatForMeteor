@@ -109,7 +109,7 @@ sudo -A touch ${POSTGRES_USER_TOML};
 sudo -A chown root:root ${POSTGRES_USER_TOML};
 sudo -A chmod 666 ${POSTGRES_USER_TOML};
 
-echo -e "${PRETTY} Patching core/postgresql 'user.toml' file." | tee -a ${LOG};
+echo -e "${PRETTY} Patching super user pwd into core/postgresql 'user.toml' file." | tee -a ${LOG};
 export PG_PWD=$(cat ./settings.json | jq -r .PG_PWD);
 
 declare EXISTING_SETTING="initdb_superuser_password";
@@ -129,7 +129,7 @@ sh ${SCRIPTPATH}/index.html.template.sh > index.html;
 sudo -A cp index.html ${NGINX_ROOT_DIRECTORY};
 
 declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
-declare CERT_PATH=$(echo ${!CP});
+declare CERT_P3ATH=$(echo ${!CP});
 # sudo -A mkdir -p ${CERT_PATH};
 # sudo -A chown -R hab:hab ${CERT_PATH};
 # ls -l "${CERT_PATH}";
@@ -203,28 +203,6 @@ echo -e "${PRETTY} Ensuring Habitat Director is available (installing if necessa
 sudo -A hab install core/hab-director; # > /dev/null 2>&1;
 sudo -A hab pkg binlink core/hab-director hab-director;
 
-echo -e "${PRETTY} Ensuring package '${PACKAGE_PATH}' is available" | tee -a ${LOG};
-
-echo -e "${PRETTY}  --> sudo -A hab pkg install '${PACKAGE_PATH}'" | tee -a ${LOG};
-sudo -A hab pkg install ${PACKAGE_PATH};
-
-PACKAGE_ABSOLUTE_PATH=$(sudo -A hab pkg path ${PACKAGE_PATH});
-
-PACKAGE_UUID=${PACKAGE_ABSOLUTE_PATH#$DNLD_DIR/};
-YOUR_PKG_VERSION=$(echo ${PACKAGE_UUID} | cut -d / -f 1);
-YOUR_PKG_TIMESTAMP=$(echo ${PACKAGE_UUID} | cut -d / -f 2);
-
-echo -e "${PRETTY} Package universal unique ID is :: '${SERVICE_PATH}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}'" >>  ${LOG};
-if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then
-  echo "Invalid package version '${YOUR_PKG_VERSION}'."  | tee -a ${LOG};
-  exit 1;
-fi;
-if [[ "${#YOUR_PKG_TIMESTAMP}" != "14" ]]; then
-  echo "Invalid package timestamp '${YOUR_PKG_TIMESTAMP}'."  | tee -a ${LOG};
-  exit 1;
-fi;
-
-
 
 MONGO_ORIGIN="billmeyer";
 # MONGO_ORIGIN="core";
@@ -249,9 +227,35 @@ use ${YOUR_PKG}
 db.createUser({user: "meteor",pwd:"${MONGODB_PWD}",roles:[{role:"dbOwner",db:"${YOUR_PKG}"},"readWrite"]})
 EOFM
 
+
+
+echo -e "${PRETTY} Ensuring package '${PACKAGE_PATH}' is available" | tee -a ${LOG};
+
+echo -e "${PRETTY}  --> sudo -A hab pkg install '${PACKAGE_PATH}'" | tee -a ${LOG};
+sudo -A hab pkg install ${PACKAGE_PATH};
+
+PACKAGE_ABSOLUTE_PATH=$(sudo -A hab pkg path ${PACKAGE_PATH});
+
+PACKAGE_UUID=${PACKAGE_ABSOLUTE_PATH#$DNLD_DIR/};
+YOUR_PKG_VERSION=$(echo ${PACKAGE_UUID} | cut -d / -f 1);
+YOUR_PKG_TIMESTAMP=$(echo ${PACKAGE_UUID} | cut -d / -f 2);
+
+echo -e "${PRETTY} Package universal unique ID is :: '${SERVICE_PATH}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}'" >>  ${LOG};
+if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then
+  echo "Invalid package version '${YOUR_PKG_VERSION}'."  | tee -a ${LOG};
+  exit 1;
+fi;
+if [[ "${#YOUR_PKG_TIMESTAMP}" != "14" ]]; then
+  echo "Invalid package timestamp '${YOUR_PKG_TIMESTAMP}'."  | tee -a ${LOG};
+  exit 1;
+fi;
+
+
 # ps aux | grep mongo;
 sudo -A pkill hab-sup;
 wait;
+
+
 
 ### ${YOUR_ORG}/${YOUR_PKG}/${YOUR_PKG_VERSION}/${YOUR_PKG_TIMESTAMP}/
 
@@ -314,6 +318,66 @@ fi;
 
 echo -e "${PRETTY} Start up the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl start ${UNIT_FILE};
+
+
+
+declare DBNAME=;
+DBNAME='template1';
+function testPostgresState() {
+  psql -h localhost -d ${DBNAME} \
+     -tc "SELECT datname FROM pg_database where datname='${DBNAME}'" 2>/dev/null \
+     | grep ${DBNAME} &>/dev/null;
+}
+
+declare SLEEP=2;
+declare REPEAT=10;
+export DELAY=$(( SLEEP * REPEAT ));
+function waitForPostgres() {
+
+  # testPostgresState && echo 77 || echo 44;
+
+  declare CNT=${REPEAT};
+  until testPostgresState || (( CNT-- < 1 ))
+  do
+    echo -ne "Waiting for PostgreSQL to wake"\\r;
+    sleep ${SLEEP};
+  done;
+  (( CNT > 0 ))
+
+}
+waitForPostgres \
+   && echo -e "\nPostgres is responding now!" \
+   || ( echo -e "\nPostgres failed to respond after ${DELAY} seconds."; exit 1; );
+
+
+DBNAME='meteor';
+echo -e "${PRETTY} Creating '${DBNAME}' PostgreSql database and owner '${DBNAME}'" | tee -a ${LOG};
+psql -h localhost -d template1 \
+    -tc "SELECT datname FROM pg_database WHERE datname='${DBNAME}'" \
+    | grep ${DBNAME} >/dev/null \
+    || psql -h localhost -d template1 \
+        -tc "CREATE DATABASE ${DBNAME}" &>/dev/null \
+        || ( echo -e "
+           *** Failed to create database '${DBNAME}' ***
+           ***   Giving up                           *** ";
+           exit 1;);
+
+echo -e "
+ººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººº
+";
+
+declare SERVER_INITIALIZER=${SCRIPTPATH}/initialize_server.sh;
+if [ -f ${SERVER_INITIALIZER} ]; then
+  chmod ug+x ${SERVER_INITIALIZER};
+  ${SERVER_INITIALIZER};
+fi;
+# whoami;
+# cat ~/.pgpass;
+# psql -h localhost -d ${DBNAME} \
+#      -tc "SELECT datname FROM pg_database where datname='${DBNAME}'";
+echo -e "
+ººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººº
+";
 
 
 sudo -A ls -l ${META_DIR}/var/logs;

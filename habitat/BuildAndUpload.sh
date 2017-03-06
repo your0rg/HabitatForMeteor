@@ -266,7 +266,7 @@ function detectIncoherentVersionSemantics() {
                             | cut -d '/' -f 3 \
                             | cut -d '^' -f 1 \
                             | uniq \
-                            | sort \
+                            | sort -V \
                             | tail -1);
 
   if [[ "X${LATEST_REMOTE_VERSION_TAG}X" = "XX" ]]; then

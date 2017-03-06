@@ -19,10 +19,10 @@ function InstalledAlready() {
       sudo apt-get -y install ${INSTALLED_ALREADY};
 };
 
+declare TEST_VARS_FILE="${HOME}/.h4mVars.sh";
 ## Preparing file of test variables for getting started with Habitat For Meteor
 function PrepareNecessaryShellVarsForExerciser() {
 
-  TEST_VARS_FILE="${HOME}/.h4mVars.sh";
   if [ ! -f ${TEST_VARS_FILE} ]; then
     cat << EOSVARS > ${TEST_VARS_FILE}
 
@@ -49,6 +49,7 @@ export SSH_KEY_PATH="\${HOME}/.ssh";
 export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
 # The SSH keys of the current user, for ssh-add
+export CURRENT_USER="\$(whoami)";
 export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
 export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
@@ -142,12 +143,19 @@ export TARGET_SRVR="hab4metsrv";
 # The 'habitat' admin account on the server
 export HABITAT_USER="hab";
 
+# Compatibility .....
+export SETUP_USER="\${CURRENT_USER}";
+# export METEOR_SETTINGS_FILE="\${METEOR_SETTINGS_FILE_PATH}";
+export VIRTUAL_HOST_DOMAIN_NAME="\${VHOST_DOMAIN}";
+export SOURCE_CERTS_DIR="\${HABITAT_FOR_METEOR_SECRETS_DIR}";
+export YOUR_PKG="\${TARGET_PROJECT_NAME}";
+
 EOSVARS
 
-
+  chmod 600 ${TEST_VARS_FILE};
   echo -e "
 
-    The file of environment variables '~/.h4mVars.sh' has been generated.
+    The file of environment variables '${TEST_VARS_FILE}' has been generated.
     Please edit as required, and then re-run this script with :
 
         ./exerciser.sh;
@@ -642,7 +650,8 @@ function TrialBuildMeteorProject() {
 
       if has_JSON_element package.json scripts.install_all; then
 
-        # Will use project's own installation script
+        echo -e "Will use project's own installation script";
+        pwd;
         meteor npm run install_all;
 
       else
@@ -1209,8 +1218,7 @@ if [[ "step0_BEGIN_BY_CLEANING" -ge "${EXECUTION_STAGE}" ]]; then
     rm -fr ${TARGET_PROJECT_PARENT_DIR}/${TARGET_PROJECT_NAME};
   fi;
 
-  rm -fr ${HOME}/.h4mVars
-.sh;
+  rm -fr ${TEST_VARS_FILE};
 
   echo -e "${PRTY}
 

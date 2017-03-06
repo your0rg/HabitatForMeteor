@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 downloadHabToPathDir() {
 
@@ -97,6 +97,7 @@ HAB_SSH_KEY_NAME=authorized_key;
 
 source secrets.sh;
 # echo -e "${PRTY} MONGODB_PWD=${MONGODB_PWD}";
+# echo -e "${PRTY} PGRESQL_PWD=${PGRESQL_PWD}";
 # echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
@@ -210,7 +211,17 @@ sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
 echo -e "${PRTY} Making SUDO_ASK_PASS for '${HAB_USER}' user  ...";
 sudo -A -sHu ${HAB_USER} bash -c "source askPassMaker.sh; makeAskPassService ${HAB_USER} ${HABITAT_USER_PWD};";
 
+declare PGPASSFILE=${HAB_DIR}/.pgpass;
+echo -e "${PRTY} Making '${PGPASSFILE}' for '${HAB_USER}' user  ...";
+sudo -A touch ${PGPASSFILE};
+sudo -A chmod 666 ${PGPASSFILE};
+echo "*:*:*:${HAB_USER}:${PGRESQL_PWD}" > ${PGPASSFILE};
+sudo -A chmod 0600 ${PGPASSFILE};
+sudo -A chown ${HAB_USER}:${HAB_USER} ${PGPASSFILE};
+
 popd;
+
+
 echo -e "${PRTY} Moving bundle directory, '${BUNDLE_DIRECTORY_NAME}' to '/home/${HAB_USER}'";
 sudo -A rm -fr ${BUNDLE_NAME};
 sudo -A rm -fr ${HAB_DIR}/${BUNDLE_DIRECTORY_NAME};

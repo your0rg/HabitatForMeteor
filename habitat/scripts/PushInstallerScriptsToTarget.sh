@@ -219,6 +219,13 @@ if [[ "X${MONGODB_PWD}X" = "XX" ]]; then errorNoSuitablePasswordInFile "null"; f
 
 
 # ----------------
+echo -e "${PRTY} Validating target host's PostgreSql user's password... ";
+if [[ "X${PGRESQL_PWD}X" = "XX" ]]; then errorNoSuitablePasswordInFile "null"; fi;
+[[ 0 -lt $(echo ${PGRESQL_PWD} | grep -cE "^.{${PASSWORD_MINIMUM_LENGTH},}$") ]] ||  errorNoSuitablePasswordInFile ${PGRESQL_PWD};
+
+
+
+# ----------------
 HABITAT_USER_SSH_KEY_FILE_NAME="authorized_key";
 echo -e "${PRTY} Validating target host's user's SSH ${HABITAT_USER_SSH_KEY_FILE_NAME}... ";
 if [[ "X${HABITAT_USER_SSH_KEY_PUBL}X" = "XX" ]]; then errorBadPathToSSHKey "null"; fi;
@@ -231,6 +238,7 @@ echo -e "${PRTY} Ready to push HabitatForMeteor deployment scripts to the target
        '${TARGET_SRVR}' prior to placing a RPC to install our Meteor project....";
 
 echo -e "${PRTY} Inserting secrets and keys in, '${BUNDLE_NAME}'...";
+
 chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
 cp -p ${METEOR_SETTINGS_FILE} ${SCRIPTS_DIRECTORY};
 chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
