@@ -19,43 +19,69 @@ function initialize_server()
   echo -e "PG_BKP -- ${PG_BKP}";
   echo -e "PG_UID -- ${PG_UID}";
   echo -e "PG_PWD -- ${PG_PWD}";
+  declare SEED_FILE="pgres_seed.sql";
   if [[ -z ${PG_BKP} ]]; then
     echo -e "${PRTY} No PostgreSQL seed URL was specified. Skipping ...";
   else
+    echo -e "${PRTY} Downloading and restoring PostgreSQL seed from URL ...
+    to have internal standard name '${SEED_FILE}'";
 
-    declare IB_SCHEMA="iridiumblue";
+    # rm -f ${SEED_FILE};
+    curl -z ${SEED_FILE} -L -o ${SEED_FILE} ${PG_BKP} ;
+    ls -l ${SEED_FILE};
+    declare SCHEMA_NAME=$(cat ${SEED_FILE} \
+      | grep -m 1 -Poh "(?<=\bSCHEMA\s)(\w+)" );
+
+    declare SCHEMA_OWNER=$(cat ${SEED_FILE} \
+      | grep "ALTER .* OWNER TO .*;"  \
+      | grep -m 1 -oh "TO .*;"  \
+      | cut -d " " -f 2  \
+      | cut -d ";" -f 1);
 
     export METSQL='psql -h localhost -d meteor';
 
-#    ${METSQL} -tc "DROP SCHEMA ${IB_SCHEMA} CASCADE" 2>/dev/null;
-    ${METSQL} -tc "CREATE SCHEMA IF NOT EXISTS ${IB_SCHEMA}";
+    echo -e "${PRTY} Creating Meteor app user '${PG_UID}' if not exists";
+    SCHEMA_USER=$(${METSQL} -tc "SELECT usename FROM pg_user WHERE usename = '${PG_UID}'" | xargs);
+    if [[ -z  ${SCHEMA_USER} ]]; then
+      ${METSQL} -tc "CREATE USER ${PG_UID} WITH PASSWORD '${PG_PWD}'";
+      ${METSQL} -tc "GRANT ALL PRIVILEGES ON SCHEMA ${SCHEMA_NAME} TO  ${PG_UID}";
+    fi;
 
-    declare COUNT_IRIDIUM_BLUE_TABLES="SELECT count(table_name) FROM information_schema.tables WHERE table_schema = '${IB_SCHEMA}'";
-    declare NUM_IRIDIUM_BLUE_TABLES=$(${METSQL} -tc "${COUNT_IRIDIUM_BLUE_TABLES}" | xargs);
-
-    if [[ 0 < ${NUM_IRIDIUM_BLUE_TABLES} ]]; then
-      echo -e "${PRTY} Schema, '${IB_SCHEMA}', has tables already. Skipping..." ;
+    if [[ -z ${SCHEMA_NAME} ]]; then
+      echo -e "No schema name specified... >${SCHEMA_NAME}<";
+      SCHEMA_NAME="public";
     else
-      echo -e "${PRTY} Downloading and restoring PostgreSQL seed from URL ...";
+      echo -e "Specified schema name... >${SCHEMA_NAME}<";
+      # ${METSQL} -tc "DROP SCHEMA ${SCHEMA_NAME} CASCADE" 2>/dev/null;
+      ${METSQL} -tc "CREATE SCHEMA IF NOT EXISTS ${SCHEMA_NAME}";
+    fi;
 
-      # rm -f pgres_seed.sql;
-      curl -z pgres_seed.sql -L -o pgres_seed.sql ${PG_BKP} ;
-      ls -l pgres_seed.sql;
-      declare SCHEMA_OWNER=$(cat pgres_seed.sql \
-        | grep "ALTER SCHEMA .* OWNER TO .*;"  \
-        | grep -oh "TO .*;"  \
-        | cut -d " " -f 2  \
-        | cut -d ";" -f 1);
+    export SCHEMA_USER="";
+    if [[ -z ${SCHEMA_OWNER} ]]; then
+      echo -e "No schema owner specified... >${SCHEMA_OWNER}<";
+    else
       echo -e "${PRTY} Creating schema owner '${SCHEMA_OWNER}' if not exists";
-      export SCHEMA_USER=$(${METSQL} -tc "SELECT usename FROM pg_user WHERE usename = '${SCHEMA_OWNER}'" | xargs);
+      SCHEMA_USER=$(${METSQL} -tc "SELECT usename FROM pg_user WHERE usename = '${SCHEMA_OWNER}'" | xargs);
       if [[ -z  ${SCHEMA_USER} ]]; then
-        ${METSQL} -tc "CREATE USER ${PG_UID} WITH PASSWORD '${PG_PWD}'";
-        ${METSQL} -tc "GRANT ALL PRIVILEGES ON SCHEMA ${IB_SCHEMA} TO  ${PG_UID}";
+        ${METSQL} -tc "CREATE USER ${SCHEMA_OWNER}";
+        ${METSQL} -tc "GRANT ALL PRIVILEGES ON SCHEMA ${SCHEMA_NAME} TO  ${SCHEMA_OWNER}";
       fi;
-      ${METSQL} -qf pgres_seed.sql &>/dev/null;
+    fi;
+
+
+    declare COUNT_SCHEMA_TABLES="SELECT count(table_name) FROM information_schema.tables WHERE table_schema = '${SCHEMA_NAME}'";
+    declare NUM_SCHEMA_TABLES=$(${METSQL} -tc "${COUNT_SCHEMA_TABLES}" | xargs);
+    if [[ 0 < ${NUM_SCHEMA_TABLES} ]]; then
+      echo -e "${PRTY} Schema, '${SCHEMA_NAME}', has tables already. Skipping..." ;
+    else
+      echo -e "${PRTY} Restoring PostgreSQL from seed file, '${SEED_FILE}'.";
+
+      ${METSQL} -qf ${SEED_FILE} &>/dev/null;
 
       echo -e "${PRTY} Database sown ...";
     fi;
+
+
   fi;
 
   echo -e "\n${PRTY} Server initialized."  | tee -a ${LOG};
@@ -72,3 +98,4 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   initialize_server;
 
 fi;
+

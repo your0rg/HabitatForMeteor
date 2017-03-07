@@ -303,18 +303,23 @@ sudo -A mkdir -p ${META_DIR}/var/logs; # > /dev/null;
 # sudo -A echo -e "nginx is ready" >> ${META_DIR}/data/index.html;
 
 # declare NGINX_CONF="${SVC_DIR}/nginx/config/nginx.conf";
-declare NGINX_CONF="/hab/pkgs/${YOUR_ORG}/nginx/1.10.1/20161105150115/config/nginx.conf";
+declare NGINX_CONFIG_DIR="/hab/pkgs/${YOUR_ORG}/nginx/1.10.1/20161105150115/config";
+declare NGINX_CONF="${NGINX_CONFIG_DIR}/nginx.conf";
+echo -e "${PRETTY} Ensuring that Nginx bucket size can be set to 64 in '${NGINX_CONF}'." | tee -a ${LOG};
 
 declare EXISTING_SETTING="keepalive_timeout";
 declare MISSING_SETTING="server_names_hash_bucket_size";
 declare REPLACEMENT="    ${MISSING_SETTING} 64;\n    ${EXISTING_SETTING} 60;";
 
+# sudo -A mkdir -p ${NGINX_CONFIG_DIR};
+# sudo -A touch ${NGINX_CONF};
 if ! sudo -A grep "${MISSING_SETTING}" ${NGINX_CONF} >/dev/null; then
   echo -e "
   FIXME : This hack should not be necessary when Habitat accepts my PR.
   ";
   sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${NGINX_CONF};
 fi;
+sudo -A ls -l ${NGINX_CONFIG_DIR};
 
 echo -e "${PRETTY} Start up the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl start ${UNIT_FILE};
