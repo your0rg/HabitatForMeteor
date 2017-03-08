@@ -5,6 +5,7 @@ function makeAskPassService() {
   SUPWD="${SSHPTH}/.supwd.sh";
   mkdir -p ${SSHPTH};
   echo -e '#!/usr/bin/env bash' > ${SUPWD};
+  echo -e '#' >> ${SUPWD};
   echo -e "echo '${2}';" >> ${SUPWD};
   chmod a+x,go-rwx ${SUPWD};
   echo "Created the ASKPASS service.";

@@ -308,10 +308,10 @@ The **client side** steps to perform server side preparations are :
     ```
     export HABITAT_PROJ_DIR="${HOME}/tools/HabitatForMeteor";
     export TARGET_SRVR="hab4metsrv";
-    export SETUP_USER="$(whoami)";
+    export SETUP_USER_UID="$(whoami)";
     export METEOR_SETTINGS_FILE="${HOME}/.ssh/hab_vault/settings.json";
     export SOURCE_SECRETS_FILE="${HOME}/.ssh/hab_vault/secrets.sh";
-    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+    ${HABITAT_PROJ_DIR}/habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
     ```
 The required arguments are :
 
@@ -649,11 +649,11 @@ This step first attempts to catch any lapses in the discipline described in the 
                  placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
 
             cd /home/you/projects/mmks;
-            ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
+            ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
 
           Where :
             TARGET_SRVR is the host where the project will be installed.
-            SETUP_USER is a previously prepared 'sudoer' account on '${TARGET_SRVR}'.
+            SETUP_USER_UID is a previously prepared 'sudoer' account on '${TARGET_SRVR}'.
             METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
             SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
                 ( example file : /home/you/projects/mmks/.habitat/scripts/target/secrets.sh.example )

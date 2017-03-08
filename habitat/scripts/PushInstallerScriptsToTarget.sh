@@ -5,12 +5,12 @@ function usage() {
   echo -e "    Usage ::
      ${SCRIPTPATH}/PushInstallerScriptsToTarget.sh \\
                    \${TARGET_SRVR} \\
-                   \${SETUP_USER} \\
+                   \${SETUP_USER_UID} \\
                    \${METEOR_SETTINGS_FILE} \\
                    \${SOURCE_SECRETS_FILE}
       Where :
         TARGET_SRVR is the host where the project will be installed.
-        SETUP_USER is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
+        SETUP_USER_UID is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
         METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/target/secrets.sh.example )
@@ -129,7 +129,7 @@ loadSemVerScript;
 PRTY="PIStT  ==> ";
 
 TARGET_SRVR=${1};
-SETUP_USER=${2};
+SETUP_USER_UID=${2};
 METEOR_SETTINGS_FILE=${3};
 SOURCE_SECRETS_FILE=${4};
 
@@ -139,7 +139,7 @@ HABITAT_USER='hab';
 PASSWORD_MINIMUM_LENGTH=4;
 
 echo -e "${PRTY} TARGET_SRVR=${TARGET_SRVR}";
-echo -e "${PRTY} SETUP_USER=${SETUP_USER}";
+echo -e "${PRTY} SETUP_USER_UID=${SETUP_USER_UID}";
 echo -e "${PRTY} METEOR_SETTINGS_FILE=${METEOR_SETTINGS_FILE}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
 
@@ -169,11 +169,11 @@ echo -e "${PRTY} Adding keys to ssh-agent";
 export KEYPAIR="${HOME}/.ssh/id_rsa";
 ssh-add -l | grep -c ${KEYPAIR} >/dev/null || ssh-add ${KEYPAIR};
 
-# # echo ${HABITAT_USER_SSH_PASS} ${HABITAT_USER_SSH_KEY_FILE};
+# # echo ${HABITAT_USER_SSH_PASS_PHRASE} ${HABITAT_USER_SSH_KEY_FILE};
 # expect << EOF
 #   spawn ssh-add ${HABITAT_USER_SSH_KEY_FILE}
 #   expect "Enter passphrase"
-#   send "${HABITAT_USER_SSH_PASS}\r"
+#   send "${HABITAT_USER_SSH_PASS_PHRASE}\r"
 #   expect eof
 # EOF
 echo -e "${PRTY} Added keys to ssh-agent";
@@ -255,35 +255,39 @@ rm -f ./${SCRIPTS_DIRECTORY}/${TARGET_SETTINGS_FILE};
 TARGET_SECRETS_FILE=$(basename "$SOURCE_SECRETS_FILE");
 rm -f ./${SCRIPTS_DIRECTORY}/${TARGET_SECRETS_FILE};
 
-echo -e "${PRTY} Pushing the bundle to account name '${SETUP_USER}' on
+echo -e "${PRTY} Pushing the bundle to account name '${SETUP_USER_UID}' on
       host '${TARGET_SRVR}' using SSH key...
        '~/.ssh/id_rsa'...";
 
-scp -p ${BUNDLE_NAME} ${SETUP_USER}@${TARGET_SRVR}:/home/${SETUP_USER} >/dev/null || errorFailedToPushBundle;
+scp -p ${BUNDLE_NAME} ${SETUP_USER_UID}@${TARGET_SRVR}:/home/${SETUP_USER_UID} >/dev/null || errorFailedToPushBundle;
 rm -fr ${BUNDLE_NAME};
 
 echo -e "${PRTY} Decompressing the bundle...";
-ssh ${SETUP_USER}@${TARGET_SRVR} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
+ssh ${SETUP_USER_UID}@${TARGET_SRVR} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Setting up SUDO_ASK_PASS on the target...";
-# echo "scp ./target/askPassMaker.sh ${SETUP_USER}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;";
-scp ./target/askPassMaker.sh ${SETUP_USER}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;
-# echo "ssh ${SETUP_USER}@${TARGET_SRVR} \"source askPassMaker.sh; makeAskPassService ${SETUP_USER} ${SETUP_USER_PWD};\" >/dev/null || errorUnexpectedRPCResult;";
-ssh ${SETUP_USER}@${TARGET_SRVR} "source askPassMaker.sh; makeAskPassService ${SETUP_USER} ${SETUP_USER_PWD};" >/dev/null || errorUnexpectedRPCResult;
+# echo "scp ./target/askPassMaker.sh ${SETUP_USER_UID}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;";
+scp ./target/askPassMaker.sh ${SETUP_USER_UID}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;
+# echo "ssh ${SETUP_USER_UID}@${TARGET_SRVR} \"source askPassMaker.sh; makeAskPassService '${SETUP_USER_UID}' '${SETUP_USER_PWD}';\" >/dev/null || errorUnexpectedRPCResult;";
+ssh ${SETUP_USER_UID}@${TARGET_SRVR} "source askPassMaker.sh; makeAskPassService '${SETUP_USER_UID}' '${SETUP_USER_PWD}';" >/dev/null || errorUnexpectedRPCResult;
 
 echo -e "${PRTY} Installing Habitat on the target...";
-# echo "ssh ${SETUP_USER}@${TARGET_SRVR} \". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh\" || errorUnexpectedRPCResult;";
-ssh ${SETUP_USER}@${TARGET_SRVR} ". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
+echo -e "ssh ${SETUP_USER_UID}@${TARGET_SRVR} \". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh\" || errorUnexpectedRPCResult;";
+# echo -e "PushInst line 276";
+# exit 1;
+ssh ${SETUP_USER_UID}@${TARGET_SRVR} ". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
 
 # ----------------
-echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";
-startSSHAgent;
-expect << EOF
-  spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
-  expect "Enter passphrase"
-  send "${HABITAT_USER_SSH_PASS}\r"
-  expect eof
+if ! ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}" &>/dev/null; then
+  echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";
+  startSSHAgent;
+  expect << EOF
+    spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
+    expect "Enter passphrase"
+    send "${HABITAT_USER_SSH_PASS_PHRASE}\r"
+    expect eof
 EOF
+fi;
 
 # ----------------
 echo -e "${PRTY} Testing SSH connection using... [   ssh ${HABITAT_USER}@${TARGET_SRVR} 'whoami';  ]";

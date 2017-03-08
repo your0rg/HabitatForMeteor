@@ -49,9 +49,9 @@ export SSH_KEY_PATH="\${HOME}/.ssh";
 export SSH_CONFIG_FILE="\${SSH_KEY_PATH}/config";
 
 # The SSH keys of the current user, for ssh-add
-export CURRENT_USER="\$(whoami)";
-export CURRENT_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
-export CURRENT_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
+export SETUP_USER_UID="\$(whoami)";
+export SETUP_USER_SSH_KEY_PRIV="\${SSH_KEY_PATH}/id_rsa";
+export SETUP_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 
 
 
@@ -144,7 +144,7 @@ export TARGET_SRVR="hab4metsrv";
 export HABITAT_USER="hab";
 
 # Compatibility .....
-export SETUP_USER="\${CURRENT_USER}";
+export SETUP_USER="\${SETUP_USER_UID}";
 # export METEOR_SETTINGS_FILE="\${METEOR_SETTINGS_FILE_PATH}";
 export VIRTUAL_HOST_DOMAIN_NAME="\${VHOST_DOMAIN}";
 export SOURCE_CERTS_DIR="\${HABITAT_FOR_METEOR_SECRETS_DIR}";
@@ -286,9 +286,9 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 
 #     echo -e "Preparing SSH config file.";
 
-#     CURRENT_USER=$(whoami);
+#     SETUP_USER_UID=$(whoami);
 #     #
-#     export PTRN="# ${CURRENT_USER} account on ${TARGET_SRVR}";
+#     export PTRN="# ${SETUP_USER_UID} account on ${TARGET_SRVR}";
 #     export PTRNB="${PTRN} «begins»";
 #     export PTRNE="${PTRN} «ends»";
 #     #
@@ -305,9 +305,9 @@ ConfigureSSHConfigForUser ${YOUR_ORG} github.com ${YOUR_ORG_IDENTITY_FILE};
 #     ${PTRNB}
 #     Host ${TARGET_SRVR}
 #         HostName ${TARGET_SRVR}
-#         User ${CURRENT_USER}
+#         User ${SETUP_USER_UID}
 #         PreferredAuthentications publickey
-#         IdentityFile ${CURRENT_USER_SSH_KEY_PRIV}
+#         IdentityFile ${SETUP_USER_SSH_KEY_PRIV}
 #     ${PTRNE}
 #     " >> ${SSH_CONFIG_FILE}
 
@@ -1247,7 +1247,7 @@ CheckForHabitatOriginKeys;
 startSSHAgent;
 
 # Add user key to agent;
-AddSSHkeyToAgent ${CURRENT_USER_SSH_KEY_PRIV};
+AddSSHkeyToAgent ${SETUP_USER_SSH_KEY_PRIV};
 
 
 if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
@@ -1275,7 +1275,7 @@ if [[ "step1_ONCE_ONLY_INITIALIZATIONS" -ge "${EXECUTION_STAGE}" ]]; then
   TrialRunMeteorProject;
 
   echo "${PRTY} Preparing SSH config file for you on server '${TARGET_SRVR}'.";
-  ConfigureSSHConfigForUser $(whoami) ${TARGET_SRVR} ${CURRENT_USER_SSH_KEY_PRIV};
+  ConfigureSSHConfigForUser $(whoami) ${TARGET_SRVR} ${SETUP_USER_SSH_KEY_PRIV};
 
 
 fi;
