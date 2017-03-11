@@ -175,12 +175,15 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org-shell >>  
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client-9.6 >>  ${LOG};
 
 
-echo -e "${PRTY} Ensuring mkpasswd is installed.  "  | tee -a ${LOG};
-sudo -A apt-get install -y whois;
+echo -e "${PRTY} Ensuring command 'mkpassword' exists . . .  " | tee -a ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y whois  >>  ${LOG};
 
 echo -e "${PRTY} Ensuring able to parse JSON files.  "  | tee -a ${LOG};
-sudo -A apt-get install -y jq;
-sudo -A apt-get install -y tree;
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y jq;
+
+echo -e "${PRTY} Ensuring able to download files.  "  | tee -a ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y curl;
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y tree;
 
 
 if ! id -u ${HAB_USER} &>/dev/null; then
@@ -191,15 +194,21 @@ if ! id -u ${HAB_USER} &>/dev/null; then
   echo -e "${PRTY} Adding user '${HAB_USER}' to sudoers . . .  " | tee -a ${LOG};
   sudo -A usermod -aG sudo ${HAB_USER};
 
-  echo -e "${PRTY} Setting password for user '${HAB_USER}' . . .  " | tee -a ${LOG};
-  sudo -A usermod --password $( mkpasswd ${HABITAT_USER_PWD} ) ${HAB_USER};
-
 fi;
 
-sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_DIR};
+echo -e "${PRTY} Setting password '${HABITAT_USER_PWD}' for user '${HAB_USER}' . . .  " | tee -a ${LOG};
+touch /dev/shm/tmppwd;
+chmod go-rwx /dev/shm/tmppwd;
+cat << EOF > /dev/shm/tmppwd
+${HAB_USER}:${HABITAT_USER_PWD}
+EOF
+# ls -l /dev/shm/tmppwd;
+# cat /dev/shm/tmppwd;
+cat /dev/shm/tmppwd | sudo -A chpasswd;
+rm -fr /dev/shm/tmppwd;
 
-echo -e "${PRTY} Ensuring command 'mkpassword' exists . . .  " | tee -a ${LOG};
-sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y whois  >>  ${LOG};
+
+sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_DIR};
 
 echo -e "${PRTY} Adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  " | tee -a ${LOG};
 sudo -A mkdir -p ${HAB_SSH_DIR};
@@ -208,8 +217,12 @@ sudo -A cp ${HABITAT_USER_SSH_KEY_NAME} ${HAB_SSH_AXS};
 sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
 # cat ${HAB_SSH_AXS};
 
-echo -e "${PRTY} Making SUDO_ASK_PASS for '${HAB_USER}' user  ...";
-sudo -A -sHu ${HAB_USER} bash -c "source askPassMaker.sh; makeAskPassService ${HAB_USER} ${HABITAT_USER_PWD};";
+echo -e "${PRTY} Making SUDO_ASK_PASS for '${HAB_USER}' user  ... (  in $(pwd)  )";
+sudo -A -sHu ${HAB_USER} bash -c "source askPassMaker.sh; makeAskPassService ${HAB_USER} '${HABITAT_USER_PWD}';";
+
+
+
+
 
 declare PGPASSFILE=${HAB_DIR}/.pgpass;
 echo -e "${PRTY} Making '${PGPASSFILE}' for '${HAB_USER}' user  ...";
@@ -227,6 +240,7 @@ sudo -A rm -fr ${BUNDLE_NAME};
 sudo -A rm -fr ${HAB_DIR}/${BUNDLE_DIRECTORY_NAME};
 sudo -A mv ${BUNDLE_DIRECTORY_NAME} ${HAB_DIR};
 sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_DIR}/${BUNDLE_DIRECTORY_NAME};
+sudo -A chmod go-rwx ${HAB_DIR}/${BUNDLE_DIRECTORY_NAME};
 
 # KY_SUDO_ASK_PASS="SUDO_ASKPASS";
 # VL_SUDO_ASK_PASS=".supwd.sh";

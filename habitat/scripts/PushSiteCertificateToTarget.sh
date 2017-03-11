@@ -6,13 +6,15 @@ function usage() {
        \${TARGET_SRVR} \\
        \${SOURCE_SECRETS_FILE} \\
        \${SOURCE_CERTS_DIR} \\
-       \${VIRTUAL_HOST_DOMAIN_NAME}
+       \${VIRTUAL_HOST_DOMAIN_NAME} \\
+       \${VHOST_ENV_VARS}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
         SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
         VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
             ( example source secrets file : ${SCRIPTPATH}/target/secrets.sh.example )
+        VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
 
   ";
   exit 1;
@@ -66,6 +68,7 @@ export TARGET_SRVR=${1};
 export SOURCE_SECRETS_FILE=${2};
 export SOURCE_CERTS_DIR=${3};
 export VIRTUAL_HOST_DOMAIN_NAME=${4};
+export VHOST_ENV_VARS=${5};
 
 export HABITAT_USER=hab;
 export BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
@@ -74,11 +77,13 @@ echo -e "${PRTY} TARGET_SRVR=${TARGET_SRVR}";
 echo -e "${PRTY} HABITAT_USER=${HABITAT_USER}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
 echo -e "${PRTY} VIRTUAL_HOST_DOMAIN_NAME=${VIRTUAL_HOST_DOMAIN_NAME}";
+echo -e "${PRTY} VHOST_ENV_VARS=${VHOST_ENV_VARS}";
 
 # ----------------
 echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
 if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
 if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
+
 source ${SOURCE_SECRETS_FILE};
 
 # ----------------
@@ -87,16 +92,26 @@ if [[ "X${TARGET_SRVR}X" = "XX" ]]; then errorNoRemoteHostSpecified "null"; fi;
 ping -c 1 ${TARGET_SRVR} >/dev/null || errorCannotPingRemoteServer "${TARGET_SRVR}";
 
 
-
 # ----------------
-echo -e "${PRTY} Activating ssh-agent for hab user's ssh key passphrase";
-startSSHAgent;
-expect << EOF
-  spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
-  expect "Enter passphrase"
-  send "${HABITAT_USER_SSH_PASS}\r"
-  expect eof
+echo -e "${PRTY} Testing environment vars file availability... [   ls \"${VHOST_ENV_VARS}\"  ]";
+if [[ "X${VHOST_ENV_VARS}X" = "XX" ]]; then errorNoEnvVarsFileSpecified "null"; fi;
+if [ ! -f "${VHOST_ENV_VARS}" ]; then errorNoEnvVarsFileSpecified "${VHOST_ENV_VARS}"; fi;
+
+source ${VHOST_ENV_VARS};
+
+
+ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}";
+echo -e "# ----------------";
+if ! ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}" &>/dev/null; then
+  echo -e "${PRTY} Activating ssh-agent for hab user's ssh key passphrase";
+  startSSHAgent;
+  expect << EOF
+    spawn ssh-add ${HABITAT_USER_SSH_KEY_PUBL%.pub}
+    expect "Enter passphrase"
+    send "${HABITAT_USER_SSH_PASS}\r"
+    expect eof
 EOF
+fi;
 
 
 
@@ -113,21 +128,20 @@ if [ ! -d "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}" ]; then
   errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}";
 fi;
 
-# ----------------
-echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
-if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
-if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
-source ${SOURCE_SECRETS_FILE};
-
+# echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH";
 declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
-# echo ${CP}
-declare CERT_PATH=$(echo ${!CP});
-# echo "~~~~~~~~~~~~~~~~~~~~~~ ${CERT_PATH} ~~~~~~~~~~~~";
+echo "CP = ${CP} --> ${!CP}";
+declare CERT_PATH=$(echo ${!CP}); # Indirect reference returns nothing if no such variable has been declared.
+echo "~~~~~~~~~~~~~~~~~~~~~~ ${CERT_PATH} ~~~~~~~~~~~~";
+if[[ -z "${CERT_PATH}" ]]; then
+  echo -e "No environment variable, '${CP}', could be sourced. Indirect variable failure."  ;
+  exit;
+fi;
 
 # declare TARGET_CERT_PATH="/home/hab/.ssh/hab_vault/${VIRTUAL_HOST_DOMAIN_NAME}";
 echo -e "${PRTY} Copying '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate
                from ${SOURCE_CERTS_DIR}
-                 to ${TARGET_SRVR}:${TARGET_CERT_PATH}";
+                 to ${TARGET_SRVR}:${CERT_PATH}";
 ssh ${HABITAT_USER}@${TARGET_SRVR} mkdir -p ${CERT_PATH};
 scp ${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}/* ${HABITAT_USER}@${TARGET_SRVR}:${CERT_PATH} >/dev/null;
 

@@ -7,13 +7,15 @@ function usage() {
                    \${TARGET_SRVR} \\
                    \${SETUP_USER_UID} \\
                    \${METEOR_SETTINGS_FILE} \\
-                   \${SOURCE_SECRETS_FILE}
+                   \${SOURCE_SECRETS_FILE} \\
+                   \${VHOST_ENV_VARS}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER_UID is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
         METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/target/secrets.sh.example )
+        VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
 
   ";
   exit 1;
@@ -54,6 +56,11 @@ function warningEmptySettingsFileSpecified() {
 
 function errorNoSecretsFileSpecified() {
   echo -e "\n\n    *** A valid path to a file of secrets for the remote server needs to be specified, not '${1}'  ***";
+  usage;
+}
+
+function errorNoEnvVarsFileSpecified() {
+  echo -e "\n\n    *** A valid path to a file of environment variables for the remote server needs to be specified, not '${1}'  ***";
   usage;
 }
 
@@ -132,6 +139,7 @@ TARGET_SRVR=${1};
 SETUP_USER_UID=${2};
 METEOR_SETTINGS_FILE=${3};
 SOURCE_SECRETS_FILE=${4};
+VHOST_ENV_VARS=${5};
 
 HABITAT_USER='hab';
 
@@ -142,13 +150,30 @@ echo -e "${PRTY} TARGET_SRVR=${TARGET_SRVR}";
 echo -e "${PRTY} SETUP_USER_UID=${SETUP_USER_UID}";
 echo -e "${PRTY} METEOR_SETTINGS_FILE=${METEOR_SETTINGS_FILE}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
-
-SCRIPTS_DIRECTORY="target";
-BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
-BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
+echo -e "${PRTY} VHOST_ENV_VARS=${VHOST_ENV_VARS}";
 
 set -e;
 
+# ----------------
+echo -e "${PRTY} Testing settings file availability... [   ls \"${METEOR_SETTINGS_FILE}\"  ]";
+if [[ "X${METEOR_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
+if [ "${METEOR_SETTINGS_FILE:0:1}" != "/" ]; then
+  METEOR_SETTINGS_FILE="${CURR_DIR}/${METEOR_SETTINGS_FILE}";
+fi;
+if [ ! -f "${METEOR_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
+if [ ! -s "${METEOR_SETTINGS_FILE}" ]; then warningEmptySettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
+
+# ----------------
+echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
+if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
+if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
+source ${SOURCE_SECRETS_FILE};
+
+# ----------------
+echo -e "${PRTY} Testing environment vars file availability... [   ls \"${VHOST_ENV_VARS}\"  ]";
+if [[ "X${VHOST_ENV_VARS}X" = "XX" ]]; then errorNoEnvVarsFileSpecified "null"; fi;
+if [ ! -f "${VHOST_ENV_VARS}" ]; then errorNoEnvVarsFileSpecified "${VHOST_ENV_VARS}"; fi;
+source ${VHOST_ENV_VARS};
 
 
 # ----------------
@@ -179,24 +204,8 @@ ssh-add -l | grep -c ${KEYPAIR} >/dev/null || ssh-add ${KEYPAIR};
 echo -e "${PRTY} Added keys to ssh-agent";
 
 
-# ----------------
-echo -e "${PRTY} Testing settings file availability... [   ls \"${METEOR_SETTINGS_FILE}\"  ]";
-if [[ "X${METEOR_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
-if [ "${METEOR_SETTINGS_FILE:0:1}" != "/" ]; then
-  METEOR_SETTINGS_FILE="${CURR_DIR}/${METEOR_SETTINGS_FILE}";
-fi;
-if [ ! -f "${METEOR_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
-if [ ! -s "${METEOR_SETTINGS_FILE}" ]; then warningEmptySettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
-
-# ----------------
-echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
-if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
-if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
-source ${SOURCE_SECRETS_FILE};
-
-
-echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
-echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
+# echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
+# echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
 echo -e "${PRTY} HABITAT_USER_SSH_KEY_PUBL=${HABITAT_USER_SSH_KEY_PUBL}";
 
 # ----------------
@@ -224,7 +233,7 @@ if [[ "X${PGRESQL_PWD}X" = "XX" ]]; then errorNoSuitablePasswordInFile "null"; f
 [[ 0 -lt $(echo ${PGRESQL_PWD} | grep -cE "^.{${PASSWORD_MINIMUM_LENGTH},}$") ]] ||  errorNoSuitablePasswordInFile ${PGRESQL_PWD};
 
 
-
+echo -e "HABITAT_USER_SSH_KEY_PUBL=${HABITAT_USER_SSH_KEY_PUBL}";
 # ----------------
 HABITAT_USER_SSH_KEY_FILE_NAME="authorized_key";
 echo -e "${PRTY} Validating target host's user's SSH ${HABITAT_USER_SSH_KEY_FILE_NAME}... ";
@@ -234,36 +243,60 @@ echo -e "${PRTY} Target's user's SSH key fingerprint...";
 cat /tmp/kyfp.txt;
 
 
+
+BUNDLING_DIRECTORY="/dev/shm";
+BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
+BUNDLE_DIRECTORY="${BUNDLING_DIRECTORY}/${BUNDLE_DIRECTORY_NAME}";
+BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
+
+echo -e "VHOST_ENV_VARS=${VHOST_ENV_VARS}";
+
+echo -e "BUNDLE_DIRECTORY=${BUNDLE_DIRECTORY}";
+echo -e "BUNDLE_NAME=${BUNDLE_NAME}";
 echo -e "${PRTY} Ready to push HabitatForMeteor deployment scripts to the target server,
        '${TARGET_SRVR}' prior to placing a RPC to install our Meteor project....";
 
-echo -e "${PRTY} Inserting secrets and keys in, '${BUNDLE_NAME}'...";
+echo -e "${PRTY} Inserting scripts, variables, secrets and keys into, '${BUNDLE_NAME}'...";
 
-chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
-cp -p ${METEOR_SETTINGS_FILE} ${SCRIPTS_DIRECTORY};
-chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
-cp -p ${SOURCE_SECRETS_FILE} ${SCRIPTS_DIRECTORY};
-cp -p ${HABITAT_USER_SSH_KEY_PUBL} ${SCRIPTS_DIRECTORY}/${HABITAT_USER_SSH_KEY_FILE_NAME};
 
-echo -e "${PRTY} Bundling up the scripts as, '${BUNDLE_NAME}'...";
-tar zcf ${BUNDLE_NAME}  --exclude='*.example' ${SCRIPTS_DIRECTORY};
-chmod go-xrw ${BUNDLE_NAME};
+mkdir -p ${BUNDLE_DIRECTORY};
 
-TARGET_SETTINGS_FILE=$(basename "$METEOR_SETTINGS_FILE");
-rm -f ./${SCRIPTS_DIRECTORY}/${TARGET_SETTINGS_FILE};
+cp -p ./target/* ${BUNDLE_DIRECTORY};
 
-TARGET_SECRETS_FILE=$(basename "$SOURCE_SECRETS_FILE");
-rm -f ./${SCRIPTS_DIRECTORY}/${TARGET_SECRETS_FILE};
+pushd ${BUNDLING_DIRECTORY} >/dev/null;
+  pushd ${BUNDLE_DIRECTORY} >/dev/null;
+
+    cp -p ${VHOST_ENV_VARS} .;
+
+    chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
+    cp -p ${METEOR_SETTINGS_FILE} .;
+
+
+    chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
+    cp -p ${SOURCE_SECRETS_FILE} .;
+    cp -p ${HABITAT_USER_SSH_KEY_PUBL} ./${HABITAT_USER_SSH_KEY_FILE_NAME};
+
+    cat ./${HABITAT_USER_SSH_KEY_FILE_NAME};
+
+  popd >/dev/null;
+
+  echo -e "${PRTY} Bundling up the scripts as, '${BUNDLE_NAME}'...";
+  tar zcf ${BUNDLING_DIRECTORY}/${BUNDLE_NAME}  --exclude='*.example' ${BUNDLE_DIRECTORY_NAME};
+  chmod go-xrw ${BUNDLING_DIRECTORY}/${BUNDLE_NAME};
+
+popd >/dev/null;
+
 
 echo -e "${PRTY} Pushing the bundle to account name '${SETUP_USER_UID}' on
       host '${TARGET_SRVR}' using SSH key...
        '~/.ssh/id_rsa'...";
 
-scp -p ${BUNDLE_NAME} ${SETUP_USER_UID}@${TARGET_SRVR}:/home/${SETUP_USER_UID} >/dev/null || errorFailedToPushBundle;
-rm -fr ${BUNDLE_NAME};
+scp -p ${BUNDLING_DIRECTORY}/${BUNDLE_NAME} ${SETUP_USER_UID}@${TARGET_SRVR}:/home/${SETUP_USER_UID} >/dev/null || errorFailedToPushBundle;
+rm -fr ${BUNDLE_DIRECTORY};
 
 echo -e "${PRTY} Decompressing the bundle...";
 ssh ${SETUP_USER_UID}@${TARGET_SRVR} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
+
 
 echo -e "${PRTY} Setting up SUDO_ASK_PASS on the target...";
 # echo "scp ./target/askPassMaker.sh ${SETUP_USER_UID}@${TARGET_SRVR}:~ >/dev/null || errorUnexpectedRPCResult;";
@@ -273,11 +306,11 @@ ssh ${SETUP_USER_UID}@${TARGET_SRVR} "source askPassMaker.sh; makeAskPassService
 
 echo -e "${PRTY} Installing Habitat on the target...";
 echo -e "ssh ${SETUP_USER_UID}@${TARGET_SRVR} \". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh\" || errorUnexpectedRPCResult;";
-# echo -e "PushInst line 276";
+# echo -e "PushInst line 314";
 # exit 1;
 ssh ${SETUP_USER_UID}@${TARGET_SRVR} ". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
 
-# ----------------
+# -------------------
 if ! ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}" &>/dev/null; then
   echo -e "${PRTY} Adding 'hab' user SSH key passphrase to ssh-agent";
   startSSHAgent;
@@ -289,11 +322,12 @@ if ! ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}" &>/dev/null; then
 EOF
 fi;
 
-# ----------------
+# ---------------------
 echo -e "${PRTY} Testing SSH connection using... [   ssh ${HABITAT_USER}@${TARGET_SRVR} 'whoami';  ]";
 if [[ "X${HABITAT_USER}X" = "XX" ]]; then errorNoUserAccountSpecified "null"; fi;
 REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) || errorCannotCallRemoteProcedure "${HABITAT_USER}@${TARGET_SRVR}";
 [[ 0 -lt $(echo "${REMOTE_USER}" | grep -c "${HABITAT_USER}") ]] ||  errorUnexpectedRPCResult;
+
 
 if [[ "${NON_STOP}" = "YES" ]]; then exit 0; fi;
 
@@ -304,17 +338,19 @@ echo -e "\n${PRTY} Now you can upload your site certificates to a secure locatio
        \${TARGET_SRVR} \\
        \${SOURCE_SECRETS_FILE} \\
        \${SOURCE_CERTS_DIR} \\
-       \${VIRTUAL_HOST_DOMAIN_NAME}
+       \${VIRTUAL_HOST_DOMAIN_NAME} \\
+       \${VHOST_ENV_VARS}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
         SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '${VIRTUAL_HOST_DOMAIN_NAME}'.
         VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
             ( example source secrets file : /home/you/tools/HabitatForMeteor/habitat/scripts/target/secrets.sh.example )
+        VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
 Quitting...
 $(date);
 Done.
-.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
 ";
 
 popd >/dev/null;

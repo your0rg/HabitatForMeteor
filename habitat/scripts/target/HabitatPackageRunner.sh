@@ -96,7 +96,7 @@ NGINX_VIRTUAL_HOST_FILE_PATH=${NGINX_VHOSTS_DEFINITIONS}/${VIRTUAL_HOST_DOMAIN_N
 
 
 pushd HabitatPkgInstallerScripts >/dev/null;
-
+source vhost_env_vars.sh;
 
 echo -e "${PRETTY} Preparing 'user.toml' file for core/postgresql bundle." | tee -a ${LOG};
 declare POSTGRES_SERVICE="${SVC_DIR}/postgresql";
@@ -109,15 +109,22 @@ sudo -A touch ${POSTGRES_USER_TOML};
 sudo -A chown root:root ${POSTGRES_USER_TOML};
 sudo -A chmod 666 ${POSTGRES_USER_TOML};
 
-echo -e "${PRETTY} Patching super user pwd into core/postgresql 'user.toml' file." | tee -a ${LOG};
+echo -e "${PRETTY} Upserting super user pwd into core/postgresql '${POSTGRES_USER_TOML}' file." | tee -a ${LOG};
 export PG_PWD=$(cat ./settings.json | jq -r .PG_PWD);
+echo -e "
 
+
+                     ${PG_PWD}
+
+
+";
 declare EXISTING_SETTING="initdb_superuser_password";
 declare REPLACEMENT="${EXISTING_SETTING} = \"${PG_PWD}\"";
 grep "${EXISTING_SETTING}" ${POSTGRES_USER_TOML} >/dev/null \
          && sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${POSTGRES_USER_TOML} \
          || echo ${REPLACEMENT} > ${POSTGRES_USER_TOML};
 sudo -A chmod 644 ${POSTGRES_USER_TOML};
+cat ${POSTGRES_USER_TOML};
 
 
 echo -e "${PRETTY} Creating Nginx virtual host directory structure." | tee -a ${LOG};
@@ -167,17 +174,13 @@ export GLOBAL_CERT_PWD_FILE=$(basename "${GLOBAL_CERT_PASSWORD_FILE}");
 
 mkdir -p ${GLOBAL_CERT_PASSWORD_PATH};
 sudo -A touch ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
+
 TMP=$(sudo -A cat ${CERT_PATH}/server.pp);
-CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c ${TMP});
+CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c -- ${TMP});
 if [[ ${CNT} -lt 1 ]]; then
+  echo -e "${PRETTY} Writing site certificates passphrase file." | tee -a ${LOG};
   echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} >/dev/null;
 fi;
-
-# echo -e "~~~~~~~~~~~~~~~~~~
-# Quitting  ...
-# ";
-# popd;
-# exit;
 
 PRETTY="\n  ==> Runner ::";
 LOG="/tmp/${SCRIPTNAME}.log";
@@ -325,28 +328,41 @@ echo -e "${PRETTY} Start up the '${SERVICE_UID}' systemd service . . ." | tee -a
 sudo -A systemctl start ${UNIT_FILE};
 
 
-
 declare DBNAME=;
 DBNAME='template1';
+declare SANITY_CHECK="SELECT datname FROM pg_database where datname='${DBNAME}'";
+
 function testPostgresState() {
-  psql -h localhost -d ${DBNAME} \
-     -tc "SELECT datname FROM pg_database where datname='${DBNAME}'" 2>/dev/null \
+  psql -h localhost -d ${DBNAME} -tc "${SANITY_CHECK}" 2>/dev/null \
      | grep ${DBNAME} &>/dev/null;
 }
 
+
+# function testPostgresState() {
+#   echo -e "
+#                          Retry
+#   ";
+#   psql -h localhost -d ${DBNAME} \
+#      -tc "SELECT datname FROM pg_database where datname='${DBNAME}'"  \
+#      | grep ${DBNAME} ;
+# }
+
 declare SLEEP=2;
-declare REPEAT=10;
+declare REPEAT=60;
 export DELAY=$(( SLEEP * REPEAT ));
 function waitForPostgres() {
 
   # testPostgresState && echo 77 || echo 44;
-
-  declare CNT=${REPEAT};
+  local CNT=${DELAY};
   until testPostgresState || (( CNT-- < 1 ))
   do
-    echo -ne "Waiting for PostgreSQL to wake"\\r;
+    echo -ne "Waiting for PostgreSQL to wake ${CNT}"\\r;
     sleep ${SLEEP};
   done;
+  echo -e "Sanity check was :\n  ${SANITY_CHECK}";
+  psql -h localhost -d ${DBNAME} -tc "${SANITY_CHECK}";
+  echo -e "Stopped waiting with : ${CNT}";
+
   (( CNT > 0 ))
 
 }
