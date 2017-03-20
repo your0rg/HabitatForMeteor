@@ -11,7 +11,7 @@ function usage() {
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
-        SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '\${VIRTUAL_HOST_DOMAIN_NAME}'.
+        SOURCE_CERTS_DIR is the path to the directory that holds the SSL certificate of '\${VIRTUAL_HOST_DOMAIN_NAME}'.
         VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
             ( example source secrets file : ${SCRIPTPATH}/target/secrets.sh.example )
         VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
@@ -124,8 +124,12 @@ REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) 
 
 # ----------------
 echo -e "${PRTY} Verifying certificates directory.";
-if [ ! -d "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}" ]; then
-  errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}";
+if [ ! -d "${SOURCE_CERTS_DIR}" ]; then
+  errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}";
+fi;
+
+if [ ! -f "${SOURCE_CERTS_DIR}/cert.pem" ]; then
+  errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}/cert.pem";
 fi;
 
 # echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH";
@@ -133,7 +137,7 @@ declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:up
 echo "CP = ${CP} --> ${!CP}";
 declare CERT_PATH=$(echo ${!CP}); # Indirect reference returns nothing if no such variable has been declared.
 echo "~~~~~~~~~~~~~~~~~~~~~~ ${CERT_PATH} ~~~~~~~~~~~~";
-if[[ -z "${CERT_PATH}" ]]; then
+if [[ -z "${CERT_PATH}" ]]; then
   echo -e "No environment variable, '${CP}', could be sourced. Indirect variable failure."  ;
   exit;
 fi;
@@ -143,7 +147,7 @@ echo -e "${PRTY} Copying '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate
                from ${SOURCE_CERTS_DIR}
                  to ${TARGET_SRVR}:${CERT_PATH}";
 ssh ${HABITAT_USER}@${TARGET_SRVR} mkdir -p ${CERT_PATH};
-scp ${SOURCE_CERTS_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}/* ${HABITAT_USER}@${TARGET_SRVR}:${CERT_PATH} >/dev/null;
+scp ${SOURCE_CERTS_DIR}/* ${HABITAT_USER}@${TARGET_SRVR}:${CERT_PATH} >/dev/null;
 
 if [[ "${NON_STOP}" = "YES" ]]; then exit 0; fi;
 

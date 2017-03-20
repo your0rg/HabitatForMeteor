@@ -22,8 +22,10 @@ server {
   index index.html index.htm;     # IGNORED
 
   ssl on;
-  ssl_certificate     /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.crt;
-  ssl_certificate_key /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.key;
+  ssl_certificate     /etc/letsencrypt/live/${VIRTUAL_HOST_DOMAIN_NAME}/cert.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${VIRTUAL_HOST_DOMAIN_NAME}/privkey.pem;
+#  ssl_certificate     /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.crt;
+#  ssl_certificate_key /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.key;
 
   location / {
 
@@ -34,7 +36,7 @@ server {
 
     proxy_set_header X-Real-IP \$remote_addr;       # http://wiki.nginx.org/HttpProxyModule
     proxy_set_header Host \$host;                   # pass the host header
-    proxy_http_version 1.1;                        # recommended with keepalive connections - 
+    proxy_http_version 1.1;                        # recommended with keepalive connections -
 #                                  see -- http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_http_version
 
     # WebSocket proxying - from http://nginx.org/en/docs/http/websocket.html
@@ -44,6 +46,6 @@ server {
 
 
   }
-  
+
 }
 EOVHCT

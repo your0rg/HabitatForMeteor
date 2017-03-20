@@ -36,6 +36,7 @@ export YOUR_PKG=${3};
 export YOUR_PKG_VERSION=${4};
 export YOUR_PKG_TIMESTAMP=${5};
 
+
 # #################################
 #     settings
 # export YOUR_ORG=fleetingclouds;
@@ -90,9 +91,13 @@ NGINX_TOML_FILE_PATH=${NGINX_DIR}/${USER_TOML_FILE};
 NGINX_WORK_DIRECTORY="/etc/nginx";
 NGINX_VHOSTS_DEFINITIONS="${NGINX_WORK_DIRECTORY}/sites-available";
 NGINX_VHOSTS_PUBLICATIONS="${NGINX_WORK_DIRECTORY}/sites-enabled";
-NGINX_VHOSTS_CERTIFICATES="${NGINX_WORK_DIRECTORY}/tls";
+# NGINX_VHOSTS_CERTIFICATES="${NGINX_WORK_DIRECTORY}/tls";
 NGINX_ROOT_DIRECTORY="${NGINX_WORK_DIRECTORY}/www-data";
 NGINX_VIRTUAL_HOST_FILE_PATH=${NGINX_VHOSTS_DEFINITIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+LETSENCRYPT_HOME="/etc/letsencrypt";
+LETSENCRYPT_LIVE="${LETSENCRYPT_HOME}/live";
+LETSENCRYPT_ARCH="${LETSENCRYPT_HOME}/archive";
 
 
 pushd HabitatPkgInstallerScripts >/dev/null;
@@ -119,6 +124,7 @@ echo -e "
 
 ";
 declare EXISTING_SETTING="initdb_superuser_password";
+
 declare REPLACEMENT="${EXISTING_SETTING} = \"${PG_PWD}\"";
 grep "${EXISTING_SETTING}" ${POSTGRES_USER_TOML} >/dev/null \
          && sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${POSTGRES_USER_TOML} \
@@ -130,7 +136,7 @@ cat ${POSTGRES_USER_TOML};
 echo -e "${PRETTY} Creating Nginx virtual host directory structure." | tee -a ${LOG};
 sudo -A mkdir -p ${NGINX_VHOSTS_DEFINITIONS};
 sudo -A mkdir -p ${NGINX_VHOSTS_PUBLICATIONS};
-sudo -A mkdir -p ${NGINX_VHOSTS_CERTIFICATES};
+# sudo -A mkdir -p ${NGINX_VHOSTS_CERTIFICATES};
 sudo -A mkdir -p ${NGINX_ROOT_DIRECTORY};
 sh ${SCRIPTPATH}/index.html.template.sh > index.html;
 sudo -A cp index.html ${NGINX_ROOT_DIRECTORY};
@@ -143,14 +149,24 @@ declare CERT_PATH=$(echo ${!CP});
 
 echo -e "${PRETTY} Moving '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate from '${CERT_PATH}'
                                     to ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
-sudo -A mkdir -p ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME};
-sudo -A cp ${CERT_PATH}/server.* ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME};
-sudo -A chown -R hab:hab ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}/server.*;
-sudo -A chmod -R go-rwx,u+rw ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}/server.*;
+sudo -A mkdir -p             ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME};
+sudo -A mkdir -p             ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+sudo -A cp ${CERT_PATH}/*.pem    ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+sudo -A chown -R hab:hab     ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+sudo -A chmod -R go-rwx,u+rw ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+pushd ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME} >/dev/null;
+  sudo -A rm -fr *.pem;
+  sudo -A ln -s ../../archive/${VIRTUAL_HOST_DOMAIN_NAME}/cert.pem cert.pem;
+  sudo -A ln -s ../../archive/${VIRTUAL_HOST_DOMAIN_NAME}/privkey.pem privkey.pem;
+popd >/dev/null;
+# ls -l                        ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME};
 
 echo -e "${PRETTY} Creating Nginx virtual host file '${NGINX_VIRTUAL_HOST_FILE_PATH}' from template." | tee -a ${LOG};
 sh ${SCRIPTPATH}/virtual.host.conf.template.sh > ${VIRTUAL_HOST_DOMAIN_NAME};
 sudo -A cp ${VIRTUAL_HOST_DOMAIN_NAME} ${NGINX_VHOSTS_DEFINITIONS};
+
 
 echo -e "${PRETTY} Enabling Nginx virtual host ${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
 sudo -A ln -sf ${NGINX_VIRTUAL_HOST_FILE_PATH} ${NGINX_VHOSTS_PUBLICATIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
@@ -175,12 +191,14 @@ export GLOBAL_CERT_PWD_FILE=$(basename "${GLOBAL_CERT_PASSWORD_FILE}");
 mkdir -p ${GLOBAL_CERT_PASSWORD_PATH};
 sudo -A touch ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
 
-TMP=$(sudo -A cat ${CERT_PATH}/server.pp);
+TMP=$(sudo -A cat ${CERT_PATH}/cert.pp);
 CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c -- ${TMP});
 if [[ ${CNT} -lt 1 ]]; then
   echo -e "${PRETTY} Writing site certificates passphrase file." | tee -a ${LOG};
   echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} >/dev/null;
 fi;
+
+
 
 PRETTY="\n  ==> Runner ::";
 LOG="/tmp/${SCRIPTNAME}.log";
@@ -356,12 +374,15 @@ function waitForPostgres() {
   local CNT=${DELAY};
   until testPostgresState || (( CNT-- < 1 ))
   do
+    echo -ne "Waiting for PostgreSQL to wake          "\\r;
     echo -ne "Waiting for PostgreSQL to wake ${CNT}"\\r;
     sleep ${SLEEP};
   done;
-  echo -e "Sanity check was :\n  ${SANITY_CHECK}";
-  psql -h localhost -d ${DBNAME} -tc "${SANITY_CHECK}";
-  echo -e "Stopped waiting with : ${CNT}";
+  # echo -e "Sanity check was :\n  ${SANITY_CHECK}";
+  # psql -h localhost -d ${DBNAME} -tc "${SANITY_CHECK}";
+  echo -e "
+
+  Stopped waiting with : ${CNT}";
 
   (( CNT > 0 ))
 
@@ -371,20 +392,23 @@ waitForPostgres \
    || ( echo -e "\nPostgres failed to respond after ${DELAY} seconds."; exit 1; );
 
 
-DBNAME='meteor';
-echo -e "${PRETTY} Creating '${DBNAME}' PostgreSql database and owner '${DBNAME}'" | tee -a ${LOG};
-psql -h localhost -d template1 \
-    -tc "SELECT datname FROM pg_database WHERE datname='${DBNAME}'" \
-    | grep ${DBNAME} >/dev/null \
-    || psql -h localhost -d template1 \
-        -tc "CREATE DATABASE ${DBNAME}" &>/dev/null \
+declare PSQL="psql -h localhost -d template1";
+DBNAME=${PG_DB};
+DBOWNER=${PG_UID};
+echo -e "${PRETTY} Creating '${DBNAME}' PostgreSql database and owner '${DBOWNER}'" | tee -a ${LOG};
+TST=$(${PSQL} -tc "SELECT datname FROM pg_database WHERE datname='${DBNAME}'");
+echo ${TEST} | grep ${DBNAME}  \
+    ||  (
+          ${PSQL} -tc "CREATE USER ${DBOWNER} PASSWORD '${PG_PWD}'" &&
+          ${PSQL} -tc "CREATE DATABASE ${DBNAME} WITH OWNER ${DBOWNER}";
+        )  \
         || ( echo -e "
            *** Failed to create database '${DBNAME}' ***
            ***   Giving up                           *** ";
            exit 1;);
 
 echo -e "
-ººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººº
+ºººººººººººººººººº  Ready to restore backup ${PG_BKP} ºººººº
 ";
 
 declare SERVER_INITIALIZER=${SCRIPTPATH}/initialize_server.sh;

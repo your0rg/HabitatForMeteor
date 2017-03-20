@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
-
 export TARGET_SRVR="hab4metsrv";
+
+# The sudoer password for the account that will install Habitat
+export SETUP_USER_UID="you";
 
 export VIRTUAL_HOST_DOMAIN_NAME="moon.planet.sun";
 export HABITAT_USER_SSH_KEY_COMMENT="MoonPlanetSun Habitat User Key";

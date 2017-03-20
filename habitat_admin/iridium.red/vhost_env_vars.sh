@@ -1,21 +1,3 @@
-ls -l## Script dependencies
-# The password the Meteor app will use to connect to a localhost MongoDB
-export MONGODB_PWD="memorablehieroglyphs";
-
-# The password the Meteor app will use to connect to PostgreSql
-export PGRESQL_PWD="memorablehieroglyphs";
-
-# The sudoer password for the account that will install Habitat
-export SETUP_USER_UID="you";
-export SETUP_USER_PWD="memorablepoppycock";
-
-# The sudoer password to give the 'hab' user account when it is created
-export HABITAT_USER_PWD="memorablecacaphony";
-
-# the client-side path and filename of a key to be added to the remote host authorized_keys file
-export HABITAT_USER_SSH_KEY_PUBL="/home/you/.ssh/hab_vault/habitat_user/id_rsa.pub";
-export HABITAT_USER_SSH_PASS="memorablegobbledygook";
-
 ## Nginx certificate dependencies
 # the path on the remote server where Nginx should look for SSL cert passwords
 export GLOBAL_CERT_PASSWORD_FILE="/home/hab/.ssh/hab_vault/global.pass";
@@ -26,10 +8,10 @@ export ENABLE_GLOBAL_CERT_PASSWORD_FILE="global_ssl_password_file = \"ssl_passwo
 # The paths to the location of your signed site certificates.
 # This is not intended for production use, but for simplifying initial start up and testing
 #   example ::
-#     export MOON_PLANET_SUN_CERT_PATH="/home/hab/.ssh/hab_vault/moon.planet.sun"
+#     export IRIDIUM_BLUE_CERT_PATH="/home/hab/.ssh/hab_vault/iridium.red"
 #   where ::
 #     The shell variable name must be the domain name in upper case, with 'dot' replaced by 'underscore' and must have the suffix "CERT_PATH".
-#     The directory "/home/hab/.ssh/hab_vault/moon.planet.sun" must contain three files named exactly :
+#     The directory "/home/hab/.ssh/hab_vault/iridium.red" must contain three files named exactly :
 #       - server.crt -- the certificate
 #       - server.key -- the certificate decryption key
 #       -  server.pp -- the certificate decryption key pass phrase in plain text
@@ -37,6 +19,6 @@ export ENABLE_GLOBAL_CERT_PASSWORD_FILE="global_ssl_password_file = \"ssl_passwo
 # To be clear, all the files, in each directory, will be named server.(suffix), so only the
 # directory name will distinguish them.   Obviously a hack.  Should change in the future.
 
-export MOON_PLANET_SUN_CERT_PATH="/home/hab/.ssh/hab_vault/moon.planet.sun"
+export IRIDIUM_RED_CERT_PATH="/home/hab/.ssh/hab_vault/iridium.red"
 export YOUR_2ND_DOMAIN_CERT_PATH="/home/hab/.ssh/hab_vault/your.2nd.domain";
 export YOUR_3RD_DOMAIN_CERT_PATH="/home/hab/.ssh/hab_vault/your.3rd.domain";

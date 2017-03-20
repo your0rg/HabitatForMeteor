@@ -9,6 +9,14 @@ function makeSiteCertificate() {
   local SUBJ="${3}";
   local CERT_PATH="${4}/${VHOST_DOMAIN}";
   #
+
+    echo -e "${PRETTY}
+
+         * * * SHOULD NOT BE HERE * * *
+
+    ";
+    exit 1;
+
   mkdir -p ${CERT_PATH};
   rm -f ${CERT_PATH}/*;
   echo ${SSLPPHRASE} > ${CERT_PATH}/server.pp;
@@ -23,6 +31,38 @@ function makeSiteCertificate() {
     -out ${CERT_PATH}/server.crt
 
 };
+
+function makeImitation_LetsEncrypt_Cert() {
+
+  local SSLPPHRASE="${1}";
+  local SUBJ="${2}";
+  local CERT_PATH="${3}";
+  #
+  mkdir -p ${CERT_PATH};
+  rm -f ${CERT_PATH}/*;
+  echo ${SSLPPHRASE} > ${CERT_PATH}/cert.pp;
+  openssl req \
+    -new \
+    -newkey rsa:4096 \
+    -days 1825 \
+    -x509 \
+    -subj "${SUBJ}" \
+    -passout file:${CERT_PATH}/cert.pp \
+    -keyout ${CERT_PATH}/privkey.pem \
+    -out ${CERT_PATH}/cert.pem;
+
+  # openssl req \
+  #   -new \
+  #   -newkey rsa:4096 \
+  #   -days 1825 \
+  #   -x509 \
+  #   -subj "${SUBJ}" \
+  #   -passout file:${CERT_PATH}/server.pp \
+  #   -keyout ${CERT_PATH}/server.key \
+  #   -out ${CERT_PATH}/server.crt
+
+};
+
 
 function startSSHAgent() {
 
