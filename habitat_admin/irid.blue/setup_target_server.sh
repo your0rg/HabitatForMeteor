@@ -52,7 +52,6 @@ ${HABITAT4METEOR_SCRIPTS}/PushInstallerScriptsToTarget.sh \
     "${SOURCE_SECRETS_FILE}" \
     "${VHOST_ENV_VARS}";
 echo -e "${PRETTY}Pushed installer scripts to host :: '${TARGET_SRVR}'.";
-exit;
 
 ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l "${HABITAT_USER}" "${TARGET_SRVR}" whoami;
 echo -e "${PRETTY}Tested 'hab' user SSH to host '${HABITAT_USER}' '${TARGET_SRVR}'.";

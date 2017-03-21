@@ -261,6 +261,6 @@ DEST_DIR="/usr/local/bin";
 downloadHabToPathDir linux ${DEST_DIR};
 echo -e "${PRTY} Installed 'hab' to '${DEST_DIR}'.\n\n";
 
-echo -e "
+echo -e "${PRTY} Complete
                     Quitting target RPC... :: $(date)";
 exit;

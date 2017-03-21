@@ -99,6 +99,7 @@ LETSENCRYPT_HOME="/etc/letsencrypt";
 LETSENCRYPT_LIVE="${LETSENCRYPT_HOME}/live";
 LETSENCRYPT_ARCH="${LETSENCRYPT_HOME}/archive";
 
+which incrond >/dev/null || sudo apt-get -y install incron;
 
 pushd HabitatPkgInstallerScripts >/dev/null;
 source vhost_env_vars.sh;
@@ -332,6 +333,43 @@ declare EXISTING_SETTING="keepalive_timeout";
 declare MISSING_SETTING="server_names_hash_bucket_size";
 declare REPLACEMENT="    ${MISSING_SETTING} 64;\n    ${EXISTING_SETTING} 60;";
 
+echo -e "${PRETTY} Prepare incrond trigger for workaround ." | tee -a ${LOG};
+
+declare INCRON_D="/etc/incron.d";
+declare INCRON_TRIGGER="${INCRON_D}/fixNginxVar";
+declare NGINX_DIR="/hab/svc/nginx";
+declare NGINX_VAR_DIR="${NGINX_DIR}/var";
+declare HAB_USER_SCRIPTS_DIR="/home/hab/scripts";
+declare NGINX_OWNERSHIP_FIXER="${HAB_USER_SCRIPTS_DIR}/postStartExec.sh";
+#
+sudo -A mkdir -m 755 -p ${INCRON_D};
+sudo -A chown root:root ${INCRON_D};
+#
+sudo -A mkdir -m 775 -p ${NGINX_VAR_DIR};
+sudo -A chown hab:hab ${NGINX_VAR_DIR};
+
+sudo -A mkdir -m 770 -p ${HAB_USER_SCRIPTS_DIR};
+sudo -A chown hab:hab ${HAB_USER_SCRIPTS_DIR};
+
+
+sudo tee ${NGINX_OWNERSHIP_FIXER} <<EOHOOK >/dev/null
+#!/usr/bin/env bash
+logger  "¬¬¬¬¬¬¬¬   ${INCRON_TRIGGER} ¬¬¬¬¬¬¬¬¬¬";
+if [[ "\$(stat -c '%U'  ${NGINX_VAR_DIR}/)" = "hab" ]]; then exit 0; fi;
+logger  "++++    chown hab:hab ${NGINX_VAR_DIR} ++++++";
+sleep 5;
+chmod 775 ${NGINX_VAR_DIR};
+chown hab:hab ${NGINX_VAR_DIR};
+EOHOOK
+sudo chown root:hab ${NGINX_OWNERSHIP_FIXER};
+sudo chmod 770      ${NGINX_OWNERSHIP_FIXER};
+
+sudo tee ${INCRON_TRIGGER} <<EOID >/dev/null
+${NGINX_VAR_DIR}/ IN_ATTRIB ${NGINX_OWNERSHIP_FIXER}
+EOID
+sudo chown root:incron ${INCRON_TRIGGER};
+sudo chmod 600 ${INCRON_TRIGGER};
+
 # sudo -A mkdir -p ${NGINX_CONFIG_DIR};
 # sudo -A touch ${NGINX_CONF};
 if ! sudo -A grep "${MISSING_SETTING}" ${NGINX_CONF} >/dev/null; then
@@ -341,6 +379,7 @@ if ! sudo -A grep "${MISSING_SETTING}" ${NGINX_CONF} >/dev/null; then
   sudo -A sed -i "s|.*${EXISTING_SETTING}.*|${REPLACEMENT}|" ${NGINX_CONF};
 fi;
 sudo -A ls -l ${NGINX_CONFIG_DIR};
+
 
 echo -e "${PRETTY} Start up the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl start ${UNIT_FILE};
@@ -407,11 +446,11 @@ echo ${TEST} | grep ${DBNAME}  \
            ***   Giving up                           *** ";
            exit 1;);
 
-echo -e "
-ºººººººººººººººººº  Ready to restore backup ${PG_BKP} ºººººº
-";
-
 declare SERVER_INITIALIZER=${SCRIPTPATH}/initialize_server.sh;
+echo -e "
+  ºººººº  Ready to restore backup ${PG_BKP} ºººººº
+    using script : ${SERVER_INITIALIZER}
+";
 if [ -f ${SERVER_INITIALIZER} ]; then
   chmod ug+x ${SERVER_INITIALIZER};
   ${SERVER_INITIALIZER};

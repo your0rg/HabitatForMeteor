@@ -10,7 +10,7 @@ export SSH_CONF_FILE="${SSH_PATH}/config";
 
 export HABITAT_USER="hab";
 
-export HABITAT4METEOR="${HOME}/tools/HabitatForMeteor";
+export HABITAT4METEOR="${HOME}/utils/H4M/";
 export HABITAT4METEOR_SCRIPTS="${HABITAT4METEOR}/habitat/scripts";
 
 export VHOSTS_SECRETS_PATH="${SECRETS_PATH}/${VIRTUAL_HOST_DOMAIN_NAME}";

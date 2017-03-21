@@ -54,7 +54,7 @@ function startSSHAgent() {
   fi;
 };
 
-set -e;
+# set -e;
 
 SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");
@@ -99,7 +99,6 @@ if [ ! -f "${VHOST_ENV_VARS}" ]; then errorNoEnvVarsFileSpecified "${VHOST_ENV_V
 
 source ${VHOST_ENV_VARS};
 
-
 ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}";
 echo -e "# ----------------";
 if ! ssh-add -l | grep "${HABITAT_USER_SSH_KEY_PUBL%.pub}" &>/dev/null; then
@@ -132,7 +131,7 @@ if [ ! -f "${SOURCE_CERTS_DIR}/cert.pem" ]; then
   errorNoCertificatesFoundToCopy "${SOURCE_CERTS_DIR}/cert.pem";
 fi;
 
-# echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH";
+echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH";
 declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
 echo "CP = ${CP} --> ${!CP}";
 declare CERT_PATH=$(echo ${!CP}); # Indirect reference returns nothing if no such variable has been declared.
