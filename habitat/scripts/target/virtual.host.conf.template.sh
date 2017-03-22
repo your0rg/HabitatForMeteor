@@ -27,6 +27,11 @@ server {
 #  ssl_certificate     /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.crt;
 #  ssl_certificate_key /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.key;
 
+  location ^~ /public/ {
+    autoindex on;
+    root /etc/nginx/www-data;
+  }
+
   location / {
 
     proxy_pass http://localhost:3000;              # How Nginx finds Meteor app

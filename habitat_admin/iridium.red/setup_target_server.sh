@@ -11,6 +11,8 @@ source ${SCRIPTPATH}/../standard_env_vars.sh;
 source ${HABITAT4METEOR_SCRIPTS}/admin_utils.sh;
 source ${SOURCE_SECRETS_FILE};
 
+which expect  >/dev/null || sudo apt-get -y install expect;
+
 PRETTY="PRP_SRV :: ";
 
 startSSHAgent;

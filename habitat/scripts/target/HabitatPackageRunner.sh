@@ -104,6 +104,9 @@ which incrond >/dev/null || sudo apt-get -y install incron;
 pushd HabitatPkgInstallerScripts >/dev/null;
 source vhost_env_vars.sh;
 
+
+
+
 echo -e "${PRETTY} Preparing 'user.toml' file for core/postgresql bundle." | tee -a ${LOG};
 declare POSTGRES_SERVICE="${SVC_DIR}/postgresql";
 sudo -A mkdir -p ${POSTGRES_SERVICE};
@@ -462,6 +465,42 @@ fi;
 echo -e "
 ººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººººº
 ";
+
+
+
+
+declare NGINX_VHOST_PUBLIC_DIR="public";
+declare NGINX_VHOST_CONFIG="${NGINX_VHOSTS_DEFINITIONS}/${VIRTUAL_HOST_DOMAIN_NAME}";
+
+# cat ${NGINX_VHOST_CONFIG} | sed -n -e "/public/,/}/ p";
+#   cat ${NGINX_VHOST_CONFIG} | sed -n -e "/${NGINX_VHOST_PUBLIC_DIR}/,/}/ p"   | grep root | tr -d '[:space:]';
+
+declare NGINX_VHOST_ROOT_DIR=$(cat ${NGINX_VHOST_CONFIG} \
+     | sed -n -e "/${NGINX_VHOST_PUBLIC_DIR}/,/}/ p" \
+     | grep root | tr -d '[:space:]');
+NGINX_VHOST_ROOT_DIR="${NGINX_VHOST_ROOT_DIR#root}";
+NGINX_VHOST_ROOT_DIR="${NGINX_VHOST_ROOT_DIR%\;}";
+
+echo -e " - NGINX_VHOST_ROOT_DIR -- ${NGINX_VHOST_ROOT_DIR}";
+declare NGINX_STATIC_FILES_DIR=${NGINX_VHOST_ROOT_DIR}/public;
+
+declare METEOR_PUBLIC_DIRECTORY="/hab/svc/${YOUR_PKG}/var/programs/web.browser/app/";
+sudo -A mkdir -p ${NGINX_VHOST_ROOT_DIR};
+sudo -A mkdir -p ${METEOR_PUBLIC_DIRECTORY};
+echo -e "
+${PRETTY} Link Nginx static files directory to Habitat Meteor 'public' directory . . .
+    - NGINX_STATIC_FILES_DIR -- ${NGINX_STATIC_FILES_DIR}
+    - METEOR_PUBLIC_DIRECTORY -- ${METEOR_PUBLIC_DIRECTORY}
+" | tee -a ${LOG};
+
+pushd ${NGINX_VHOST_ROOT_DIR} >/dev/null;
+  sudo -A ln -s ${METEOR_PUBLIC_DIRECTORY} ${NGINX_VHOST_PUBLIC_DIR};
+  ls -l;
+popd >/dev/null;
+
+echo -e "
+
+______________________________________________________________________";
 
 
 sudo -A ls -l ${META_DIR}/var/logs;
