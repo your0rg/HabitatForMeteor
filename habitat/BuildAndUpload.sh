@@ -29,6 +29,10 @@ fi;
 
 loadShellVars;
 
+TARGET_ARCHITECTURE=${TARGET_ARCHITECTURE:=x86_64};
+TARGET_OPERATING_SYSTEM=${TARGET_OPERATING_SYSTEM:=linux};
+GITHUB_PERSONAL_TOKEN=${GITHUB_PERSONAL_TOKEN:=b913...e191};
+
 PARM_NAMES=("GITHUB_PERSONAL_TOKEN" "TARGET_OPERATING_SYSTEM" "TARGET_ARCHITECTURE");
 [ "${ENVVARSDIRTY}" = "true" ] && askUserForParameters PARM_NAMES[@];
 
@@ -37,7 +41,6 @@ if [[ "X${1}X" == "XX" ]]; then
   exit;
 fi;
 RELEASE_TAG=${1};
-
 
 function getNewestHabitatBuildPackageIfAny() {
 
@@ -401,7 +404,7 @@ function buildMeteorProjectBundleIfNotExist() {
     pushd .. &>/dev/null;
       local BUILD_DIR="./.habitat/results";
       local BUNDLE_DIR="${BUILD_DIR}/bundle";
-      local SETTINGS_FILE="settings.json";
+      local METEOR_SETTINGS_TEMPLATE_FILE="template.settings.json.sh";
 
       echo "${PRTY} Copying any external Node modules from '${EXTERNAL_MODULES_DIRECTORY}' to 'node_modules' ...";
       copyExternalNodeModulesToInternal;
@@ -414,9 +417,9 @@ function buildMeteorProjectBundleIfNotExist() {
       echo "         ** The 'source tree' WARNING can safely be ignored ** ";
       meteor build ${BUILD_DIR} --directory --server-only;
 
-      if [[ -f ./${SETTINGS_FILE} ]]; then
-        cp ./${SETTINGS_FILE} ${BUNDLE_DIR};
-        chmod ug+rw,o-rwx ${BUNDLE_DIR}/${SETTINGS_FILE};
+      if [[ -f ./${METEOR_SETTINGS_TEMPLATE_FILE} ]]; then
+        cp ./${METEOR_SETTINGS_TEMPLATE_FILE} ${BUNDLE_DIR};
+        chmod 775 ${BUNDLE_DIR}/${METEOR_SETTINGS_TEMPLATE_FILE};
       fi;
 
       echo -e "${PRTY} Meteor project rebuilt.
@@ -629,13 +632,11 @@ function lastMessage() {
         ./.habitat/scripts/PushInstallerScriptsToTarget.sh \\
               \${TARGET_SRVR} \\
               \${SETUP_USER_UID} \\
-              \${METEOR_SETTINGS_FILE} \\
               \${SOURCE_SECRETS_FILE};
 
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER_UID is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
-        METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/scripts/target/secrets.sh.example )
 
@@ -645,6 +646,8 @@ function lastMessage() {
   popd >/dev/null;
 }
 
+#               \${METEOR_SETTINGS_FILE} \\
+#         METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
 
 
 HABITAT_PKG_NAME="";

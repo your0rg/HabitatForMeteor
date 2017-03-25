@@ -41,16 +41,16 @@ echo -e "${PRETTY}Testing SSH to host '${SETUP_USER_UID}' '${TARGET_SRVR}'."
 ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l "${SETUP_USER_UID}" "${TARGET_SRVR}" whoami || exit 1;
 echo -e "${PRETTY}Success: SSH to host '${SETUP_USER_UID}' '${TARGET_SRVR}'.";
 
-sh template.settings.json.sh > ${METEOR_SETTINGS_FILE};
-echo -e "${PRETTY}Generated Meteor settings file.";
-cat ${METEOR_SETTINGS_FILE};
+# sh template.settings.json.sh > ${METEOR_SETTINGS_FILE};
+# echo -e "${PRETTY}Generated Meteor settings file.";
+# cat ${METEOR_SETTINGS_FILE};
 
 ${HABITAT4METEOR_SCRIPTS}/PushInstallerScriptsToTarget.sh \
     "${TARGET_SRVR}" \
     "${SETUP_USER_UID}" \
-    "${METEOR_SETTINGS_FILE}" \
     "${SOURCE_SECRETS_FILE}" \
     "${VHOST_ENV_VARS}";
+#     "${METEOR_SETTINGS_FILE}" \
 echo -e "${PRETTY}Pushed installer scripts to host :: '${TARGET_SRVR}'.";
 
 ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l "${HABITAT_USER}" "${TARGET_SRVR}" whoami;
@@ -87,7 +87,7 @@ echo -e "${PRETTY} SOURCE_CERTS_DIR : ${SOURCE_CERTS_DIR}.";
 echo -e "${PRETTY} VHOST_SUBJECT : ${VHOST_SUBJECT}.";
 echo -e "${PRETTY} VHOST_CERT_PASSPHRASE : ${VHOST_CERT_PASSPHRASE}.";
 echo -e "${PRETTY}  : ${PRETTY}.";
-echo -e "${PRETTY} METEOR_SETTINGS_FILE : ${METEOR_SETTINGS_FILE}.";
+# echo -e "${PRETTY} METEOR_SETTINGS_FILE : ${METEOR_SETTINGS_FILE}.";
 echo -e "${PRETTY} VHOST_ENV_VARS : ${VHOST_ENV_VARS}.";
 echo -e "${PRETTY} TARGET_SRVR : ${TARGET_SRVR}.";
 echo -e "${PRETTY} VIRTUAL_HOST_DOMAIN_NAME : ${VIRTUAL_HOST_DOMAIN_NAME}.";

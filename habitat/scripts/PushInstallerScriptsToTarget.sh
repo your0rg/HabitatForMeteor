@@ -6,13 +6,11 @@ function usage() {
      ${SCRIPTPATH}/PushInstallerScriptsToTarget.sh \\
                    \${TARGET_SRVR} \\
                    \${SETUP_USER_UID} \\
-                   \${METEOR_SETTINGS_FILE} \\
                    \${SOURCE_SECRETS_FILE} \\
                    \${VHOST_ENV_VARS}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER_UID is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
-        METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
             ( example file : ${SCRIPTPATH}/target/secrets.sh.example )
         VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
@@ -20,6 +18,8 @@ function usage() {
   ";
   exit 1;
 }
+#                    \${METEOR_SETTINGS_FILE} \\
+#         METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
 
 function errorInvalidReleaseTag() {
   echo -e "\n\n    *** Invalid release tag ***";
@@ -36,23 +36,25 @@ function errorNoUserAccountSpecified() {
   usage;
 }
 
-function errorNoSettingsFileSpecified() {
-  echo -e "\n\n    *** A valid path to a Meteor settings.json file needs to be specified, not '${1}'  ***";
-  usage;
-}
+# FIXME : We should be pushing the secrets file, and making settings.json from its template
+#
+# function errorNoSettingsFileSpecified() {
+#   echo -e "\n\n    *** A valid path to a Meteor settings.json file needs to be specified, not '${1}'  ***";
+#   usage;
+# }
 
-function warningEmptySettingsFileSpecified() {
-  echo -e "\n\n    *** An empty Meteor settings.json file was detected at, '${1}'  ***
+# function warningEmptySettingsFileSpecified() {
+#   echo -e "\n\n    *** An empty Meteor settings.json file was detected at, '${1}'  ***
 
-  ";
-  read -ep "Do you wish to (q)uit or fix that and (c)ontinue? (q/c) ::  " -n 1 -r USER_ANSWER
-  CHOICE=$(echo ${USER_ANSWER:0:1} | tr '[:upper:]' '[:lower:]')
-  if [[ "X${CHOICE}X" == "XqX" ]]; then
-    echo "Skipping this operation."; exit 1;
-  fi;
-  echo -e " Continuing... ";
+#   ";
+#   read -ep "Do you wish to (q)uit or fix that and (c)ontinue? (q/c) ::  " -n 1 -r USER_ANSWER
+#   CHOICE=$(echo ${USER_ANSWER:0:1} | tr '[:upper:]' '[:lower:]')
+#   if [[ "X${CHOICE}X" == "XqX" ]]; then
+#     echo "Skipping this operation."; exit 1;
+#   fi;
+#   echo -e " Continuing... ";
+# }
 
-}
 
 function errorNoSecretsFileSpecified() {
   echo -e "\n\n    *** A valid path to a file of secrets for the remote server needs to be specified, not '${1}'  ***";
@@ -137,9 +139,9 @@ PRTY="PIStT  ==> ";
 
 TARGET_SRVR=${1};
 SETUP_USER_UID=${2};
-METEOR_SETTINGS_FILE=${3};
-SOURCE_SECRETS_FILE=${4};
-VHOST_ENV_VARS=${5};
+# METEOR_SETTINGS_FILE=${3};
+SOURCE_SECRETS_FILE=${3};
+VHOST_ENV_VARS=${4};
 
 HABITAT_USER='hab';
 
@@ -148,20 +150,22 @@ PASSWORD_MINIMUM_LENGTH=4;
 
 echo -e "${PRTY} TARGET_SRVR=${TARGET_SRVR}";
 echo -e "${PRTY} SETUP_USER_UID=${SETUP_USER_UID}";
-echo -e "${PRTY} METEOR_SETTINGS_FILE=${METEOR_SETTINGS_FILE}";
+# echo -e "${PRTY} METEOR_SETTINGS_FILE=${METEOR_SETTINGS_FILE}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
 echo -e "${PRTY} VHOST_ENV_VARS=${VHOST_ENV_VARS}";
 
 set -e;
 
 # ----------------
-echo -e "${PRTY} Testing settings file availability... [   ls \"${METEOR_SETTINGS_FILE}\"  ]";
-if [[ "X${METEOR_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
-if [ "${METEOR_SETTINGS_FILE:0:1}" != "/" ]; then
-  METEOR_SETTINGS_FILE="${CURR_DIR}/${METEOR_SETTINGS_FILE}";
-fi;
-if [ ! -f "${METEOR_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
-if [ ! -s "${METEOR_SETTINGS_FILE}" ]; then warningEmptySettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
+# FIXME : We should be pushing the secrets file, and making settings.json from its template
+#
+# echo -e "${PRTY} Testing settings file availability... [   ls \"${METEOR_SETTINGS_FILE}\"  ]";
+# if [[ "X${METEOR_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
+# if [ "${METEOR_SETTINGS_FILE:0:1}" != "/" ]; then
+#   METEOR_SETTINGS_FILE="${CURR_DIR}/${METEOR_SETTINGS_FILE}";
+# fi;
+# if [ ! -f "${METEOR_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
+# if [ ! -s "${METEOR_SETTINGS_FILE}" ]; then warningEmptySettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
 
 # ----------------
 echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
@@ -268,11 +272,12 @@ pushd ${BUNDLING_DIRECTORY} >/dev/null;
 
     cp -p ${VHOST_ENV_VARS} .;
 
-    chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
-    cp -p ${METEOR_SETTINGS_FILE} .;
+    # chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
+    # cp -p ${METEOR_SETTINGS_FILE} .;
 
 
-    chmod u+x,go-xrw ${SOURCE_SECRETS_FILE};
+    chmod 770 ${SOURCE_SECRETS_FILE};
+#    chown hab:hab ${SOURCE_SECRETS_FILE};
     cp -p ${SOURCE_SECRETS_FILE} .;
     cp -p ${HABITAT_USER_SSH_KEY_PUBL} ./${HABITAT_USER_SSH_KEY_FILE_NAME};
 

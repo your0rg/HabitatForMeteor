@@ -6,10 +6,10 @@ declare SCRIPTNAME=$(basename "${SCRIPT}");
 
 source ${HOME}/.bash_login;
 
-function errorNoSettingsFileSpecified() {
-  echo -e "\n\n    *** A valid path to a Meteor settings.json file needs to be specified, not '${1}'  ***";
-  usage;
-}
+# function errorNoSettingsFileSpecified() {
+#   echo -e "\n\n    *** A valid path to a Meteor settings.json file needs to be specified, not '${1}'  ***";
+#   usage;
+# }
 
 function errorNoSecretsFileSpecified() {
   echo -e "\n\n    *** A valid path to a file of secrets for the remote server needs to be specified, not '${1}'  ***";
@@ -58,9 +58,9 @@ if [[ "X${TARGET_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "nu
 if [ ! -f "${TARGET_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${TARGET_SECRETS_FILE}"; fi;
 source ${TARGET_SECRETS_FILE};
 
-echo -e "${PRTY} Testing settings file availability... [   ls \"${TARGET_SETTINGS_FILE}\"  ]";
-if [[ "X${TARGET_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
-if [ ! -f "${TARGET_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${TARGET_SETTINGS_FILE}"; fi;
+# echo -e "${PRTY} Testing settings file availability... [   ls \"${TARGET_SETTINGS_FILE}\"  ]";
+# if [[ "X${TARGET_SETTINGS_FILE}X" = "XX" ]]; then errorNoSettingsFileSpecified "null"; fi;
+# if [ ! -f "${TARGET_SETTINGS_FILE}" ]; then errorNoSettingsFileSpecified "${TARGET_SETTINGS_FILE}"; fi;
 
 VERSION_PATH="/${YOUR_PKG_VERSION}";
 if [[ "X${YOUR_PKG_VERSION}X" = "XX" ]]; then unset VERSION_PATH; fi;
@@ -118,8 +118,8 @@ sudo -A touch ${POSTGRES_USER_TOML};
 sudo -A chown root:root ${POSTGRES_USER_TOML};
 sudo -A chmod 666 ${POSTGRES_USER_TOML};
 
-echo -e "${PRETTY} Upserting super user pwd into core/postgresql '${POSTGRES_USER_TOML}' file." | tee -a ${LOG};
-export PG_PWD=$(cat ./settings.json | jq -r .PG_PWD);
+# echo -e "${PRETTY} Upserting super user pwd into core/postgresql '${POSTGRES_USER_TOML}' file." | tee -a ${LOG};
+# export PG_PWD=$(cat ./settings.json | jq -r .PG_PWD);
 echo -e "
 
 
@@ -303,10 +303,22 @@ ${SCRIPTPATH}/app.user.toml.template.sh > ${SCRIPTPATH}/${USER_TOML_FILE};
 echo -e "${PRETTY} Copying user toml file to '${WORK_DIR}' directory" | tee -a ${LOG};
 sudo -A cp ${SCRIPTPATH}/${USER_TOML_FILE} ${WORK_DIR} >> ${LOG};
 
-echo -e "${PRETTY} Copying Meteor settings file to '${WORK_DIR}/var' directory" | tee -a ${LOG};
-sudo -A mkdir -p ${WORK_DIR}/var >> ${LOG};
-sudo -A cp ${TARGET_SETTINGS_FILE} ${WORK_DIR}/var >> ${LOG};
-sudo -A chown -R hab:hab ${WORK_DIR}/var >> ${LOG};
+# ##########################
+export SECRETS_DIR="$(cat vhost_env_vars.sh \
+   | grep .ssh \
+   | grep ${VIRTUAL_HOST_DOMAIN_NAME} \
+   | cut -d "=" -f 2 \
+   | sed 's/^"\(.*\)"$/\1/')";
+
+echo -e "${PRETTY} Copying secrets file to '${SECRETS_DIR}' directory" | tee -a ${LOG};
+sudo -A mkdir -p ${SECRETS_DIR} >> ${LOG};
+sudo -A cp ${TARGET_SECRETS_FILE} ${SECRETS_DIR} >> ${LOG};
+sudo -A chown -R hab:hab ${SECRETS_DIR} >> ${LOG};
+
+# echo -e "${PRETTY} Copying Meteor settings file to '${WORK_DIR}/var' directory" | tee -a ${LOG};
+# sudo -A mkdir -p ${WORK_DIR}/var >> ${LOG};
+# sudo -A cp ${TARGET_SETTINGS_FILE} ${WORK_DIR}/var >> ${LOG};
+# sudo -A chown -R hab:hab ${WORK_DIR}/var >> ${LOG};
 
 echo -e "${PRETTY} Enabling the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
 sudo -A systemctl enable ${UNIT_FILE};

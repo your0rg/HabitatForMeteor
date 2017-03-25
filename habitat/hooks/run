@@ -2,7 +2,15 @@
 #
 cd {{pkg.svc_var_path}}
 
-export METEOR_SETTINGS="`cat settings.json`";
+export METEOR_SETTINGS_TEMPLATE_FILE="template.settings.json.sh";
+export METEOR_SETTINGS_FILE="settings.json";
+export SOURCE_SECRETS_FILE="/home/hab/.ssh/hab_vault/irid.blue/secrets.sh";
+
+# echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+. ${SOURCE_SECRETS_FILE};
+sh ${METEOR_SETTINGS_TEMPLATE_FILE} > ${METEOR_SETTINGS_FILE};
+export METEOR_SETTINGS="`cat ${METEOR_SETTINGS_FILE}`";
+# echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 echo "###########################################################";
 echo "########## Base directory     {{pkg.svc_path}} ";
@@ -11,7 +19,11 @@ echo "########## Config directory   {{pkg.svc_config_path}} ";
 echo "########## Mongo URL          {{cfg.mongo_url}}";
 echo "########## Meteor app URL     {{cfg.root_url}} ";
 echo "########## Meteor app port    {{cfg.port}} ";
-# echo "########## Meteor settings    ${METEOR_SETTINGS} ";
+echo "########## Settings template  ${METEOR_SETTINGS_TEMPLATE_FILE} ";
+echo "########## Meteor settings    ${METEOR_SETTINGS_FILE} ";
+echo "########## Secrets            ${SOURCE_SECRETS_FILE} ";
+echo "########## PG_BKP             '${PG_BKP}'";
+echo "########## LOGGLY_SUBDOMAIN   '$(cat ${METEOR_SETTINGS_FILE} | jq -r .LOGGLY_SUBDOMAIN)'";
 echo "###########################################################";
 
 
@@ -19,10 +31,11 @@ export MONGO_URL={{cfg.mongo_url}};
 export ROOT_URL={{cfg.root_url}};
 export PORT={{cfg.port}};
 
-# `exec` makes it so the process that the Habitat supervisor uses is 
+mkdir -p {{pkg.svc_var_path}}/logs;
+touch {{pkg.svc_var_path}}/logs/stdout.log;
+touch {{pkg.svc_var_path}}/logs/stderr.log;
+
+# `exec` makes it so the process that the Habitat supervisor uses is
 # 'node main.js`, rather than the run hook itself.
 
-# `2>&1` makes it so both standard output and standard error go to the standard 
-# output stream, so all the logs from the application go to the same place.
-
-exec node main.js 2>&1
+exec node main.js >{{pkg.svc_var_path}}/logs/stdout.log 2>{{pkg.svc_var_path}}/logs/stderr.log

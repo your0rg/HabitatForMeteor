@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ###################
 
-set -e;
+# set -e;
 
 export step0_BEGIN_BY_CLEANING=0;
 export step1_ONCE_ONLY_INITIALIZATIONS=$((${step0_BEGIN_BY_CLEANING}+1));
@@ -60,11 +60,12 @@ export SETUP_USER_SSH_KEY_PUBL="\${SSH_KEY_PATH}/id_rsa.pub";
 ### Locating secrets within the developer VM
 # Habitat for Meteor secrets directory
 export HABITAT_FOR_METEOR_SECRETS_DIR="\${SSH_KEY_PATH}/hab_vault";
-export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/secrets.sh";
-export METEOR_SETTINGS='{ "public": { "DUMMY": "dummy" } }';
-export METEOR_SETTINGS_FILE="settings.json";
-export METEOR_SETTINGS_EXAMPLE_FILE="\${METEOR_SETTINGS_FILE}.example";
-export METEOR_SETTINGS_FILE_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${METEOR_SETTINGS_FILE}";
+export SOURCE_SECRETS=;
+export SOURCE_SECRETS_FILE="secrets.sh";
+# export METEOR_SETTINGS=;
+# export METEOR_SETTINGS_FILE="settings.json";
+# export METEOR_SETTINGS_EXAMPLE_FILE="\${METEOR_SETTINGS_FILE}.example";
+# export METEOR_SETTINGS_FILE_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${METEOR_SETTINGS_FILE}";
 
 # Habitat for Meteor user secrets directory
 export HABITAT_FOR_METEOR_USER_SECRETS_DIR=\${HABITAT_FOR_METEOR_SECRETS_DIR}/habitat_user;
@@ -96,10 +97,13 @@ export HABITAT_USER_SSH_KEY_PUBL="\${HABITAT_USER_SSH_KEY_PATH}/id_rsa.pub";
 # Virtual host domain name
 export VHOST_DOMAIN="moon.planet.sun";
 export VHOST_CERT_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}";
+export SOURCE_SECRETS_FILE_PATH="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}/\${SOURCE_SECRETS_FILE}";
+export SOURCE_SECRETS_EXAMPLE_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/\${VHOST_DOMAIN}/\${SOURCE_SECRETS_FILE}.example";
 
 # Virtual host domain name
 export VHOST_CERT_PASSPHRASE="memorablegibberish";
 
+export SOURCE_SECRETS_FILE="\${HABITAT_FOR_METEOR_SECRETS_DIR}/${VHOST_DOMAIN}/secrets.sh";
 
 
 ### Specifying your fork of a target project ###
@@ -179,6 +183,7 @@ PrepareNecessaryShellVarsForExerciser;
 
 source ${TEST_VARS_FILE};
 source habitat/scripts/target/secrets.sh.example;
+
 ### secrets.sh provides obligatory secret settings for ...
 # The password the Meteor app will use to connect to a localhost MongoDB
 # The sudoer password for the account that will install Habitat
@@ -970,9 +975,9 @@ function BuildAndUploadMeteorProject() {
   pushd ${THE_PROJECT_ROOT} >/dev/null;
 
 
-    echo "${PRTY} Prepare Meteor settings file ";
-    PrepareMeteorSettingsFile;
-    cp ${METEOR_SETTINGS_FILE} ${HABITAT_FOR_METEOR_SECRETS_DIR};
+    # echo "${PRTY} Prepare Meteor settings file ";
+    # PrepareMeteorSettingsFile;
+    # cp ${METEOR_SETTINGS_FILE} ${HABITAT_FOR_METEOR_SECRETS_DIR};
 
     echo "${PRTY} Start tagging if none";
     if [[ "X$(git describe 2> /dev/null)X" = "XX" ]]; then
@@ -1097,9 +1102,11 @@ function PrepareSecretsFile() {
   local SETUP_USER_PWD="";
   while [[ ! "X${CHOICE}X" == "XyX" ]]
   do
-    eval SETUP_USER_UID=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_UID | cut -d '"' -f 2);
-    SETUP_USER_PWD=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_PWD | cut -d '"' -f 2);
 
+    # eval SETUP_USER_UID=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_UID | cut -d '"' -f 2);
+    # SETUP_USER_PWD=$(cat ${SOURCE_SECRETS_FILE} | grep SETUP_USER_PWD | cut -d '=' -f 2 | cut -d ';' -f 1 | sed -r "s/'//g");
+
+    source ${SOURCE_SECRETS_FILE};
     echo -e "   -----------------------------------------
 
     According to the file '${SOURCE_SECRETS_FILE}' your user ID
@@ -1149,26 +1156,33 @@ function PrepareMeteorSettingsFile() {
 
   pushd ${THE_PROJECT_ROOT} >/dev/null;
 
-    echo -e "Preparing Meteor Settings File -- ${THE_PROJECT_ROOT}/${METEOR_SETTINGS_FILE}";
-#    echo "${METEOR_SETTINGS_FILE_PATH}";
-#    ls -l ${METEOR_SETTINGS_FILE_PATH};
+    source ./.scripts/utils.sh;
+    # haveUtils || (echo "No utils"; exit 1;)
 
-    if [ -f ${METEOR_SETTINGS_FILE_PATH} ]; then
+    local HOST_SERVER_NAME=${VIRTUAL_HOST_DOMAIN_NAME}
+    validateMeteorSettings;
 
-      cp ${METEOR_SETTINGS_FILE_PATH} .;
+#     exit;
+#     echo -e "Preparing Meteor Settings File -- ${THE_PROJECT_ROOT}/${METEOR_SETTINGS_FILE}";
+# #    echo "${METEOR_SETTINGS_FILE_PATH}";
+# #    ls -l ${METEOR_SETTINGS_FILE_PATH};
 
-    else
-      if [ -f ${METEOR_SETTINGS_EXAMPLE_FILE} ]; then
-        echo -e "
+#     if [ -f ${METEOR_SETTINGS_FILE_PATH} ]; then
 
-        There is a '${METEOR_SETTINGS_EXAMPLE_FILE}' file, **but** there is no '${METEOR_SETTINGS_FILE_PATH}' file!
+#       cp ${METEOR_SETTINGS_FILE_PATH} .;
 
-        ";
-        exit;
-      fi;
-      echo '{ "public": { "DUMMY": "dummy" } }' > ${METEOR_SETTINGS_FILE};
+#     else
+#       if [ -f ${METEOR_SETTINGS_EXAMPLE_FILE} ]; then
+#         echo -e "
 
-    fi;
+#         There is a '${METEOR_SETTINGS_EXAMPLE_FILE}' file, **but** there is no '${METEOR_SETTINGS_FILE_PATH}' file!
+
+#         ";
+#         exit;
+#       fi;
+#       echo '{ "public": { "DUMMY": "dummy" } }' > ${METEOR_SETTINGS_FILE};
+
+#     fi;
 
     touch .gitignore;
     cat .gitignore | grep ${METEOR_SETTINGS_FILE} >/dev/null || echo "${METEOR_SETTINGS_FILE}" >> .gitignore;
@@ -1355,7 +1369,7 @@ if [[ "step5_INSTALL_SERVER_SCRIPTS" -ge "${EXECUTION_STAGE}" ]]; then
 
   pushd ${THE_PROJECT_ROOT} >/dev/null;
 
-  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE_PATH} ${SOURCE_SECRETS_FILE};
+  ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${SOURCE_SECRETS_FILE};
   VerifySSHasHabUser;
   ./.habitat/scripts/PushSiteCertificateToTarget.sh \
                ${TARGET_SRVR} \
