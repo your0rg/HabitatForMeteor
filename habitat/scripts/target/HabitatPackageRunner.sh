@@ -99,7 +99,7 @@ LETSENCRYPT_HOME="/etc/letsencrypt";
 LETSENCRYPT_LIVE="${LETSENCRYPT_HOME}/live";
 LETSENCRYPT_ARCH="${LETSENCRYPT_HOME}/archive";
 
-which incrond >/dev/null || sudo apt-get -y install incron;
+which incrond >/dev/null || sudo -A DEBIAN_FRONTEND=noninteractive apt-get -y install incron;
 
 pushd HabitatPkgInstallerScripts >/dev/null;
 source vhost_env_vars.sh;
@@ -304,13 +304,26 @@ echo -e "${PRETTY} Copying user toml file to '${WORK_DIR}' directory" | tee -a $
 sudo -A cp ${SCRIPTPATH}/${USER_TOML_FILE} ${WORK_DIR} >> ${LOG};
 
 # ##########################
-export SECRETS_DIR="$(cat vhost_env_vars.sh \
-   | grep .ssh \
-   | grep ${VIRTUAL_HOST_DOMAIN_NAME} \
-   | cut -d "=" -f 2 \
-   | sed 's/^"\(.*\)"$/\1/')";
+# export SECRETS_DIR="$(cat vhost_env_vars.sh \
+#    | grep .ssh \
+#    | grep ${VIRTUAL_HOST_DOMAIN_NAME} \
+#    | cut -d "=" -f 2 \
+#    | sed 's/^"\(.*\)"$/\1/')";
+
+source vhost_env_vars.sh;
+declare VHDN=$(  echo ${VIRTUAL_HOST_DOMAIN_NAME} \
+               | tr '[:lower:]' '[:upper:]' \
+               | sed -e "s/\./_/g"
+              );
+
+eval "export SECRETS_DIR=\${${VHDN}_SECRETS};";
+echo ${SECRETS_DIR};
 
 echo -e "${PRETTY} Copying secrets file to '${SECRETS_DIR}' directory" | tee -a ${LOG};
+echo -e "sudo -A mkdir -p ${SECRETS_DIR} >> ${LOG};";
+echo -e "sudo -A cp ${TARGET_SECRETS_FILE} ${SECRETS_DIR} >> ${LOG};";
+echo -e "sudo -A chown -R hab:hab ${SECRETS_DIR} >> ${LOG};";
+
 sudo -A mkdir -p ${SECRETS_DIR} >> ${LOG};
 sudo -A cp ${TARGET_SECRETS_FILE} ${SECRETS_DIR} >> ${LOG};
 sudo -A chown -R hab:hab ${SECRETS_DIR} >> ${LOG};

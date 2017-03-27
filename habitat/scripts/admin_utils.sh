@@ -2,6 +2,8 @@
 #
 
 
+PRETTY="ADM_UTL :: ";
+
 function makeSiteCertificate() {
 
   local VHOST_DOMAIN="${1}";
@@ -38,28 +40,25 @@ function makeImitation_LetsEncrypt_Cert() {
   local SUBJ="${2}";
   local CERT_PATH="${3}";
   #
+  local CERT=${CERT_PATH}/cert.pem;
+  local KEY=${CERT_PATH}/privkey.pem;
+  local PWD=${CERT_PATH}/cert.pp;
   mkdir -p ${CERT_PATH};
+  [ -f ${CERT} ] && [ -f ${KEY} ] && [ -f ${PWD} ] && return 0;
+
+  echo -e "${PRETTY}Partially or entirely absent site certificate
+         Making a new one";
   rm -f ${CERT_PATH}/*;
-  echo ${SSLPPHRASE} > ${CERT_PATH}/cert.pp;
+  echo ${SSLPPHRASE} > ${PWD};
   openssl req \
     -new \
     -newkey rsa:4096 \
     -days 1825 \
     -x509 \
     -subj "${SUBJ}" \
-    -passout file:${CERT_PATH}/cert.pp \
-    -keyout ${CERT_PATH}/privkey.pem \
-    -out ${CERT_PATH}/cert.pem;
-
-  # openssl req \
-  #   -new \
-  #   -newkey rsa:4096 \
-  #   -days 1825 \
-  #   -x509 \
-  #   -subj "${SUBJ}" \
-  #   -passout file:${CERT_PATH}/server.pp \
-  #   -keyout ${CERT_PATH}/server.key \
-  #   -out ${CERT_PATH}/server.crt
+    -passout file:${PWD} \
+    -keyout ${KEY} \
+    -out ${CERT};
 
 };
 
@@ -85,7 +84,7 @@ function AddSSHkeyToAgent() {
   if [[ "${KEY_PRESENT}" -gt "0" ]]; then
     return 1;
   elif [[ -f ${KEY_FILE} ]]; then
-    echo -e "${PRTY} Remembering SSH key: '${KEY_FILE}'...";
+    echo -e "${PRETTY} Remembering SSH key: '${KEY_FILE}'...";
     startSSHAgent;
     expect << EOF
       spawn ssh-add ${KEY_FILE}
@@ -165,3 +164,10 @@ function makeTargetAuthorizedHostSshKeyIfNotExist() {
 
 }
 
+function chkHostConn() {
+    echo -e "${PRETTY}Verifying target server rear access : ${TARGET_SRVR}.";
+    ping -c 4 ${TARGET_SRVR};
+
+    echo -e "${PRETTY}Verifying target server front access : ${VIRTUAL_HOST_DOMAIN_NAME}.";
+    ping -c 4 ${VIRTUAL_HOST_DOMAIN_NAME};
+}

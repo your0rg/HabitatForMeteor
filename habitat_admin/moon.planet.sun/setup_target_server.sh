@@ -4,6 +4,8 @@ SCRIPT=$(readlink -f "$0");
 SCRIPTPATH=$(dirname "$SCRIPT");  # Where this script resides
 SCRIPTNAME=$(basename "$SCRIPT"); # This script's name
 
+export QUICK=${1};
+
 export VHOST_ENV_VARS="${SCRIPTPATH}/vhost_env_vars.sh";
 
 source ${SCRIPTPATH}/env_vars.sh;
@@ -24,12 +26,7 @@ makeTargetAuthorizedHostSshKeyIfNotExist \
      "${HABITAT_USER_SSH_KEY_FILE}";
 AddSSHkeyToAgent "${HABITAT_USER_SSH_KEY_FILE}" "${HABITAT_USER_SSH_PASS_PHRASE}";
 
-
-echo -e "${PRETTY}Verifying target server rear access : ${TARGET_SRVR}.";
-ping -c 4 ${TARGET_SRVR};
-
-echo -e "${PRETTY}Verifying target server rear access : ${VIRTUAL_HOST_DOMAIN_NAME}.";
-ping -c 4 ${VIRTUAL_HOST_DOMAIN_NAME};
+[ -z ${QUICK} ] && chkHostConn;
 
 #
 makeSSH_Config_File;
@@ -41,16 +38,11 @@ echo -e "${PRETTY}Testing SSH to host '${SETUP_USER_UID}' '${TARGET_SRVR}'."
 ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l "${SETUP_USER_UID}" "${TARGET_SRVR}" whoami || exit 1;
 echo -e "${PRETTY}Success: SSH to host '${SETUP_USER_UID}' '${TARGET_SRVR}'.";
 
-# sh template.settings.json.sh > ${METEOR_SETTINGS_FILE};
-# echo -e "${PRETTY}Generated Meteor settings file.";
-# cat ${METEOR_SETTINGS_FILE};
-
 ${HABITAT4METEOR_SCRIPTS}/PushInstallerScriptsToTarget.sh \
     "${TARGET_SRVR}" \
     "${SETUP_USER_UID}" \
     "${SOURCE_SECRETS_FILE}" \
     "${VHOST_ENV_VARS}";
-#     "${METEOR_SETTINGS_FILE}" \
 echo -e "${PRETTY}Pushed installer scripts to host :: '${TARGET_SRVR}'.";
 
 ssh -t -oStrictHostKeyChecking=no -oBatchMode=yes -l "${HABITAT_USER}" "${TARGET_SRVR}" whoami;

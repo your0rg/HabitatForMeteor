@@ -130,6 +130,7 @@ export SUDO_ASKPASS=${HOME}/.ssh/.supwd.sh;
 echo -e "${PRTY} Testing SUDO_ASKPASS and sudo password for '$(whoami)'.  "  | tee -a ${LOG};
 if [[ $(sudo -A touch "/root/$(date)"  &>/dev/null; echo $?;) -gt 0 ]]; then
   echo -e "ERROR : SUDO_ASKPASS doesn't work.  Is the password correct for : '$(whoami)'"  | tee -a ${LOG};
+  exit 1;
 fi;
 
 
@@ -180,6 +181,9 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y whois  >>  ${LOG};
 
 echo -e "${PRTY} Ensuring able to parse JSON files.  "  | tee -a ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y jq;
+
+echo -e "${PRTY} Ensuring able to run incron.d scripts.  "  | tee -a ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y incron;
 
 echo -e "${PRTY} Ensuring able to download files.  "  | tee -a ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y curl;

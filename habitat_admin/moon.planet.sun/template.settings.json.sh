@@ -3,9 +3,9 @@
 cat <<EOF
 {
   "HOST_SERVER_NAME": "localhost:3000",
-  "MAILGUN_DOMAIN": "iridium.blue",
+  "MAILGUN_DOMAIN": "${MAILGUN_DOMAIN}",
   "MAILGUN_KEY": "${MAILGUN_KEY}",
-  "LOGGLY_SUBDOMAIN": "yourwork",
+  "LOGGLY_SUBDOMAIN": "${LOGGLY_SUBDOMAIN}",
   "LOGGLY_TOKEN": "${LOGGLY_TOKEN}",
 
   "PG_DB": "${PG_DB}",
