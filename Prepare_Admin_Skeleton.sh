@@ -82,6 +82,3 @@ echo -e "
   Tools directory :
 ";
 tree -L 3 ${TARGET_DIRECTORY};
-
-cat ${TARGET_DIRECTORY}/${STANDARD_SHELL_VARIABLES};
-echo "${HABITAT4METEOR_HOME}";

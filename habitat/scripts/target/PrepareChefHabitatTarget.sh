@@ -189,6 +189,9 @@ echo -e "${PRTY} Ensuring able to download files.  "  | tee -a ${LOG};
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y curl;
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y tree;
 
+echo -e "${PRTY} Ensuring able to install SSL certs.  "  | tee -a ${LOG};
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y letsencrypt;
+
 
 if ! id -u ${HAB_USER} &>/dev/null; then
 

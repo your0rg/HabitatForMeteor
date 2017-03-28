@@ -6,6 +6,6 @@
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 
-192.168.1.123	hmsrv
-192.168.1.123	irid.blue
+192.168.122.147	hab4metsrv
+192.168.122.147	irid.blue
 

@@ -22,10 +22,14 @@ server {
   index index.html index.htm;     # IGNORED
 
   ssl on;
-  ssl_certificate     /etc/letsencrypt/live/${VIRTUAL_HOST_DOMAIN_NAME}/cert.pem;
+  ssl_certificate     /etc/letsencrypt/live/${VIRTUAL_HOST_DOMAIN_NAME}/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/${VIRTUAL_HOST_DOMAIN_NAME}/privkey.pem;
-#  ssl_certificate     /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.crt;
-#  ssl_certificate_key /etc/nginx/tls/${VIRTUAL_HOST_DOMAIN_NAME}/server.key;
+
+  ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH";
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+  ssl_prefer_server_ciphers on;
+  ssl_session_cache shared:SSL:10m;
+  ssl_dhparam /etc/ssl/private/dhparams_4096.pem;
 
   location ^~ /public/ {
     autoindex on;

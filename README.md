@@ -648,7 +648,7 @@ This step first attempts to catch any lapses in the discipline described in the 
             - Next Step * : Prepare your target host for deploying the package by
                  placing a Secure SHell Remote Procedure Call (SSH RPC) to it :
 
-            cd /home/you/projects/mmks;
+            cd /home/you/projects/todos;
             ./.habitat/scripts/PushInstallerScriptsToTarget.sh ${TARGET_SRVR} ${SETUP_USER_UID} ${METEOR_SETTINGS_FILE} ${SOURCE_SECRETS_FILE};
 
           Where :
@@ -656,7 +656,7 @@ This step first attempts to catch any lapses in the discipline described in the 
             SETUP_USER_UID is a previously prepared 'sudoer' account on '${TARGET_SRVR}'.
             METEOR_SETTINGS_FILE typically called 'settings.json', contains your app's internal settings,
             SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
-                ( example file : /home/you/projects/mmks/.habitat/scripts/target/secrets.sh.example )
+                ( example file : /home/you/projects/todos/.habitat/scripts/target/secrets.sh.example )
 
 
       .  .  .  .  .  .  .  .  .  .  .  .  .
