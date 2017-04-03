@@ -1,13 +1,13 @@
 #!/bin/bash
 
-cat <<EOVHCT
+cat <<EOVHSCT
 ## Virtual host configuration file
 
 server {
 
   listen   80;
   server_name ${VIRTUAL_HOST_DOMAIN_NAME};
-  return   301 https://$server_name$request_uri;
+  return   301 https://\$server_name\$request_uri;
 }
 
 server {
@@ -57,4 +57,4 @@ server {
   }
 
 }
-EOVHCT
+EOVHSCT

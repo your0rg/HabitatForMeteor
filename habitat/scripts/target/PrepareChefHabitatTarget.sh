@@ -58,8 +58,34 @@ downloadHabToPathDir() {
 
 }
 
+function initialSecurityTasks() {
+#
+  echo -e "APT install ufw and fail2ban";
+  sudo apt-get install -y ufw fail2ban;
+  #
+  echo -e "ufw settings";
+  sudo ufw default deny incoming;
+  sudo ufw default deny outgoing;
+  sudo ufw allow ssh;
+  sudo ufw allow git;
+  sudo ufw allow out http;
+  sudo ufw allow in http;
+  sudo ufw allow out https;
+  sudo ufw allow in https;
+  sudo ufw allow out 53;
+  sudo ufw disable;
+  sudo ufw --force  enable;
+  #
+  echo -e "cycle fail2ban";
+  sudo service fail2ban stop;
+  sudo service fail2ban start;
+  #
+  echo -e "Complete : OK";
+
+}
+
 function usage() {
-  echo -e "USAGE : ./PrepareChefHabitat.sh HABITAT_USER_NAME HABITAT_USER_PASSWORD";
+  echo -e "USAGE : ./PrepareChefHabitatTarget.sh HABITAT_USER_NAME HABITAT_USER_PASSWORD";
 }
 
 PASSWORD_MINIMUM_LENGTH=4;
@@ -82,10 +108,14 @@ else
   touch ${LOG};
 fi;
 
+export ENVIRONMENT="environment.sh";
+
 echo -e "Habitat Preparation Log :: $(date)
 =======================================================" > ${LOG};
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}."  | tee -a ${LOG};
 pushd ${SCRIPTPATH};
+
+source ${ENVIRONMENT};
 
 HAB_USER='hab';
 # HABITAT_USER_PWD=$(cat ./HabUserPwd.txt);
@@ -93,15 +123,24 @@ HAB_USER='hab';
 HAB_DIR=/home/${HAB_USER};
 HAB_SSH_DIR=${HAB_DIR}/.ssh;
 HAB_SSH_AXS=${HAB_SSH_DIR}/authorized_keys;
-HAB_SSH_KEY_NAME=authorized_key;
+# HAB_SSH_KEY_NAME=authorized_key;
 
-source secrets.sh;
-# echo -e "${PRTY} MONGODB_PWD=${MONGODB_PWD}";
-# echo -e "${PRTY} PGRESQL_PWD=${PGRESQL_PWD}";
-# echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
-# echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
+INSTALL_SECRETS="./secrets/secrets.sh";
+VHOST_SECRETS="${SECRETS}/secrets.sh";
+
+HAB_USER_SECRETS_DIR="./secrets/habitat_user";
+HABITAT_USER_SSH_KEY_PUBL="${HAB_USER_SECRETS_DIR}/id_rsa.pub";
+
+echo -e "${PRTY} SECRETS=${SECRETS}";
+echo -e "${PRTY} INSTALL_SECRETS=${INSTALL_SECRETS}";
+echo -e "${PRTY} VHOST_SECRETS=${VHOST_SECRETS}";
+source ${INSTALL_SECRETS};
+
+echo -e "${PRTY} MONGODB_PWD=${MONGODB_PWD}";
+echo -e "${PRTY} PGRESQL_PWD=${PGRESQL_PWD}";
+echo -e "${PRTY} SETUP_USER_PWD=${SETUP_USER_PWD}";
+echo -e "${PRTY} HABITAT_USER_PWD=${HABITAT_USER_PWD}";
 # echo -e "${PRTY} HABITAT_USER_SSH_KEY_FILE=${HABITAT_USER_SSH_KEY_FILE}";
-
 
 BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
 BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
@@ -117,12 +156,15 @@ BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
 echo -e "${PRTY} Validating user's sudo password... ";
 [[ 0 -lt $(echo ${HABITAT_USER_PWD} | grep -cE "^.{${PASSWORD_MINIMUM_LENGTH},}$") ]] ||  errorUnsuitablePassword ${HABITAT_USER_PWD};
 
-HABITAT_USER_SSH_KEY_NAME="authorized_key";
-if [ ! -f "${HABITAT_USER_SSH_KEY_NAME}" ]; then
-  echo -e "ERROR : A ssh certificate is required.  Found no file : '$(pwd)/${HABITAT_USER_SSH_KEY_NAME}'"  | tee -a ${LOG};
-  usage;
-  exit 1;
-fi;
+# cp -p ${HABITAT_USER_SSH_KEY_PUBL} ./${HABITAT_USER_SSH_KEY_FILE_NAME};
+# cat ./${HABITAT_USER_SSH_KEY_FILE_NAME};
+
+# HABITAT_USER_SSH_KEY_NAME="authorized_key";
+# if [ ! -f "${HABITAT_USER_SSH_KEY_NAME}" ]; then
+#   echo -e "ERROR : A ssh certificate is required.  Found no file : '$(pwd)/${HABITAT_USER_SSH_KEY_NAME}'"  | tee -a ${LOG};
+#   usage;
+#   exit 1;
+# fi;
 
 
 export SUDO_ASKPASS=${HOME}/.ssh/.supwd.sh;
@@ -136,6 +178,9 @@ fi;
 
 
 declare APT_SRC_LST="/etc/apt/sources.list.d";
+
+echo -e "${PRTY} Prepare for CERTBOT.  "  | tee -a ${LOG};
+sudo -A add-apt-repository ppa:certbot/certbot -y;
 
 echo -e "${PRTY} Ensuring mongo-shell is installed.  "  | tee -a ${LOG};
 declare MONGO_LST="mongodb-org-3.2.list";
@@ -190,7 +235,7 @@ sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y curl;
 sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y tree;
 
 echo -e "${PRTY} Ensuring able to install SSL certs.  "  | tee -a ${LOG};
-sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y letsencrypt;
+sudo -A DEBIAN_FRONTEND=noninteractive apt-get install -y certbot;
 
 
 if ! id -u ${HAB_USER} &>/dev/null; then
@@ -218,11 +263,19 @@ rm -fr /dev/shm/tmppwd;
 sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_DIR};
 
 echo -e "${PRTY} Adding caller's credentials to authorized SSH keys of '${HAB_USER}' . . .  " | tee -a ${LOG};
+echo -e "${PRTY} -----------------------------------";
+echo -e "${PRTY} HAB_DIR=${HAB_DIR}";
+echo -e "${PRTY} HAB_SSH_DIR=${HAB_SSH_DIR}";
+echo -e "${PRTY} HABITAT_USER_SSH_KEY_PUBL=${HABITAT_USER_SSH_KEY_PUBL}";
+echo -e "${PRTY} HAB_SSH_AXS=${HAB_SSH_AXS}";
+echo -e "${PRTY} HAB_USER=${HAB_USER}";
+
 sudo -A mkdir -p ${HAB_SSH_DIR};
 # sudo -A touch ${HAB_SSH_DIR}/${HAB_SSH_AXS};
-sudo -A cp ${HABITAT_USER_SSH_KEY_NAME} ${HAB_SSH_AXS};
+sudo -A cp ${HABITAT_USER_SSH_KEY_PUBL} ${HAB_SSH_AXS};
 sudo -A chown -R ${HAB_USER}:${HAB_USER} ${HAB_SSH_DIR};
 # cat ${HAB_SSH_AXS};
+
 
 echo -e "${PRTY} Making SUDO_ASK_PASS for '${HAB_USER}' user  ... (  in $(pwd)  )";
 sudo -A -sHu ${HAB_USER} bash -c "source askPassMaker.sh; makeAskPassService ${HAB_USER} '${HABITAT_USER_PWD}';";
@@ -240,7 +293,6 @@ sudo -A chmod 0600 ${PGPASSFILE};
 sudo -A chown ${HAB_USER}:${HAB_USER} ${PGPASSFILE};
 
 popd;
-
 
 echo -e "${PRTY} Moving bundle directory, '${BUNDLE_DIRECTORY_NAME}' to '/home/${HAB_USER}'";
 sudo -A rm -fr ${BUNDLE_NAME};

@@ -4,63 +4,63 @@
 
 PRETTY="ADM_UTL :: ";
 
-function makeSiteCertificate() {
+# function makeSiteCertificate() {
 
-  local VHOST_DOMAIN="${1}";
-  local SSLPPHRASE="${2}";
-  local SUBJ="${3}";
-  local CERT_PATH="${4}/${VHOST_DOMAIN}";
-  #
+#   local VHOST_DOMAIN="${1}";
+#   local SSLPPHRASE="${2}";
+#   local SUBJ="${3}";
+#   local CERT_PATH="${4}/${VHOST_DOMAIN}";
+#   #
 
-    echo -e "${PRETTY}
+#     echo -e "${PRETTY}
 
-         * * * SHOULD NOT BE HERE * * *
+#          * * * SHOULD NOT BE HERE * * *
 
-    ";
-    exit 1;
+#     ";
+#     exit 1;
 
-  mkdir -p ${CERT_PATH};
-  rm -f ${CERT_PATH}/*;
-  echo ${SSLPPHRASE} > ${CERT_PATH}/server.pp;
-  openssl req \
-    -new \
-    -newkey rsa:4096 \
-    -days 1825 \
-    -x509 \
-    -subj "${SUBJ}" \
-    -passout file:${CERT_PATH}/server.pp \
-    -keyout ${CERT_PATH}/server.key \
-    -out ${CERT_PATH}/server.crt
+#   mkdir -p ${CERT_PATH};
+#   rm -f ${CERT_PATH}/*;
+#   echo ${SSLPPHRASE} > ${CERT_PATH}/server.pp;
+#   openssl req \
+#     -new \
+#     -newkey rsa:4096 \
+#     -days 1825 \
+#     -x509 \
+#     -subj "${SUBJ}" \
+#     -passout file:${CERT_PATH}/server.pp \
+#     -keyout ${CERT_PATH}/server.key \
+#     -out ${CERT_PATH}/server.crt
 
-};
+# };
 
-function makeImitation_LetsEncrypt_Cert() {
+# function makeImitation_LetsEncrypt_Cert() {
 
-  local SSLPPHRASE="${1}";
-  local SUBJ="${2}";
-  local CERT_PATH="${3}";
-  #
-  local CERT=${CERT_PATH}/cert.pem;
-  local KEY=${CERT_PATH}/privkey.pem;
-  local PWD=${CERT_PATH}/cert.pp;
-  mkdir -p ${CERT_PATH};
-  [ -f ${CERT} ] && [ -f ${KEY} ] && [ -f ${PWD} ] && return 0;
+#   local SSLPPHRASE="${1}";
+#   local SUBJ="${2}";
+#   local CERT_PATH="${3}";
+#   #
+#   local CERT=${CERT_PATH}/fullchain.pem;
+#   local KEY=${CERT_PATH}/privkey.pem;
+#   local PWD=${CERT_PATH}/cert.pp;
+#   mkdir -p ${CERT_PATH};
+#   [ -f ${CERT} ] && [ -f ${KEY} ] && [ -f ${PWD} ] && return 0;
 
-  echo -e "${PRETTY}Partially or entirely absent site certificate
-         Making a new one";
-  rm -f ${CERT_PATH}/*;
-  echo ${SSLPPHRASE} > ${PWD};
-  openssl req \
-    -new \
-    -newkey rsa:4096 \
-    -days 1825 \
-    -x509 \
-    -subj "${SUBJ}" \
-    -passout file:${PWD} \
-    -keyout ${KEY} \
-    -out ${CERT};
+#   echo -e "${PRETTY}Partially or entirely absent site certificate
+#          Making a new one";
+#   rm -f ${CERT_PATH}/*;
+#   echo ${SSLPPHRASE} > ${PWD};
+#   openssl req \
+#     -new \
+#     -newkey rsa:4096 \
+#     -days 1825 \
+#     -x509 \
+#     -subj "${SUBJ}" \
+#     -passout file:${PWD} \
+#     -keyout ${KEY} \
+#     -out ${CERT};
 
-};
+# };
 
 
 function startSSHAgent() {
@@ -164,6 +164,17 @@ function makeTargetAuthorizedHostSshKeyIfNotExist() {
 
 }
 
+function chkOk() {
+
+  read -ep "All correct? (y/q) ::  " -n 1 -r USER_ANSWER;
+  CHOICE=$(echo ${USER_ANSWER:0:1} | tr '[:upper:]' '[:lower:]')
+  if [[ "X${CHOICE}X" == "XqX" ]]; then
+    echo "Skipping this operation."; exit 1;
+  elif [[ ! "X${CHOICE}X" == "XyX" ]]; then
+    return 0;
+  fi;
+}
+
 function chkHostConn() {
     echo -e "${PRETTY}Verifying target server rear access : ${TARGET_SRVR}.";
     ping -c 4 ${TARGET_SRVR};
@@ -171,3 +182,4 @@ function chkHostConn() {
     echo -e "${PRETTY}Verifying target server front access : ${VIRTUAL_HOST_DOMAIN_NAME}.";
     ping -c 4 ${VIRTUAL_HOST_DOMAIN_NAME};
 }
+

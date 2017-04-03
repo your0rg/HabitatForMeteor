@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 #
-
 function usage() {
   echo -e "    Usage ::
      ${SCRIPTPATH}/PushInstallerScriptsToTarget.sh \\
                    \${TARGET_SRVR} \\
                    \${SETUP_USER_UID} \\
-                   \${SOURCE_SECRETS_FILE} \\
-                   \${VHOST_ENV_VARS}
+                   \${SOURCE_SECRETS_DIR} \\
+                   \${ENVIRONMENT}
       Where :
         TARGET_SRVR is the host where the project will be installed.
         SETUP_USER_UID is a previously prepared 'sudoer' account on '\${TARGET_SRVR}'.
-        SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '\${TARGET_SRVR}'.
-            ( example file : ${SCRIPTPATH}/target/secrets.sh.example )
-        VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
+        SOURCE_SECRETS_DIR is the path of a directory of secrets for the '\${TARGET_SRVR}' server.
+            ( example : ${HOME}/.ssh/hab_vault/\${TARGET_SRVR} )
+        ENVIRONMENT is the path to a file of environment variables for '\${TARGET_SRVR}'
 
   ";
   exit 1;
@@ -56,13 +55,18 @@ function errorNoUserAccountSpecified() {
 # }
 
 
-function errorNoSecretsFileSpecified() {
-  echo -e "\n\n    *** A valid path to a file of secrets for the remote server needs to be specified, not '${1}'  ***";
+function errorNoSecretsDirSpecified() {
+  echo -e "\n\n    *** A valid path of a directory of secrets for the remote server needs to be specified, not '${1}'  ***";
   usage;
 }
 
 function errorNoEnvVarsFileSpecified() {
   echo -e "\n\n    *** A valid path to a file of environment variables for the remote server needs to be specified, not '${1}'  ***";
+  usage;
+}
+
+function errorDHParamsFileSpecified() {
+  echo -e "\n\n    *** A valid path to a file of Diffie-Hellman paramaters for the remote server needs to be specified, not '${1}'  ***";
   usage;
 }
 
@@ -130,6 +134,7 @@ SCRIPTPATH=$(dirname "$SCRIPT");
 echo -e "\n${PRTY} Changing working location to ${SCRIPTPATH}.";
 cd ${SCRIPTPATH};
 
+. ./admin_utils.sh;
 . ./utils.sh;
 loadSemVerScript;
 . ./semver.sh
@@ -140,8 +145,11 @@ PRTY="PIStT  ==> ";
 TARGET_SRVR=${1};
 SETUP_USER_UID=${2};
 # METEOR_SETTINGS_FILE=${3};
-SOURCE_SECRETS_FILE=${3};
-VHOST_ENV_VARS=${4};
+SOURCE_SECRETS_DIR=${3};
+ENVIRONMENT=${4};
+# DH_PARAMS_DIR=${5};
+
+SOURCE_SECRETS_FILE="${SOURCE_SECRETS_DIR}/secrets.sh";
 
 HABITAT_USER='hab';
 
@@ -151,8 +159,10 @@ PASSWORD_MINIMUM_LENGTH=4;
 echo -e "${PRTY} TARGET_SRVR=${TARGET_SRVR}";
 echo -e "${PRTY} SETUP_USER_UID=${SETUP_USER_UID}";
 # echo -e "${PRTY} METEOR_SETTINGS_FILE=${METEOR_SETTINGS_FILE}";
+echo -e "${PRTY} SOURCE_SECRETS_DIR=${SOURCE_SECRETS_DIR}";
 echo -e "${PRTY} SOURCE_SECRETS_FILE=${SOURCE_SECRETS_FILE}";
-echo -e "${PRTY} VHOST_ENV_VARS=${VHOST_ENV_VARS}";
+echo -e "${PRTY} ENVIRONMENT=${ENVIRONMENT}";
+# echo -e "${PRTY} DH_PARAMS_DIR=${DH_PARAMS_DIR}";
 
 set -e;
 
@@ -168,16 +178,23 @@ set -e;
 # if [ ! -s "${METEOR_SETTINGS_FILE}" ]; then warningEmptySettingsFileSpecified "${METEOR_SETTINGS_FILE}"; fi;
 
 # ----------------
-echo -e "${PRTY} Testing secrets file availability... [   ls \"${SOURCE_SECRETS_FILE}\"  ]";
-if [[ "X${SOURCE_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
-if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${SOURCE_SECRETS_FILE}"; fi;
+echo -e "${PRTY} Testing secrets directory existence ... [   ls \"${SOURCE_SECRETS_DIR}\"  ]";
+if [[ "X${SOURCE_SECRETS_DIR}X" = "XX" ]]; then errorNoSecretsDirSpecified "null"; fi;
+if [ ! -f "${SOURCE_SECRETS_FILE}" ]; then errorNoSecretsDirSpecified "${SOURCE_SECRETS_FILE}"; fi;
 source ${SOURCE_SECRETS_FILE};
 
 # ----------------
-echo -e "${PRTY} Testing environment vars file availability... [   ls \"${VHOST_ENV_VARS}\"  ]";
-if [[ "X${VHOST_ENV_VARS}X" = "XX" ]]; then errorNoEnvVarsFileSpecified "null"; fi;
-if [ ! -f "${VHOST_ENV_VARS}" ]; then errorNoEnvVarsFileSpecified "${VHOST_ENV_VARS}"; fi;
-source ${VHOST_ENV_VARS};
+echo -e "${PRTY} Testing environment vars file availability... [   ls \"${ENVIRONMENT}\"  ]";
+if [[ "X${ENVIRONMENT}X" = "XX" ]]; then errorNoEnvVarsFileSpecified "null"; fi;
+if [ ! -f "${ENVIRONMENT}" ]; then errorNoEnvVarsFileSpecified "${ENVIRONMENT}"; fi;
+source ${ENVIRONMENT};
+
+# ----------------
+# echo -e "${PRTY} Testing Diffie-Hellman paramaters file availability... [   ls \"${DH_PARAMS_DIR}\"  ]";
+# if [[ "X${DH_PARAMS_DIR}X" = "XX" ]]; then errorDHParamsFileSpecified "null"; fi;
+# if [ ! -d "${DH_PARAMS_DIR}" ]; then errorDHParamsFileSpecified "${DH_PARAMS_DIR}"; fi;
+# echo -e "${PRTY} Got $(head -n 2 ${DH_PARAMS_DIR})
+# ";
 
 
 # ----------------
@@ -247,41 +264,40 @@ echo -e "${PRTY} Target's user's SSH key fingerprint...";
 cat /tmp/kyfp.txt;
 
 
-
 BUNDLING_DIRECTORY="/dev/shm";
 BUNDLE_DIRECTORY_NAME="HabitatPkgInstallerScripts";
 BUNDLE_DIRECTORY="${BUNDLING_DIRECTORY}/${BUNDLE_DIRECTORY_NAME}";
+BUNDLED_SECRETS="${BUNDLE_DIRECTORY}/secrets";
 BUNDLE_NAME="${BUNDLE_DIRECTORY_NAME}.tar.gz";
 
-echo -e "VHOST_ENV_VARS=${VHOST_ENV_VARS}";
+echo -e "ENVIRONMENT=${ENVIRONMENT}";
+echo -e "SOURCE_SECRETS_DIR=${SOURCE_SECRETS_DIR}";
 
 echo -e "BUNDLE_DIRECTORY=${BUNDLE_DIRECTORY}";
 echo -e "BUNDLE_NAME=${BUNDLE_NAME}";
+echo -e "BUNDLED_SECRETS=${BUNDLED_SECRETS}";
+
 echo -e "${PRTY} Ready to push HabitatForMeteor deployment scripts to the target server,
        '${TARGET_SRVR}' prior to placing a RPC to install our Meteor project....";
 
 echo -e "${PRTY} Inserting scripts, variables, secrets and keys into, '${BUNDLE_NAME}'...";
 
-
-mkdir -p ${BUNDLE_DIRECTORY};
+mkdir -p ${BUNDLED_SECRETS};
 
 cp -p ./target/* ${BUNDLE_DIRECTORY};
 
 pushd ${BUNDLING_DIRECTORY} >/dev/null;
   pushd ${BUNDLE_DIRECTORY} >/dev/null;
 
-    cp -p ${VHOST_ENV_VARS} .;
+    cp -p ${ENVIRONMENT} .;
+#    cp -pr ${DH_PARAMS_DIR} .;
 
-    # chmod u-x,go-xrw ${METEOR_SETTINGS_FILE};
-    # cp -p ${METEOR_SETTINGS_FILE} .;
-
-
-    chmod 770 ${SOURCE_SECRETS_FILE};
-#    chown hab:hab ${SOURCE_SECRETS_FILE};
-    cp -p ${SOURCE_SECRETS_FILE} .;
-    cp -p ${HABITAT_USER_SSH_KEY_PUBL} ./${HABITAT_USER_SSH_KEY_FILE_NAME};
-
-    cat ./${HABITAT_USER_SSH_KEY_FILE_NAME};
+    chmod 770 ${SOURCE_SECRETS_DIR};
+#    chown hab:hab ${SOURCE_SECRETS_DIR};
+    cp -pr ${SOURCE_SECRETS_DIR}/* ${BUNDLED_SECRETS};
+    rm -f ${BUNDLED_SECRETS}/habitat_user/id_rsa;
+    # cp -p ${HABITAT_USER_SSH_KEY_PUBL} ./${HABITAT_USER_SSH_KEY_FILE_NAME};
+    # cat ./${HABITAT_USER_SSH_KEY_FILE_NAME};
 
   popd >/dev/null;
 
@@ -296,8 +312,11 @@ echo -e "${PRTY} Pushing the bundle to account name '${SETUP_USER_UID}' on
       host '${TARGET_SRVR}' using SSH key...
        '~/.ssh/id_rsa'...";
 
+
 scp -p ${BUNDLING_DIRECTORY}/${BUNDLE_NAME} ${SETUP_USER_UID}@${TARGET_SRVR}:/home/${SETUP_USER_UID} >/dev/null || errorFailedToPushBundle;
+rm -fr ${BUNDLING_DIRECTORY}/${BUNDLE_NAME};
 rm -fr ${BUNDLE_DIRECTORY};
+
 
 echo -e "${PRTY} Decompressing the bundle...";
 ssh ${SETUP_USER_UID}@${TARGET_SRVR} tar zxf ${BUNDLE_NAME} --transform "s/target/${BUNDLE_DIRECTORY_NAME}/" >/dev/null || errorUnexpectedRPCResult;
@@ -311,8 +330,7 @@ ssh ${SETUP_USER_UID}@${TARGET_SRVR} "source askPassMaker.sh; makeAskPassService
 
 echo -e "${PRTY} Installing Habitat on the target...";
 echo -e "ssh ${SETUP_USER_UID}@${TARGET_SRVR} \". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh\" || errorUnexpectedRPCResult;";
-# echo -e "PushInst line 314";
-# exit 1;
+
 ssh ${SETUP_USER_UID}@${TARGET_SRVR} ". .bash_login && ./${BUNDLE_DIRECTORY_NAME}/PrepareChefHabitatTarget.sh" || errorUnexpectedRPCResult;
 
 # -------------------
@@ -336,23 +354,33 @@ REMOTE_USER=$(ssh -qt -oBatchMode=yes -l ${HABITAT_USER} ${TARGET_SRVR} whoami) 
 
 if [[ "${NON_STOP}" = "YES" ]]; then exit 0; fi;
 
-pushd ${SCRIPTPATH}/../.. >/dev/null;
-echo -e "\n${PRTY} Now you can upload your site certificates to a secure location in the 'hab' user's account.
 
-     $(pwd)/habitat/scripts/PushSiteCertificateToTarget.sh \\
-       \${TARGET_SRVR} \\
-       \${SOURCE_SECRETS_FILE} \\
-       \${SOURCE_CERTS_DIR} \\
-       \${VIRTUAL_HOST_DOMAIN_NAME} \\
-       \${VHOST_ENV_VARS}
-      Where :
-        TARGET_SRVR is the host where the project will be installed.
-        SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
-        SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '${VIRTUAL_HOST_DOMAIN_NAME}'.
-        VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
-            ( example source secrets file : /home/you/tools/HabitatForMeteor/habitat/scripts/target/secrets.sh.example )
-        VHOST_ENV_VARS is the path to a file of environment variables for '\${TARGET_SRVR}'
-Quitting...
+pushd ${SCRIPTPATH}/../.. >/dev/null;
+# echo -e "\n${PRTY} Now you can upload your site certificates to a secure location in the 'hab' user's account.
+
+#                                       * * * DEPRECATED * * *
+
+#      $(pwd)/habitat/scripts/PushSiteCertificateToTarget.sh \\
+#        \${TARGET_SRVR} \\
+#        \${SOURCE_SECRETS_FILE} \\
+#        \${SOURCE_CERTS_DIR} \\
+#        \${VIRTUAL_HOST_DOMAIN_NAME} \\
+#        \${ENVIRONMENT}
+#       Where :
+#         TARGET_SRVR is the host where the project will be installed.
+#         SOURCE_SECRETS_FILE is the path to a file of required passwords and keys for '${TARGET_SRVR}'.
+#         SOURCE_CERTS_DIR is the path to a directory of certificates holding the one for '${VIRTUAL_HOST_DOMAIN_NAME}'.
+#         VIRTUAL_HOST_DOMAIN_NAME identifies the target server domain name
+#             ( example source secrets file : /home/you/tools/HabitatForMeteor/habitat/scripts/target/secrets.sh.example )
+#         ENVIRONMENT is the path to a file of environment variables for '\${TARGET_SRVR}'
+# Quitting...
+# $(date);
+# Done.
+# .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+# ";
+
+echo -e "\n${PRTY} All files have been pushed to target server.
+Exiting '${PRTY}' ...
 $(date);
 Done.
 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .

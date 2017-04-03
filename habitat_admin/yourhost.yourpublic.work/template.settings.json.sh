@@ -21,7 +21,7 @@ cat <<EOF
       "Text_1": "If you did not request a password reset just ignore this.\nIf you did request it, then please go to http://",
       "Text_2": " in order to reset your password.",
       "Subject": "Your Mantra Kickstarter password reset request",
-      "From": "yourself@yourpublic.work"
+      "From": "${CERT_EMAIL}"
     }
   }
 }

@@ -20,21 +20,32 @@ function errorNoSecretsFileSpecified() {
 function usage() {
   echo -e "USAGE :
 
-   ./${SCRIPTNAME} \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} [\${YOUR_PKG_VERSION}] [\${YOUR_PKG_TIMESTAMP}]
+   ./${SCRIPTNAME}
 
-  Where : * The first argument identifies URL by which the application will be found.
-          * The last four arguments correspond to the four parts of a Habitat package UUID.
-          * Of those, the first and second are obligatory.  The third and fourth are optional.
-          * All must be lowercase letting.
+   Expects all parameters to be provided in files in same directory
+
   ${1}";
   exit 1;
 }
 
-export VIRTUAL_HOST_DOMAIN_NAME=${1};
-export YOUR_ORG=${2};
-export YOUR_PKG=${3};
-export YOUR_PKG_VERSION=${4};
-export YOUR_PKG_TIMESTAMP=${5};
+# function usage() {
+#   echo -e "USAGE :
+
+#    ./${SCRIPTNAME} \${VIRTUAL_HOST_DOMAIN_NAME} \${YOUR_ORG} \${YOUR_PKG} [\${YOUR_PKG_VERSION}] [\${YOUR_PKG_TIMESTAMP}]
+
+#   Where : * The first argument identifies URL by which the application will be found.
+#           * The last four arguments correspond to the four parts of a Habitat package UUID.
+#           * Of those, the first and second are obligatory.  The third and fourth are optional.
+#           * All must be lowercase letting.
+#   ${1}";
+#   exit 1;
+# }
+
+# export VIRTUAL_HOST_DOMAIN_NAME=${1};
+# export YOUR_ORG=${2};
+# export YOUR_PKG=${3};
+# export YOUR_PKG_VERSION=${4};
+# export YOUR_PKG_TIMESTAMP=${5};
 
 
 # #################################
@@ -46,15 +57,27 @@ export YOUR_PKG_TIMESTAMP=${5};
 # #################################
 
 # if [[ "X${USER_TOML_FILE_PATH}X" = "XX" ]]; then usage "USER_TOML_FILE_PATH=${USER_TOML_FILE_PATH}"; fi;
-TARGET_SECRETS_FILE=${SCRIPTPATH}/secrets.sh;
+
+ENVIRONMENT=${SCRIPTPATH}/environment.sh;
+TARGET_SECRETS_PATH=${SCRIPTPATH}/secrets;
+TARGET_SECRETS_FILE=${TARGET_SECRETS_PATH}/secrets.sh;
 TARGET_SETTINGS_FILE=${SCRIPTPATH}/settings.json;
+
+source ${ENVIRONMENT};
+echo "SCRIPTPATH=${SCRIPTPATH}";
+echo "ENVIRONMENT=${ENVIRONMENT}";
+echo "VIRTUAL_HOST_DOMAIN_NAME=${VIRTUAL_HOST_DOMAIN_NAME}";
+echo "YOUR_ORG=${YOUR_ORG}";
+echo "YOUR_PKG=${YOUR_PKG}";
+echo "TARGET_SECRETS_FILE=${TARGET_SECRETS_FILE}";
+
 
 if [[ "X${VIRTUAL_HOST_DOMAIN_NAME}X" = "XX" ]]; then usage "VIRTUAL_HOST_DOMAIN_NAME=${VIRTUAL_HOST_DOMAIN_NAME}"; fi;
 if [[ "X${YOUR_ORG}X" = "XX" ]]; then usage "YOUR_ORG=${YOUR_ORG}"; fi;
 if [[ "X${YOUR_PKG}X" = "XX" ]]; then usage "YOUR_PKG=${YOUR_PKG}"; fi;
 
+
 echo -e "${PRTY} Testing secrets file availability... [   ls \"${TARGET_SECRETS_FILE}\"  ]";
-if [[ "X${TARGET_SECRETS_FILE}X" = "XX" ]]; then errorNoSecretsFileSpecified "null"; fi;
 if [ ! -f "${TARGET_SECRETS_FILE}" ]; then errorNoSecretsFileSpecified "${TARGET_SECRETS_FILE}"; fi;
 source ${TARGET_SECRETS_FILE};
 
@@ -102,7 +125,7 @@ LETSENCRYPT_ARCH="${LETSENCRYPT_HOME}/archive";
 which incrond >/dev/null || sudo -A DEBIAN_FRONTEND=noninteractive apt-get -y install incron;
 
 pushd HabitatPkgInstallerScripts >/dev/null;
-source vhost_env_vars.sh;
+source environment.sh;
 
 
 
@@ -145,35 +168,48 @@ sudo -A mkdir -p ${NGINX_ROOT_DIRECTORY};
 sh ${SCRIPTPATH}/index.html.template.sh > index.html;
 sudo -A cp index.html ${NGINX_ROOT_DIRECTORY};
 
-declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
-declare CERT_PATH=$(echo ${!CP});
-# sudo -A mkdir -p ${CERT_PATH};
-# sudo -A chown -R hab:hab ${CERT_PATH};
-# ls -l "${CERT_PATH}";
 
-echo -e "${PRETTY} Moving '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate from '${CERT_PATH}'
-                                    to ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
-sudo -A mkdir -p             ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME};
-sudo -A mkdir -p             ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+echo -e "${PRETTY} Preparing CertBot (Let's Encrypt) config file '${LETSENCRYPT_HOME}/cli.ini'
+                using '${SCRIPTPATH}/cli.ini.template.sh'";
+sudo -A mkdir -p ${LETSENCRYPT_HOME};
+sh ${SCRIPTPATH}/cli.ini.template.sh | sudo -A tee -a  ${LETSENCRYPT_HOME}/cli.ini;
 
-sudo -A cp ${CERT_PATH}/*.pem    ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
-sudo -A chown -R hab:hab     ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
-sudo -A chmod -R go-rwx,u+rw ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+echo -e "${PRETTY} Installing CertBot certificate";
+sudo -A certbot certonly;
 
-pushd ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME} >/dev/null;
-  sudo -A rm -fr *.pem;
-  sudo -A ln -s ../../archive/${VIRTUAL_HOST_DOMAIN_NAME}/cert.pem cert.pem;
-  sudo -A ln -s ../../archive/${VIRTUAL_HOST_DOMAIN_NAME}/privkey.pem privkey.pem;
-popd >/dev/null;
-# ls -l                        ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME};
+    # declare CP=$(echo "${VIRTUAL_HOST_DOMAIN_NAME}_CERT_PATH" | tr '[:lower:]' '[:upper:]' | tr '.' '_' ;)
+    # declare CERT_PATH=$(echo ${!CP});
+    # # sudo -A mkdir -p ${CERT_PATH};
+    # # sudo -A chown -R hab:hab ${CERT_PATH};
+    # # ls -l "${CERT_PATH}";
 
-echo -e "${PRETTY} Creating Nginx virtual host file '${NGINX_VIRTUAL_HOST_FILE_PATH}' from template." | tee -a ${LOG};
-sh ${SCRIPTPATH}/virtual.host.conf.template.sh > ${VIRTUAL_HOST_DOMAIN_NAME};
-sudo -A cp ${VIRTUAL_HOST_DOMAIN_NAME} ${NGINX_VHOSTS_DEFINITIONS};
+    # echo -e "${PRETTY} Moving '${VIRTUAL_HOST_DOMAIN_NAME}' site certificate from '${CERT_PATH}'
+    #                                     to ${NGINX_VHOSTS_CERTIFICATES}/${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
+    # sudo -A mkdir -p             ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME};
+    # sudo -A mkdir -p             ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+    # sudo -A cp ${CERT_PATH}/*.pem    ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+    # sudo -A chown -R hab:hab     ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+    # sudo -A chmod -R go-rwx,u+rw ${LETSENCRYPT_ARCH}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+    # pushd ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME} >/dev/null;
+    #   sudo -A rm -fr *.pem;
+    #   sudo -A ln -s ../../archive/${VIRTUAL_HOST_DOMAIN_NAME}/fullchain.pem fullchain.pem;
+    #   sudo -A ln -s ../../archive/${VIRTUAL_HOST_DOMAIN_NAME}/privkey.pem privkey.pem;
+    # popd >/dev/null;
+    # # ls -l                        ${LETSENCRYPT_LIVE}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+echo -e "${PRETTY} Creating Nginx virtual host files '${NGINX_VIRTUAL_HOST_FILE_PATH}' from templates." | tee -a ${LOG};
+sh ${SCRIPTPATH}/virtual.http.host.conf.template.sh > ${VIRTUAL_HOST_DOMAIN_NAME}_NOCERT;
+sh ${SCRIPTPATH}/virtual.https.host.conf.template.sh > ${VIRTUAL_HOST_DOMAIN_NAME}_WITHCERT;
+sudo -A cp ${VIRTUAL_HOST_DOMAIN_NAME}* ${NGINX_VHOSTS_DEFINITIONS};
 
 
-echo -e "${PRETTY} Enabling Nginx virtual host ${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
-sudo -A ln -sf ${NGINX_VIRTUAL_HOST_FILE_PATH} ${NGINX_VHOSTS_PUBLICATIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
+# echo -e "${PRETTY} Enabling temporary Nginx HTTP virtual host ${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
+# sudo -A ln -sf ${NGINX_VIRTUAL_HOST_FILE_PATH}_NOCERT ${NGINX_VHOSTS_PUBLICATIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
+
+echo -e "${PRETTY} Enabling Nginx HTTP virtual host ${VIRTUAL_HOST_DOMAIN_NAME}." | tee -a ${LOG};
+sudo -A ln -sf ${NGINX_VIRTUAL_HOST_FILE_PATH}_WITHCERT ${NGINX_VHOSTS_PUBLICATIONS}/${VIRTUAL_HOST_DOMAIN_NAME};
 
 LOG_DIR="/var/log/nginx";
 VHOST_LOG_DIR="${LOG_DIR}/${VIRTUAL_HOST_DOMAIN_NAME}";
@@ -188,19 +224,19 @@ sudo -A mkdir -p ${NGINX_DIR};
 sh ${SCRIPTPATH}/nginx.user.toml.template.sh > nginx.user.toml;
 sudo -A cp nginx.user.toml ${NGINX_TOML_FILE_PATH};
 
-echo -e "${PRETTY} Preparing site certificates passphrase file." | tee -a ${LOG};
-export GLOBAL_CERT_PASSWORD_PATH=$( dirname "${GLOBAL_CERT_PASSWORD_FILE}");
-export GLOBAL_CERT_PWD_FILE=$(basename "${GLOBAL_CERT_PASSWORD_FILE}");
+# echo -e "${PRETTY} Preparing site certificates passphrase file." | tee -a ${LOG};
+# export GLOBAL_CERT_PASSWORD_PATH=$( dirname "${GLOBAL_CERT_PASSWORD_FILE}");
+# export GLOBAL_CERT_PWD_FILE=$(basename "${GLOBAL_CERT_PASSWORD_FILE}");
 
-mkdir -p ${GLOBAL_CERT_PASSWORD_PATH};
-sudo -A touch ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
+# mkdir -p ${GLOBAL_CERT_PASSWORD_PATH};
+# sudo -A touch ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE};
 
-TMP=$(sudo -A cat ${CERT_PATH}/cert.pp);
-CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c -- ${TMP});
-if [[ ${CNT} -lt 1 ]]; then
-  echo -e "${PRETTY} Writing site certificates passphrase file." | tee -a ${LOG};
-  echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} >/dev/null;
-fi;
+# TMP=$(sudo -A cat ${CERT_PATH}/cert.pp);
+# CNT=$(sudo -A cat ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} | grep -c -- ${TMP});
+# if [[ ${CNT} -lt 1 ]]; then
+#   echo -e "${PRETTY} Writing site certificates passphrase file." | tee -a ${LOG};
+#   echo ${TMP} | sudo -A tee --append ${GLOBAL_CERT_PASSWORD_PATH}/${GLOBAL_CERT_PWD_FILE} >/dev/null;
+# fi;
 
 
 
@@ -310,23 +346,39 @@ sudo -A cp ${SCRIPTPATH}/${USER_TOML_FILE} ${WORK_DIR} >> ${LOG};
 #    | cut -d "=" -f 2 \
 #    | sed 's/^"\(.*\)"$/\1/')";
 
-source vhost_env_vars.sh;
-declare VHDN=$(  echo ${VIRTUAL_HOST_DOMAIN_NAME} \
-               | tr '[:lower:]' '[:upper:]' \
-               | sed -e "s/\./_/g"
-              );
+source environment.sh;
+# declare VHDN=$(  echo ${VIRTUAL_HOST_DOMAIN_NAME} \
+#                | tr '[:lower:]' '[:upper:]' \
+#                | sed -e "s/\./_/g"
+#               );
 
-eval "export SECRETS_DIR=\${${VHDN}_SECRETS};";
-echo ${SECRETS_DIR};
+# echo "export SECRETS_DIR=${VHDN}_SECRETS;";
+# eval "export SECRETS_DIR=\${${VHDN}_SECRETS};";
+export SECRETS_DIR="secrets";
+echo SECRETS_DIR=${SECRETS_DIR};
+echo SECRETS=${SECRETS};
+echo TARGET_SECRETS_PATH=${TARGET_SECRETS_PATH};
 
-echo -e "${PRETTY} Copying secrets file to '${SECRETS_DIR}' directory" | tee -a ${LOG};
-echo -e "sudo -A mkdir -p ${SECRETS_DIR} >> ${LOG};";
-echo -e "sudo -A cp ${TARGET_SECRETS_FILE} ${SECRETS_DIR} >> ${LOG};";
-echo -e "sudo -A chown -R hab:hab ${SECRETS_DIR} >> ${LOG};";
+echo -e "${PRETTY} Copying secrets file to '${SECRETS}' directory" | tee -a ${LOG};
+echo -e "sudo -A mkdir -p ${SECRETS} >> ${LOG};";
+echo -e "sudo -A cp -r ${TARGET_SECRETS_PATH}/* ${SECRETS} >> ${LOG};";
+echo -e "sudo -A chown -R hab:hab ${SECRETS} >> ${LOG};";
 
-sudo -A mkdir -p ${SECRETS_DIR} >> ${LOG};
-sudo -A cp ${TARGET_SECRETS_FILE} ${SECRETS_DIR} >> ${LOG};
-sudo -A chown -R hab:hab ${SECRETS_DIR} >> ${LOG};
+sudo -A mkdir -p ${SECRETS} >> ${LOG};
+sudo -A cp -r ${TARGET_SECRETS_PATH}/* ${SECRETS} >> ${LOG};
+sudo -A chown -R hab:hab ${SECRETS} >> ${LOG};
+
+echo -e "${PRETTY} Copying Diffie-Hellman file to SSL directory" | tee -a ${LOG};
+echo -e " - From : ${SECRETS}/dh/*" | tee -a ${LOG};
+echo -e " - To   : ${DIFFIE_HELLMAN_DIR}" | tee -a ${LOG};
+
+sudo -A mkdir -p ${DIFFIE_HELLMAN_DIR} >> ${LOG};
+sudo -A touch ${DIFFIE_HELLMAN_DIR}/DiffieHellman_files_go_here >> ${LOG};
+sudo -A chmod    ug+w         ${DIFFIE_HELLMAN_DIR}/* >> ${LOG};
+sudo -A cp ${SECRETS}/dh/*    ${DIFFIE_HELLMAN_DIR} >> ${LOG};
+sudo -A chown -R root:hab     ${DIFFIE_HELLMAN_DIR} >> ${LOG};
+sudo -A chmod -R ug+rwx,o-rwx ${DIFFIE_HELLMAN_DIR} >> ${LOG};
+sudo -A chmod    ug-w         ${DIFFIE_HELLMAN_DIR}/* >> ${LOG};
 
 # echo -e "${PRETTY} Copying Meteor settings file to '${WORK_DIR}/var' directory" | tee -a ${LOG};
 # sudo -A mkdir -p ${WORK_DIR}/var >> ${LOG};
@@ -410,7 +462,15 @@ sudo -A ls -l ${NGINX_CONFIG_DIR};
 
 
 echo -e "${PRETTY} Start up the '${SERVICE_UID}' systemd service . . ." | tee -a ${LOG};
+
 sudo -A systemctl start ${UNIT_FILE};
+
+echo -e "${PRETTY} Clean up APT dependencies . . ." | tee -a ${LOG};
+sudo apt-get -y update;
+sudo apt-get -y upgrade;
+sudo apt-get -y dist-upgrade;
+sudo apt-get -y clean;
+sudo apt-get -y autoremove;
 
 
 declare DBNAME=;
