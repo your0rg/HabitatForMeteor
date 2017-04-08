@@ -1,0 +1,3 @@
+[submodule "habitat/scripts/semver-shell"]
+	path = habitat/scripts/semver-shell
+	url = git@github.com:warehouseman/semver_shell.git
