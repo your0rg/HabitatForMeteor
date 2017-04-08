@@ -345,8 +345,8 @@ function ensureUserAlsoHasGlobalOriginKey() {
 }
 
 
+declare EXTERNAL_MODULES_DIRECTORY=".pkgs";
 function copyExternalNodeModulesToInternal() {
-  local EXTERNAL_MODULES_DIRECTORY=".pkgs";
   echo -e "  - Looking for external modules directory.";
   if [[ -d ${EXTERNAL_MODULES_DIRECTORY} ]]; then
 
@@ -662,11 +662,22 @@ cd ${SCRIPTPATH};
 
 . ./scripts/utils.sh;
 . ./scripts/VersionControl.sh;
-. ./scripts/ManageShellVars.sh "scripts/";   loadShellVars;
-echo "Using Habitat plan = ${SCRIPTPATH}/${HABITAT_PLAN_SH}";
+. ./scripts/ManageShellVars.sh "scripts/";
 
+loadShellVars;
 
 set -e;
+
+[ -f ${HABITAT_PLAN_SH} ] \
+  && echo -e "Using Habitat plan = ${HABITAT_PLAN_SH}" \
+  || (
+    echo -e "      * * *
+    Unable to find Habitat plan = ${SCRIPTPATH}/${HABITAT_PLAN_SH}
+    Copy '${SCRIPTPATH}/${HABITAT_PLAN_SH}.example' and edit as required.
+    Don't know what to do. Quitting...";
+    exit 1;
+  )
+
 
 getTOMLValueFromName HABITAT_PKG_ORIGIN ${HABITAT_PLAN_SH} pkg_origin;
 getTOMLValueFromName HABITAT_PKG_NAME ${HABITAT_PLAN_SH} pkg_name;
