@@ -80,11 +80,25 @@ declare TARGET_PROJECT_PATH=$(pwd);
 declare HABITAT_WORK=${TARGET_PROJECT_PATH}/.habitat;
 mkdir -p ${HABITAT_WORK};
 
-if [ -f ${HABITAT_WORK}/plan.sh ]; then
+echo -e "${PRTY}\nCopying HabitatForMeteor files to target...";
+SCRIPTS_PATH='scripts';
+SEMVER_SHELL_PATH='semver-shell';
+SEMVER_SH='semver.sh';
+pushd ${HABITAT_PATH} >/dev/null;
+  cp -p  BuildAndUpload.sh ${HABITAT_WORK};
+  rsync -a --exclude="${SCRIPTS_PATH}/${SEMVER_SHELL_PATH}" . ${HABITAT_WORK};
 
-  echo "${PRTY} Updating previous HabitatForMeteor files of target...";
-  cp -p  ${HABITAT_PATH}/BuildAndUpload.sh ${HABITAT_WORK};
-  cp -pr ${HABITAT_PATH}/scripts ${HABITAT_WORK};
+  mkdir -p ${HABITAT_WORK}/${SCRIPTS_PATH}/${SEMVER_SHELL_PATH};
+
+  cp                 ${SCRIPTS_PATH}/${SEMVER_SHELL_PATH}/${SEMVER_SH} \
+     ${HABITAT_WORK}/${SCRIPTS_PATH}/${SEMVER_SHELL_PATH};
+
+popd >/dev/null;
+
+mv ${HABITAT_WORK}/target_gitignore ${HABITAT_WORK}/.gitignore;
+mv ${HABITAT_WORK}/release_notes/target_gitignore ${HABITAT_WORK}/release_notes/.gitignore;
+
+if [ -f ${HABITAT_WORK}/plan.sh ]; then
 
   echo "${PRTY} Detecting changes ...";
   set +e;
@@ -100,16 +114,7 @@ if [ -f ${HABITAT_WORK}/plan.sh ]; then
 
   listChanges;
 
-else
-
-  echo "${PRTY} Copying HabitatForMeteor files to target...";
-  cp -r ${HABITAT_PATH}/* ${HABITAT_WORK};
-  mv ${HABITAT_WORK}/target_gitignore ${HABITAT_WORK}/.gitignore;
-  mv ${HABITAT_WORK}/release_notes/target_gitignore ${HABITAT_WORK}/release_notes/.gitignore;
-
 fi;
-
-
 
 echo -e "\n${PRTY} Your application is ready for HabitatForMeteor.
 
@@ -132,5 +137,5 @@ echo -e "\n${PRTY} Your application is ready for HabitatForMeteor.
               ./.habitat/scripts/Update_or_Install_Dependencies.sh;
 
 done
-.  .  .  .  .  .  .  .  .  .  .  .  
+.  .  .  .  .  .  .  .  .  .  .  .
 ";

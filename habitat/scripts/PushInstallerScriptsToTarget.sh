@@ -112,6 +112,14 @@ function startSSHAgent() {
 };
 
 
+function sourceSemVerToolkit() {
+
+#  loadSemVerScript;
+  echo -e "${PRTY} Sourcing Semantic Versioning toolkit."
+  . ./semver-shell/semver.sh;
+
+};
+
 
 declare MKR_SCRPT="";
 function makeMakerScriptMaker() {
@@ -136,8 +144,8 @@ cd ${SCRIPTPATH};
 
 . ./admin_utils.sh;
 . ./utils.sh;
-loadSemVerScript;
-. ./semver.sh
+
+sourceSemVerToolkit;
 
 
 PRTY="PIStT  ==> ";

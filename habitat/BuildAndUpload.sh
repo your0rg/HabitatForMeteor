@@ -234,15 +234,11 @@ detectSourceVersionsMismatch() {
 
 }
 
-function loadSemVerToolkit() {
+function sourceSemVerToolkit() {
 
-#  echo -e; set -e;
-  loadSemVerScript;
-  . ./semver.sh
-#  . ./scripts/semver.sh;
-  # COHERENT_VERSIONS=0;
-  # ERMSG="";
-  # set +e;
+#  loadSemVerScript;
+  echo -e "${PRTY} Sourcing Semantic Versioning toolkit."
+  . ./scripts/semver-shell/semver.sh;
 
 }
 
@@ -686,7 +682,7 @@ echo -e "${PRTY} Beginning to build Habitat package '${HABITAT_PKG_ORIGIN}/${HAB
 echo -e "${PRTY} Some steps require 'sudo' ...";
 sudo ls -l >/dev/null;
 
-loadSemVerToolkit;
+sourceSemVerToolkit;
 
 startSSHAgent;
 

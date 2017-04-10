@@ -378,6 +378,7 @@ sudo -A chmod    ug+w         ${DIFFIE_HELLMAN_DIR}/* >> ${LOG};
 sudo -A cp ${SECRETS}/dh/*    ${DIFFIE_HELLMAN_DIR} >> ${LOG};
 sudo -A chown -R root:hab     ${DIFFIE_HELLMAN_DIR} >> ${LOG};
 sudo -A chmod -R ug+rwx,o-rwx ${DIFFIE_HELLMAN_DIR} >> ${LOG};
+sudo -A ls -l ${DIFFIE_HELLMAN_DIR}/*;
 sudo -A chmod    ug-w         ${DIFFIE_HELLMAN_DIR}/* >> ${LOG};
 
 # echo -e "${PRETTY} Copying Meteor settings file to '${WORK_DIR}/var' directory" | tee -a ${LOG};

@@ -36,7 +36,7 @@ AddSSHkeyToAgent "${HABITAT_USER_SSH_KEY_FILE}" "${HABITAT_USER_SSH_PASS_PHRASE}
 
 [ -z ${QUICK} ] && chkHostConn;
 
-#
+# ....
 makeSSH_Config_File;
 addSSH_Config_Identity "${SETUP_USER_UID}" "${TARGET_SRVR}" "${YOUR_TARGET_SRVR_SSH_KEY_FILE}";
 addSSH_Config_Identity "${HABITAT_USER}" "${TARGET_SRVR}" "${HABITAT_USER_SSH_KEY_FILE}";
