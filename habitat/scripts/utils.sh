@@ -4,12 +4,12 @@ function loadSemVerScript() {
 
   SEMVER_SCRIPT_NAME="semver.sh";
   if [[ ! -x ${SEMVER_SCRIPT_NAME} ]]; then
-    ##     'semver_bash'    parses and compares version numbers
-    SEMVER_UTIL="semver_bash";
-    SU_VERSION="0.1.0-beta.03";
+    ##     'semver_shell'    parses and compares version numbers
+    SEMVER_UTIL="semver_shell";
+    SU_VERSION="0.2.0";
     SEMVER_TAR="${SEMVER_UTIL}-${SU_VERSION}";
 
-    #                                https://github.com/warehouseman/semver_bash/archive/v0.1.0-beta.03.tar.gz
+    #                                https://github.com/warehouseman/semver_shell/archive/v0.2.0.tar.gz
     wget -nc -O ${SEMVER_TAR}.tar.gz https://github.com/warehouseman/${SEMVER_UTIL}/archive/v${SU_VERSION}.tar.gz;
     tar zxvf ${SEMVER_TAR}.tar.gz ${SEMVER_TAR}/${SEMVER_SCRIPT_NAME};
     mv ${SEMVER_TAR}/${SEMVER_SCRIPT_NAME} .;

@@ -10,7 +10,7 @@ declare ENVVARSDIRTY=true;
 
 declare START_FROM=$(echo ${SCRIPTPATH} | grep -o ".habitat$");
 
-declare HAB_DIR=${HOME}/.hab;
+declare HAB_DIR=${HOME}/.ssh/hab_vault;
 mkdir -p ${HAB_DIR};
 
 
