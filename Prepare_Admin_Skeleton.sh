@@ -26,10 +26,10 @@ function usage() {
   echo -e "  Usage ::
     ${SCRIPTPATH}/${SCRIPTNAME} \${TARGET_DIRECTORY};
       Where :
-        TARGET_DIRECTORY specifies the path to, and name of, the Habitat for Meteor 
+        TARGET_DIRECTORY specifies the path to, and name of, the Habitat for Meteor
             work directory you wish to create.
 
-      Creates an example admininstrator toolkit in the directory you specify.
+      Creates an example administrator toolkit in the directory you specify.
       The structure is:
 
       You will need to decide on your own version control for it, IF you choose to
@@ -37,7 +37,7 @@ function usage() {
 
       Also note that, currently, your secret information will be kept in your '.ssh' directory
       with the following structure:
-      
+
         .ssh/${HAB_VAULT}/
 		├── habitat_user
 		│   ├── yourse1f-yourorg-20161031014505.pub
